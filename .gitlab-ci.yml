@@ -35,6 +35,7 @@ build:
       - build
   only:
     - npanic
+    - tags
   tags:
     - mandelbulber
 
