@@ -1,6 +1,6 @@
 stages:
   - build
-#  - package
+  - package
 
 .build_template: &build_definition
   when: manual
