@@ -22,20 +22,21 @@ stages:
   tags:
     - mandelbulber
 
-#.debpkg_template: &debpkg_template
-#  stage: package
-#  before_script:
+.debpkg_template: &debpkg_template
+  when: manual
+  stage: package
+  before_script:
 #    - apt-get update -y
-#    - mkdir -p build/deb/mandelbulber2/DEBIAN/
-#    - cp misc/debpkg-control build/deb/mandelbulber2/DEBIAN/control
-#    - cp -Rp artifact/minetest/usr build/deb/mandelbulber2/
-#  script:
-#    - cd build/deb/ && dpkg-deb -b mandelbulber2/ && mv mandelbulber2.deb ../../
-#  artifacts:
-#    when: on_success
-#    expire_in: 90 day
-#    paths:
-#      - ./*.deb
+    - mkdir -p deb/mandelbulber2/DEBIAN/
+    - cp mandelbulber2/misc/debpkg-control deb/mandelbulber2/DEBIAN/control
+    - cp -Rp mandelbulber2/build/usr build/deb/mandelbulber2/
+  script:
+    - cd deb/ && dpkg-deb -b mandelbulber2/ && mv mandelbulber2.deb ../
+  artifacts:
+    when: on_success
+    expire_in: 90 day
+    paths:
+      - ./*.deb
 
 build:ubuntu-trusty:
   <<: *build_definition
@@ -44,8 +45,8 @@ build:ubuntu-trusty:
     - export QTDIR="/opt/qt57"
     - export PATH="$QTDIR/bin:$PATH"
 
-#package:ubuntu-trusty:
-#  image: ubuntu:trusty
-#  dependencies:
-#    - build:ubuntu-trusty
-#  <<: *debpkg_template
+package:ubuntu-trusty:
+  image: ubuntu:trusty
+  dependencies:
+    - build:ubuntu-trusty
+  <<: *debpkg_template
