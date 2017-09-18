@@ -194,7 +194,7 @@ public:
 	}
 	inline double Normalize() // returns normalization factor
 	{
-		double norm = 1.0 / Length();
+		const double norm = 1.0 / Length();
 		x = x * norm;
 		y = y * norm;
 		z = z * norm;
@@ -409,7 +409,7 @@ public:
 
 	inline double Normalize()
 	{
-		double norm = 1.0 / Length();
+		const double norm = 1.0 / Length();
 		x = x * norm;
 		y = y * norm;
 		z = z * norm;
@@ -552,7 +552,7 @@ public:
 	}
 	inline double Normalize() // returns normalization factor
 	{
-		double norm = 1.0 / Length();
+		const double norm = 1.0 / Length();
 		x = x * norm;
 		y = y * norm;
 		return norm;
@@ -694,16 +694,5 @@ private:
 	CMatrix44 matrix;
 	bool zero;
 };
-
-
-// Safe Cast Helper for size_t ==> int
-inline int CastSizeToInt(size_t sizeValue) {
-	return (sizeValue <= std::numeric_limits<int>::max()) ? int(size_t(sizeValue)) : -1;
-}
-
-// Safe Cast Helper for int ==> size_t
-inline size_t CastIntToSize(int intValue) {
-	return (intValue < 0) ? std::numeric_limits<size_t>::max() : size_t(unsigned(intValue));
-}
 
 #endif /* MANDELBULBER2_SRC_ALGEBRA_HPP_ */

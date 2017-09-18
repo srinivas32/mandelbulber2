@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -27,47 +27,24 @@
  *
  * ###########################################################################
  *
- * Authors: Sebastian Jennen (jenzebas@gmail.com)
+ * Authors: Robert Pancoast (RobertPancoast77@gmail.com)
  *
- * MyScrolledArea class - promoted QScrollArea widget with custom resize event
+ * Functions to Help safely cast objects within limits of their types.
  */
 
-#ifndef MANDELBULBER2_QT_MY_SCROLLED_AREA_H_
-#define MANDELBULBER2_QT_MY_SCROLLED_AREA_H_
+#ifndef MANDELBULBER2_SRC_CAST_HPP_
+#define MANDELBULBER2_SRC_CAST_HPP_
 
-#include <QScrollArea>
-#include <QScrollBar>
-#include <QtGui>
+#include <limits.h>
 
-class MyScrolledArea : public QScrollArea
-{
-	Q_OBJECT
+// Safe Cast Helper for size_t ==> int
+inline int CastSizeToInt(size_t sizeValue) {
+	return (sizeValue <= std::numeric_limits<int>::max()) ? int(size_t(sizeValue)) : -1;
+}
 
-public:
-	MyScrolledArea(QWidget *parent = nullptr) : QScrollArea(parent)
-	{
-		visibleAreaWidth = width() - verticalScrollBar()->width();
-		visibleAreaHeight = height() - horizontalScrollBar()->height();
-	};
-	int VisibleAreaWidth() { return visibleAreaWidth; }
-	int VisibleAreaHeight() { return visibleAreaHeight; }
+// Safe Cast Helper for int ==> size_t
+inline size_t CastIntToSize(int intValue) {
+	return (intValue < 0) ? std::numeric_limits<size_t>::max() : size_t(unsigned(intValue));
+}
 
-private:
-	int visibleAreaWidth;
-	int visibleAreaHeight;
-
-protected:
-	void resizeEvent(QResizeEvent *event) override
-	{
-		// qDebug() << "resize event";
-		QScrollArea::resizeEvent(event);
-		visibleAreaWidth = width() - verticalScrollBar()->width();
-		visibleAreaHeight = height() - horizontalScrollBar()->height();
-		emit resized(visibleAreaWidth, visibleAreaHeight);
-	}
-
-signals:
-	void resized(const int &newWidth, const int &newHeight);
-};
-
-#endif /* MANDELBULBER2_QT_MY_SCROLLED_AREA_H_ */
+#endif /* MANDELBULBER2_SRC_CAST_HPP_ */
