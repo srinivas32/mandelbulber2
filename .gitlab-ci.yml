@@ -1,29 +1,51 @@
-build:
-  image: acidhunter/mandelbulber2-docker:trusty
-  before_script:
-#     - eval $(ssh-agent -s)
-#     - ssh-add <(echo "$SSH_PRIVATE_KEY")
-#     - mkdir -p ~/.ssh
-#     - echo "${SSH_PRIVATE_KEY}" > id_rsa
-#     - chmod 600 id_rsa
-#     - echo "${SSH_HOST_KEY}" > "${HOME}/.ssh/known_hosts"
-#     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+stages:
+  - build
+#  - package
 
+.build_template: &build_definition
+  when: manual
+  stage: build
   script:
-    - QTDIR="/opt/qt57"
-    - PATH="$QTDIR/bin:$PATH"
     - mkdir mandelbulber2/build
     - cd mandelbulber2/build
     - qmake ../qmake/mandelbulber.pro
     - make -j4
-    - tree .
     - cp -vurL "../deploy/share" "usr/"
   artifacts:
-     paths:
+    when: on_success
+    paths:
       - mandelbulber2/build/usr/*
       - mandelbulber2/build/mandelbulber2
-     expire_in: 1 day
+    expire_in: 1 day
   only:
     - npanic
   tags:
     - mandelbulber
+
+#.debpkg_template: &debpkg_template
+#  stage: package
+#  before_script:
+#    - apt-get update -y
+#    - mkdir -p build/deb/mandelbulber2/DEBIAN/
+#    - cp misc/debpkg-control build/deb/mandelbulber2/DEBIAN/control
+#    - cp -Rp artifact/minetest/usr build/deb/mandelbulber2/
+#  script:
+#    - cd build/deb/ && dpkg-deb -b mandelbulber2/ && mv mandelbulber2.deb ../../
+#  artifacts:
+#    when: on_success
+#    expire_in: 90 day
+#    paths:
+#      - ./*.deb
+
+build:ubuntu-trusty:
+  <<: *build_definition
+  image: acidhunter/mandelbulber2-docker:trusty
+  before_script:
+    - export QTDIR="/opt/qt57"
+    - export PATH="$QTDIR/bin:$PATH"
+
+#package:ubuntu-trusty:
+#  image: ubuntu:trusty
+#  dependencies:
+#    - build:ubuntu-trusty
+#  <<: *debpkg_template
