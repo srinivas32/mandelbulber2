@@ -34,7 +34,7 @@ stages:
     - cd deb/ && dpkg-deb -b mandelbulber2/ && mv mandelbulber2.deb ../
   artifacts:
     when: on_success
-    expire_in: 90 day
+    expire_in: 2 day
     paths:
       - ./*.deb
   tags:
@@ -68,12 +68,12 @@ package:ubuntu-xenial:
   <<: *debpkg_template
 
 
-build:ubuntu-zesty:
-  <<: *build_definition
-  image: acidhunter/mandelbulber2-docker:zesty
+#build:ubuntu-zesty:
+#  <<: *build_definition
+#  image: acidhunter/mandelbulber2-docker:zesty
 
-package:ubuntu-zesty:
-  image: ubuntu:zesty
-  dependencies:
-    - build:ubuntu-zesty
-  <<: *debpkg_template
+#package:ubuntu-zesty:
+#  image: ubuntu:zesty
+#  dependencies:
+#    - build:ubuntu-zesty
+#  <<: *debpkg_template
