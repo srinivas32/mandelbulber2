@@ -37,6 +37,8 @@ stages:
     expire_in: 90 day
     paths:
       - ./*.deb
+  tags:
+    - mandelbulber
 
 build:ubuntu-trusty:
   <<: *build_definition
@@ -49,4 +51,29 @@ package:ubuntu-trusty:
   image: ubuntu:trusty
   dependencies:
     - build:ubuntu-trusty
+  <<: *debpkg_template
+
+
+build:ubuntu-xenial:
+  <<: *build_definition
+  image: acidhunter/mandelbulber2-docker:xenial
+  before_script:
+    - export QTDIR="/opt/qt57"
+    - export PATH="$QTDIR/bin:$PATH"
+
+package:ubuntu-xenial:
+  image: ubuntu:xenial
+  dependencies:
+    - build:ubuntu-xenial
+  <<: *debpkg_template
+
+
+build:ubuntu-zesty:
+  <<: *build_definition
+  image: acidhunter/mandelbulber2-docker:zesty
+
+package:ubuntu-zesty:
+  image: ubuntu:zesty
+  dependencies:
+    - build:ubuntu-zesty
   <<: *debpkg_template
