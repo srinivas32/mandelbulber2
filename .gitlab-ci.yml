@@ -19,8 +19,10 @@ build:
     - tree .
     - cp -vurL "../deploy/share" "usr/"
   artifacts:
+     untracked: true
      paths:
-      - build
+      - mandelbulber/build/
+     expire_in: 1 week
   only:
     - npanic
   tags:
