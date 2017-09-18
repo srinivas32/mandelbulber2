@@ -21,7 +21,7 @@ build:
   artifacts:
      untracked: true
      paths:
-      - mandelbulber/build/
+      - mandelbulber2/build/
      expire_in: 1 week
   only:
     - npanic
