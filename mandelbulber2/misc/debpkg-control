@@ -1,0 +1,20 @@
+Section: graphics
+Priority: standard
+Standards-Version: 3.6.2
+Package: mandelbulber2
+Version: 2.12-DATEPLACEHOLDER
+Depends: libqt5gui5,libpng16-16,libgsl2,liblzo2-2,libgomp1,libqt5multimedia5,libqt5multimedia5-plugins
+Maintainer: Martin Friedrich <npanic@kmpt.nz>
+Homepage: https://github.com/buddhi1980/mandelbulber2
+Vcs-Git: https://github.com/buddhi1980/mandelbulber2.git
+Vcs-Browser: https://github.com/buddhi1980/mandelbulber2.git
+Architecture: amd64
+Build-Depends:a
+ libjpeg-dev,
+ libpng-dev
+Description: Mandelbulber generates three-dimensional fractals.
+The algorithm computes voxels in Euclidean space available for manufacturing from mesh.
+Explore trigonometric, hyper-complex, Mandelbox, IFS, and many other 3D fractals.
+Render with a great palette of customizable materials to create stunning images and videos.
+The possibilities are literally infinite!
+Conflicts: mandelbulber2
