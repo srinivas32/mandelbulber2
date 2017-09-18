@@ -29,7 +29,7 @@ stages:
 #    - apt-get update -y
     - mkdir -p deb/mandelbulber2/DEBIAN/
     - cp mandelbulber2/misc/debpkg-control deb/mandelbulber2/DEBIAN/control
-    - cp -Rp mandelbulber2/build/usr build/deb/mandelbulber2/
+    - cp -Rp mandelbulber2/build/usr deb/mandelbulber2/
   script:
     - cd deb/ && dpkg-deb -b mandelbulber2/ && mv mandelbulber2.deb ../
   artifacts:
