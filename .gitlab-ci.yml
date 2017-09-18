@@ -1,26 +1,14 @@
 build:
-  image: ubuntu:trusty
+  image: acidhunter/mandelbulber2-docker:trusty
   before_script:
-     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
-     - 'which rsync || ( apt-get update -y && apt-get install rsync -y )'
-     - sudo apt-get -y install software-properties-common
-     - eval $(ssh-agent -s)
+#     - eval $(ssh-agent -s)
 #     - ssh-add <(echo "$SSH_PRIVATE_KEY")
-     - mkdir -p ~/.ssh
+#     - mkdir -p ~/.ssh
 #     - echo "${SSH_PRIVATE_KEY}" > id_rsa
 #     - chmod 600 id_rsa
 #     - echo "${SSH_HOST_KEY}" > "${HOME}/.ssh/known_hosts"
-     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
-     - sudo apt-add-repository -y ppa:ubuntu-toolchain-r/test
-     - sudo apt-add-repository -y ppa:beineri/opt-qt571-trusty
-     - sudo add-apt-repository -y ppa:ubuntu-sdk-team/ppa
-     - sudo apt-get update
-     - sudo apt-get install -y libncurses5-dev libglib2.0-dev libgeoip-dev libtokyocabinet-dev zlib1g-dev libncursesw5-dev libbz2-dev
-     - sudo apt-get install -y curl g++-6 libc6-i386 mesa-common-dev libgl1-mesa-dev qt57base qt57tools qt57multimedia libpng12-0 libpng12-dev libgsl0-dev libgsl0ldbl libgomp1 liblzo2-2 liblzo2-dev libtiff5 libsndfile1-dev tree
-     - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 100
-     - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 100
-     - sudo update-alternatives --set g++ /usr/bin/g++-6
-     - sudo update-alternatives --set gcc /usr/bin/gcc-6
+#     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+
   script:
     - QTDIR="/opt/qt57"
     - PATH="$QTDIR/bin:$PATH"
@@ -35,7 +23,5 @@ build:
       - build
   only:
     - npanic
-    - tags
   tags:
     - mandelbulber
-
