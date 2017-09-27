@@ -114,6 +114,7 @@ void cOpenClEngineRenderDOFPhase2::SetParameters(const sParamRender *paramRender
 		paramRender->DOFRadius * (paramRender->imageWidth + paramRender->imageHeight) / 2000.0;
 	paramsDOF.neutral = paramRender->DOFFocus;
 	paramsDOF.blurOpacity = paramRender->DOFBlurOpacity;
+	paramsDOF.maxRadius = paramRender->DOFMaxRadius;
 
 	numberOfPixels = paramsDOF.width * paramsDOF.height;
 }
@@ -449,7 +450,6 @@ bool cOpenClEngineRenderDOFPhase2::Render(
 		for (int pixelIndex = 0; pixelIndex < width * height; pixelIndex += optimalJob.stepSize)
 		{
 			size_t pixelsLeft = width * height - pixelIndex;
-			UpdateOptimalJobStart(pixelsLeft);
 
 			// assign parameters to kernel
 			if (!AssignParametersToKernel()) return false;
@@ -461,8 +461,6 @@ bool cOpenClEngineRenderDOFPhase2::Render(
 			emit updateProgressAndStatus(
 				tr("OpenCL - rendering DOF - phase 2"), progressText.getText(percentDone), percentDone);
 			gApplication->processEvents();
-
-			UpdateOptimalJobEnd();
 
 			if (*stopRequest)
 			{
@@ -512,6 +510,11 @@ bool cOpenClEngineRenderDOFPhase2::Render(
 	{
 		return false;
 	}
+}
+
+size_t cOpenClEngineRenderDOFPhase2::CalcNeededMemory()
+{
+	return numberOfPixels * sizeof(cl_float4);
 }
 
 #endif // USE_OPEMCL

@@ -43,6 +43,7 @@ cOpenClHardware::cOpenClHardware(QObject *parent) : QObject(parent)
 	contextReady = false;
 	selectedDeviceIndex = 0;
 	missingOpenClDLL = false;
+	selectedPlatformIndex = 0;
 
 #ifdef USE_OPENCL
 #ifdef _WIN32
@@ -57,6 +58,7 @@ cOpenClHardware::cOpenClHardware(QObject *parent) : QObject(parent)
 #endif //   _MSC_VER
 #endif
 	isNVidia = false;
+	isAMD = false;
 	context = nullptr;
 #endif
 }
@@ -167,6 +169,7 @@ void cOpenClHardware::CreateContext(
 				contextReady = true;
 				ListOpenClDevices();
 				isNVidia = platformsInformation[platformIndex].name.contains("nvidia", Qt::CaseInsensitive);
+				isAMD = platformsInformation[platformIndex].name.contains("amd", Qt::CaseInsensitive);
 			}
 			else
 			{

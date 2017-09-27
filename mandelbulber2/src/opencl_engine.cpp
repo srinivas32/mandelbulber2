@@ -113,21 +113,13 @@ bool cOpenClEngine::Build(const QByteArray &programString, QString *errorText)
 
 			if (checkErr(err, "cl::Program()"))
 			{
-				QString openclPath = systemData.sharedDir + "opencl" + QDir::separator();
 				std::string buildParams = "-w -cl-single-precision-constant -cl-denorms-are-zero";
-
-				// buildParams.append(" -DOPENCL_KERNEL_CODE -I\"" + openclPath.toStdString() + "\"");
 				buildParams.append(" -DOPENCL_KERNEL_CODE");
 
 				buildParams += definesCollector.toUtf8().constData();
 
-				QString previousPath = QDir::currentPath();
-				QDir::setCurrent(openclPath);
-
 				qDebug() << "Build parameters: " << buildParams.c_str();
 				err = program->build(hardware->getClDevices(), buildParams.c_str());
-
-				QDir::setCurrent(previousPath);
 
 				if (checkErr(err, "program->build()"))
 				{
@@ -329,16 +321,15 @@ void cOpenClEngine::UpdateOptimalJobEnd()
 
 void cOpenClEngine::Lock()
 {
-	lock.lock();
 	locked = true;
+	lock.lock();
 }
 
 void cOpenClEngine::Unlock()
 {
-	if (locked)
-	{
-		lock.unlock();
-	}
+
+	lock.unlock();
+
 	locked = false;
 }
 

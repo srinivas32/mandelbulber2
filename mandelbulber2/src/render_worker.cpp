@@ -803,7 +803,6 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 
 				if (rayIndex < reflectionsMax)
 				{
-					enumRayBranch rayBranch = rayStack[rayIndex].rayBranch;
 					if (rayStack[rayIndex].rayBranch == rayBranchReflection)
 					{
 						// qDebug() << "Reflection" << rayIndex;
@@ -964,6 +963,8 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 			cObjectData objectData = data->objectData[shaderInputData.objectId];
 			shaderInputData.material = &data->materials[objectData.materialId];
 
+			shaderInputData.normal = recursionOut.normal;
+
 			// letting colors from textures (before normal map shader)
 			if (shaderInputData.material->colorTexture.IsLoaded())
 				shaderInputData.texColor =
@@ -1000,8 +1001,6 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 			sRGBAfloat backgroundShader;
 			sRGBAfloat volumetricShader;
 			sRGBAfloat specular;
-
-			shaderInputData.normal = recursionOut.normal;
 
 			if (rayMarchingOut.found)
 			{

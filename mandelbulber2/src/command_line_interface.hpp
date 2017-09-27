@@ -42,7 +42,7 @@ public:
 	cCommandLineInterface(QCoreApplication *qApplication);
 	~cCommandLineInterface();
 
-	enum cliTODOMode
+	enum cliOperationalMode
 	{
 		modeBootOnly,
 		modeNetrender,
@@ -134,11 +134,12 @@ private:
 		QString portText;
 		QString outputText;
 		QString voxelFormat;
+		QString logFilepathText;
 	} cliData;
 
 	QCommandLineParser parser;
 	QStringList args;
-	cliTODOMode cliTODO;
+	cliOperationalMode cliOperationalMode;
 	bool settingsSpecified;
 };
 

@@ -289,6 +289,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("DOF_enabled", false, morphLinear, paramStandard);
 	par->addParam("DOF_focus", 6.0, 0.0, 200.0, morphLinear, paramStandard);
 	par->addParam("DOF_radius", 10.0, 0.0, 200.0, morphLinear, paramStandard);
+	par->addParam("DOF_max_radius", 250.0, 2.0, 1000.0, morphLinear, paramStandard);
 	par->addParam("DOF_HDR", false, morphLinear, paramStandard);
 	par->addParam("DOF_number_of_passes", 1, 1, 10, morphLinear, paramStandard);
 	par->addParam("DOF_blur_opacity", 4.0, 0.01, 10.0, morphLinear, paramStandard);
@@ -412,9 +413,12 @@ void InitParams(cParameterContainer *par)
 	par->addParam("camera_movement_step", 0.5, 1e-15, 1e5, morphNone, paramApp);
 	par->addParam("camera_rotation_step", 15.0, 1e-15, 360.0, morphNone, paramApp);
 	par->addParam("camera_straight_rotation", 0, morphNone, paramApp);
-	par->addParam("camera_absolute_distance_mode", 0, morphNone, paramApp);
-	par->addParam("camera_movement_mode", 0, morphNone, paramApp);
-	par->addParam("camera_rotation_mode", 0, morphNone, paramApp);
+	par->addParam(
+		"camera_absolute_distance_mode", 0, morphNone, paramApp, QStringList({"relative", "absolute"}));
+	par->addParam("camera_movement_mode", 0, morphNone, paramApp,
+		QStringList({"fixed_distance", "move_camera", "move_target"}));
+	par->addParam("camera_rotation_mode", 0, morphNone, paramApp,
+		QStringList({"rotate_camera", "rotate_around_target"}));
 	par->addParam("mouse_click_function", 1, morphNone, paramNoSave);
 	par->addParam("show_cursor", true, morphNone, paramApp);
 
@@ -490,10 +494,11 @@ void InitParams(cParameterContainer *par)
 
 	par->addParam("opencl_enabled", false, morphNone, paramApp);
 	par->addParam("opencl_platform", 0, morphNone, paramApp);
-	par->addParam("opencl_device_type", 0, morphNone, paramApp);
+	par->addParam("opencl_device_type", 0, morphNone, paramApp,
+		QStringList({"gpu", "default", "all", "cpu", "accelerator"}));
 	par->addParam("opencl_device_list", QString(""), morphNone, paramApp);
-	par->addParam("opencl_mode", 0, morphNone, paramApp);
-	par->addParam("opencl_precision", 0, morphNone, paramApp);
+	par->addParam("opencl_mode", 0, morphNone, paramApp, QStringList({"fast", "limited", "full"}));
+	par->addParam("opencl_precision", 0, morphNone, paramApp, QStringList({"single", "double"}));
 	par->addParam("opencl_memory_limit", 512, 1, 10000, morphNone, paramApp);
 
 	WriteLog("Parameters initialization finished", 3);
@@ -503,6 +508,9 @@ void InitParams(cParameterContainer *par)
 void InitFractalParams(cParameterContainer *par)
 {
 	WriteLog("Fractal parameters initialization started: " + par->GetContainerName(), 3);
+
+	QStringList qslAcosAsin({"acos", "asin"});
+	QStringList qslAtanAtan2({"atan", "atan2"});
 
 	par->addParam("power", 9.0, morphAkima, paramStandard);
 	par->addParam("alpha_angle_offset", 0.0, morphAkimaAngle, paramStandard);
@@ -582,11 +590,11 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("aboxMod1_foldM", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
 
 	// mandelbulbMulti
-	par->addParam("mandelbulbMulti_acos_or_asin", 0, morphNone, paramStandard);
-	par->addParam("mandelbulbMulti_atan_or_atan2", 0, morphNone, paramStandard);
+	par->addParam("mandelbulbMulti_acos_or_asin", 0, morphNone, paramStandard, qslAcosAsin);
+	par->addParam("mandelbulbMulti_atan_or_atan2", 0, morphNone, paramStandard, qslAtanAtan2);
 
-	par->addParam("mandelbulbMulti_acos_or_asin_A", 0, morphNone, paramStandard);
-	par->addParam("mandelbulbMulti_atan_or_atan2_A", 0, morphNone, paramStandard);
+	par->addParam("mandelbulbMulti_acos_or_asin_A", 0, morphNone, paramStandard, qslAcosAsin);
+	par->addParam("mandelbulbMulti_atan_or_atan2_A", 0, morphNone, paramStandard, qslAtanAtan2);
 
 	par->addParam("mandelbulbMulti_order_of_xyz", 0, morphNone, paramStandard);
 	par->addParam("mandelbulbMulti_order_of_xyz_2", 0, morphNone, paramStandard);
