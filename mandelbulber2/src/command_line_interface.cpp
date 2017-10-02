@@ -527,8 +527,8 @@ void cCommandLineInterface::printOpenCLHelpAndExit()
 			<< " Specify the device hash of the device to use, see available devices below\n";
 	out << " * opencl_mode         - "
 			<< QObject::tr(
-					 "Mode of the render engine, fast has no effects, limited has "
-					 "basic effects, full contains all shaders.")
+					 "Mode of the render engine, 'fast' has no effects, 'limited' has "
+					 "basic effects, 'full' contains all shaders.")
 			<< QString("\n  `- %1\n")
 					 .arg(QObject::tr("possible values: [%1]")
 									.arg(gPar->GetAsOneParameter("opencl_mode").GetEnumLookup().join(", ")));
@@ -793,7 +793,7 @@ void cCommandLineInterface::handleArgs()
 				{
 					parSettings.CreateText(gPar, gParFractal, gAnimFrames, gKeyframes);
 					parSettings.SaveToFile(filename);
-					qDebug() << "touched file: " << filename;
+					WriteLogString("cCommandLineInterface::handleArgs(): touched file", filename, 3);
 					exit(0);
 				}
 			}
@@ -1082,7 +1082,8 @@ void cCommandLineInterface::handleEndFrame()
 void cCommandLineInterface::handleVoxel()
 {
 	QStringList allowedVoxelFormat({"ply", "slice"});
-	qDebug() << "cliData.voxelFormat. " << cliData.voxelFormat;
+	WriteLogString(
+		"CommandLineInterface::handleVoxel(): cliData.voxelFormat", cliData.voxelFormat, 3);
 	if (!allowedVoxelFormat.contains(cliData.voxelFormat))
 	{
 		cErrorMessage::showMessage(QObject::tr("Specified voxel format is not valid\n"

@@ -36,7 +36,7 @@
    <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
-      <number>2</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabGeneral">
       <attribute name="icon">
@@ -995,6 +995,12 @@ and will only be present after enabling and re-render.</string>
                 </property>
                 <item row="2" column="1" colspan="2">
                  <widget class="QComboBox" name="comboBox_opencl_precision">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="editable">
+                   <bool>false</bool>
+                  </property>
                   <item>
                    <property name="text">
                     <string>single</string>

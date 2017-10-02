@@ -272,7 +272,6 @@ void cInterface::ShowUi()
 	ComboMouseClickUpdate();
 
 	mainWindow->slotPopulateRecentSettings();
-	mainWindow->slotPopulateToolbar();
 	mainWindow->slotPopulateCustomWindowStates();
 	systemTray = new cSystemTray(mainImage, mainWindow);
 
@@ -970,7 +969,7 @@ void cInterface::RefreshPostEffects()
 				{
 					gOpenCl->openClEngineRenderSSAO->CreateKernel4Program(gPar);
 					size_t neededMem = gOpenCl->openClEngineRenderSSAO->CalcNeededMemory();
-					qDebug() << "OpenCl render SSAO - needed mem:" << neededMem / 1048576;
+					WriteLogDouble("OpenCl render SSAO - needed mem:", neededMem / 1048576.0, 2);
 					if (neededMem / 1048576 < gPar->Get<int>("opencl_memory_limit"))
 					{
 						gOpenCl->openClEngineRenderSSAO->PreAllocateBuffers(gPar);
@@ -980,7 +979,7 @@ void cInterface::RefreshPostEffects()
 					else
 					{
 						cErrorMessage::showMessage(
-							QObject::tr("Not enough free memory in graphics card to render SSAO effect!"),
+							QObject::tr("Not enough free memory in OpenCL device to render SSAO effect!"),
 							cErrorMessage::errorMessage, mainWindow);
 					}
 				}

@@ -35,8 +35,8 @@
 #ifndef MANDELBULBER2_SRC_SYSTEM_HPP_
 #define MANDELBULBER2_SRC_SYSTEM_HPP_
 
-#define MANDELBULBER_VERSION 2.11
-#define MANDELBULBER_VERSION_STRING "2.11"
+#define MANDELBULBER_VERSION 2.12
+#define MANDELBULBER_VERSION_STRING "2.12-alpha7"
 #define TO_STRING(a) #a
 
 #ifdef _WIN32 /* WINDOWS */
@@ -50,6 +50,15 @@
 #define SHARED_DIR QDir::homePath() + "/share/mandelbulber2"
 #else
 #define SHARED_DIR "/usr/share/mandelbulber2"
+#endif
+#endif
+
+#ifndef SHARED_DOC_DIR
+#ifdef _WIN32
+#elif __APPLE__
+#define SHARED_DOC_DIR QDir::homePath() + "/share/doc/mandelbulber2"
+#else
+#define SHARED_DOC_DIR "/usr/share/doc/mandelbulber2"
 #endif
 #endif
 
@@ -147,13 +156,11 @@ public:
 	{
 		this->preferredFontPointSize = preferredFontPointSize;
 	}
-	void SetLogfileName(QString logfileName)
-	{
-		this->logfileName = logfileName;
-	}
+	void SetLogfileName(QString logfileName) { this->logfileName = logfileName; }
 
 	QString homeDir;
 	QString sharedDir;
+	QString docDir;
 	QString logfileName;
 	QString lastSettingsFile;
 	QString lastImageFile;
@@ -190,6 +197,7 @@ extern sActualFileNames actualFileNames;
 bool InitSystem();
 void WriteLog(QString text, int verbosityLevel);
 void WriteLogDouble(QString text, double value, int verbosityLevel);
+void WriteLogInt(QString text, int value, int verbosityLevel);
 void WriteLogString(QString text, QString value, int verbosityLevel);
 void handle_winch(int sig);
 int get_cpu_count();

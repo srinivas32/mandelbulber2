@@ -72,6 +72,12 @@ cOpenClEngineRenderDOF::~cOpenClEngineRenderDOF()
 }
 
 #ifdef USE_OPENCL
+void cOpenClEngineRenderDOF::Reset()
+{
+	dofEnginePhase1->Reset();
+	dofEnginePhase2->Reset();
+}
+
 bool cOpenClEngineRenderDOF::RenderDOF(const sParamRender *paramRender,
 	const cParameterContainer *params, cImage *image, bool *stopRequest, cRegion<int> screenRegion)
 {
@@ -89,7 +95,7 @@ bool cOpenClEngineRenderDOF::RenderDOF(const sParamRender *paramRender,
 	{
 		dofEnginePhase1->CreateKernel4Program(params);
 		size_t neededMem = dofEnginePhase1->CalcNeededMemory();
-		qDebug() << "OpenCl render DOF Phase 1 - needed mem:" << neededMem / 1048576;
+		WriteLogDouble("OpenCl render DOF Phase 1 - needed mem:", neededMem / 1048576.0, 2);
 		if (neededMem / 1048576 < params->Get<int>("opencl_memory_limit"))
 		{
 			dofEnginePhase1->PreAllocateBuffers(params);
@@ -226,7 +232,7 @@ bool cOpenClEngineRenderDOF::RenderDOF(const sParamRender *paramRender,
 			{
 				dofEnginePhase2->CreateKernel4Program(params);
 				size_t neededMem = dofEnginePhase2->CalcNeededMemory();
-				qDebug() << "OpenCl render DOF Phase 2 - needed mem:" << neededMem / 1048576;
+				WriteLogDouble("OpenCl render DOF Phase 2 - needed mem:", neededMem / 1048576.0, 2);
 				if (neededMem / 1048576 < params->Get<int>("opencl_memory_limit"))
 				{
 					dofEnginePhase2->PreAllocateBuffers(params);

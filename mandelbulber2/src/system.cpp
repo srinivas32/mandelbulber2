@@ -76,11 +76,17 @@ bool InitSystem()
 	systemData.homeDir = QDir::toNativeSeparators(QDir::homePath() + QDir::separator());
 #ifdef _WIN32 /* WINDOWS */
 	systemData.sharedDir = QDir::toNativeSeparators(QDir::currentPath() + QDir::separator());
+	systemData.docDir =
+		QDir::toNativeSeparators(QDir::currentPath() + QDir::separator() + "doc" + QDir::separator());
 #elif SHARED_DIR_IS_APP_DIR
 	/* used for AppImage, which requires fixed data bundled at same location, as the application */
 	systemData.sharedDir = QDir::toNativeSeparators(QDir::currentPath() + QDir::separator());
+	systemData.docDir =
+		QDir::toNativeSeparators(QDir::currentPath() + QDir::separator() + "doc" + QDir::separator());
+
 #else
 	systemData.sharedDir = QDir::toNativeSeparators(QString(SHARED_DIR) + QDir::separator());
+	systemData.docDir = QDir::toNativeSeparators(QString(SHARED_DOC_DIR) + QDir::separator());
 #endif
 
 // logfile
@@ -178,6 +184,11 @@ int get_cpu_count()
 
 void WriteLog(QString text, int verbosityLevel)
 {
+	// verbosity level:
+	// 1 - only errors
+	// 2 - main events / actions
+	// 3 - detailed events / actions
+
 	if (verbosityLevel <= systemData.loggingVerbosity)
 	{
 		FILE *logfile = fopen(systemData.logfileName.toLocal8Bit().constData(), "a");
@@ -211,6 +222,11 @@ void WriteLogString(QString text, QString value, int verbosityLevel)
 }
 
 void WriteLogDouble(QString text, double value, int verbosityLevel)
+{
+	WriteLog(text + ", value = " + QString::number(value), verbosityLevel);
+}
+
+void WriteLogInt(QString text, int value, int verbosityLevel)
 {
 	WriteLog(text + ", value = " + QString::number(value), verbosityLevel);
 }
