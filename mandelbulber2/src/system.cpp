@@ -41,6 +41,7 @@
 #include <string.h>
 
 #include <ctime>
+#include <iostream>
 
 #include <QTextStream>
 #include <QtGui>
@@ -182,6 +183,14 @@ int get_cpu_count()
 	return QThread::idealThreadCount();
 }
 
+void WriteLogCout(QString text, int verbosityLevel)
+{
+	// output to console
+	cout << text.toStdString();
+	cout.flush();
+	WriteLog(text, verbosityLevel);
+}
+
 void WriteLog(QString text, int verbosityLevel)
 {
 	// verbosity level:
@@ -311,10 +320,11 @@ bool CreateFolder(QString qName)
 	}
 }
 
-void DeleteAllFilesFromDirectory(QString folder, QString filterExpression)
+void DeleteAllFilesFromDirectory(
+	QString folder, QString filterExpression, QRegExp::PatternSyntax pattern)
 {
 	QRegExp rx(filterExpression);
-	rx.setPatternSyntax(QRegExp::Wildcard);
+	rx.setPatternSyntax(pattern);
 
 	if (QDir(folder).exists())
 	{

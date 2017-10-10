@@ -196,6 +196,7 @@ extern sActualFileNames actualFileNames;
 
 bool InitSystem();
 void WriteLog(QString text, int verbosityLevel);
+void WriteLogCout(QString text, int verbosityLevel);
 void WriteLogDouble(QString text, double value, int verbosityLevel);
 void WriteLogInt(QString text, int value, int verbosityLevel);
 void WriteLogString(QString text, QString value, int verbosityLevel);
@@ -203,7 +204,8 @@ void handle_winch(int sig);
 int get_cpu_count();
 bool CreateDefaultFolders();
 bool CreateFolder(QString name);
-void DeleteAllFilesFromDirectory(QString folder, QString filterExpression);
+void DeleteAllFilesFromDirectory(
+	QString folder, QString filterExpression, QRegExp::PatternSyntax pattern = QRegExp::Wildcard);
 int fcopy(QString source, QString dest);
 void Wait(long int time);
 void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg);

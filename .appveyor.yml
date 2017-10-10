@@ -13,7 +13,7 @@ version: 1.0.1.0.0.7.{build}-{branch}
 #---------------------------------#
 
 # Build worker image (VM template)
-image: Visual Studio 2015
+image: Visual Studio 2017
 # Enable Global[Internet] Windows RDP Client Access to Build Worker
 init:
   - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
@@ -85,6 +85,7 @@ test: off
 artifacts:
   - path: mandelbulber-%CONFIGURATION%-%PLATFORM%-%APPVEYOR_REPO_COMMIT%.zip
     name: Mandelbulber-%CONFIGURATION%-%PLATFORM%
+  - path: build-win\Setup\%CONFIGURATION%\%PLATFORM%\*
 
 #---------------------------------#
 #     deployment configuration    #

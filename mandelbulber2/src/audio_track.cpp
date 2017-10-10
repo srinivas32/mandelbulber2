@@ -110,9 +110,10 @@ void cAudioTrack::LoadAudio(const QString &_filename)
 
 	if ((infile = sf_open(filename.toLocal8Bit().constData(), SFM_READ, &sfInfo)) == nullptr)
 	{
-		qInfo() << "Not able to open input file using libSndFile:" << filename;
-		qInfo() << "Will be used QAudioDecoder instead";
-		qInfo() << sf_strerror(nullptr);
+		WriteLogCout(
+			"Not able to open input file using libSndFile: " + filename + " Using QAudioDecoder instead",
+			1);
+		WriteLogCout(sf_strerror(nullptr), 1);
 	}
 	else
 	{

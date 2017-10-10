@@ -116,7 +116,7 @@ void Test::renderExamples()
 		QElapsedTimer timer;
 		timer.start();
 		QString filename = it.next();
-		if (!IsBenchmarking()) qInfo() << "trying file: " << filename;
+		if (!IsBenchmarking()) WriteLogCout("trying file: " + filename, 2);
 		cSettings parSettings(cSettings::formatFullText);
 		parSettings.BeQuiet(true);
 		parSettings.LoadFromFile(filename);

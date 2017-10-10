@@ -34,6 +34,8 @@
 
 #include "one_parameter.hpp"
 
+#include "nine_fractals.hpp"
+
 using namespace parameterContainer;
 
 cOneParameter::cOneParameter()
@@ -254,8 +256,9 @@ int cOneParameter::GetIndexByEnumeration(QString value) const
 		const int index = value.toInt(&checkParse);
 		if (!checkParse)
 		{
-			qInfo() << "Enumeration not found, cannot find value: '" << value << "' in QStringList "
-							<< enumLookup;
+			WriteLogCout("Enumeration not found, cannot find value: '" + value + "' in QStringList "
+										 + enumLookup.join(","),
+				1);
 		}
 		return index;
 	}

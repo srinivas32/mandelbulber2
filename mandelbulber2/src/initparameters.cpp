@@ -502,7 +502,8 @@ void InitParams(cParameterContainer *par)
 	par->addParam("opencl_device_type", 0, morphNone, paramApp,
 		QStringList({"gpu", "default", "all", "cpu", "accelerator"}));
 	par->addParam("opencl_device_list", QString(""), morphNone, paramApp);
-	par->addParam("opencl_mode", 0, morphNone, paramApp, QStringList({"fast", "limited", "full"}));
+	par->addParam(
+		"opencl_mode", 1, morphNone, paramApp, QStringList({"none", "fast", "limited", "full"}));
 	par->addParam("opencl_precision", 0, morphNone, paramApp, QStringList({"single", "double"}));
 	par->addParam("opencl_memory_limit", 512, 1, 10000, morphNone, paramApp);
 
@@ -720,6 +721,8 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("fold_color_scaleF0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleG0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleA1", 1.0, morphAkima, paramStandard);
+	par->addParam("fold_color_scaleB1", 1.0, morphAkima, paramStandard);
+	par->addParam("fold_color_scaleC1", 1.0, morphAkima, paramStandard);
 	par->addParam("fold_color_period1", 1.0, morphAkima, paramStandard);
 	par->addParam("fold_color_trig_add1", 1.0, morphAkima, paramStandard);
 
@@ -731,6 +734,7 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("fold_color_parab_enabled_false", false, morphLinear, paramStandard);
 	par->addParam("fold_color_cos_enabled_false", false, morphLinear, paramStandard);
 	par->addParam("fold_color_aux_color_enabled_false", false, morphLinear, paramStandard);
+	par->addParam("fold_color_distance_enabled_false", false, morphLinear, paramStandard);
 
 	// common parameters for transforming formulas
 	par->addParam("transf_alpha_angle_offset", 0.0, morphAkimaAngle, paramStandard);
