@@ -50,6 +50,7 @@
 #include "opencl_hardware.h"
 #include "parameters.hpp"
 #include "progress_text.hpp"
+#include "rectangle.hpp"
 #include "render_data.hpp"
 #include "render_worker.hpp"
 
@@ -204,6 +205,7 @@ bool cOpenClEngineRenderFractal::LoadSourcesAndCompile(const cParameterContainer
 			case clRenderEngineTypeFast: engineFileName = "fast_engine.cl"; break;
 			case clRenderEngineTypeLimited: engineFileName = "limited_engine.cl"; break;
 			case clRenderEngineTypeFull: engineFileName = "full_engine.cl"; break;
+			case clRenderEngineTypeNone: break;
 		}
 		QString engineFullFileName = openclEnginePath + engineFileName;
 		programEngine.append(LoadUtf8TextFromFile(engineFullFileName));
@@ -524,13 +526,13 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 		QElapsedTimer progressRefreshTimer;
 		progressRefreshTimer.start();
 
-		int numberOfPixels = width * height;
-		int gridWidth = width / optimalJob.stepSizeX;
-		int gridHeight = height / optimalJob.stepSizeY;
+		qint64 numberOfPixels = width * height;
+		qint64 gridWidth = width / optimalJob.stepSizeX;
+		qint64 gridHeight = height / optimalJob.stepSizeY;
 
-		int noiseTableSize = (gridWidth + 1) * (gridHeight + 1);
+		const qint64 noiseTableSize = (gridWidth + 1) * (gridHeight + 1);
 		double *noiseTable = new double[noiseTableSize];
-		for (int i = 0; i < noiseTableSize; i++)
+		for (qint64 i = 0; i < noiseTableSize; i++)
 		{
 			noiseTable[i] = 0.0;
 		}
@@ -552,18 +554,18 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 
 			QList<QRect> lastRenderedRects;
 
-			int pixelsRendered = 0;
-			int pixelsRenderedMC = 0;
-			int gridX = (gridWidth - 1) / 2;
-			int gridY = gridHeight / 2;
+			qint64 pixelsRendered = 0;
+			qint64 pixelsRenderedMC = 0;
+			qint64 gridX = (gridWidth - 1) / 2;
+			qint64 gridY = gridHeight / 2;
 			int dir = 0;
 			int gridPass = 0;
 			int gridStep = 1;
 
 			while (pixelsRendered < numberOfPixels)
 			{
-				int jobX = gridX * optimalJob.stepSizeX;
-				int jobY = gridY * optimalJob.stepSizeY;
+				const qint64 jobX = gridX * optimalJob.stepSizeX;
+				const qint64 jobY = gridY * optimalJob.stepSizeY;
 
 				// check if noise is still too high
 				bool bigNoise = true;
@@ -577,10 +579,10 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 
 				if (jobX >= 0 && jobX < width && jobY >= 0 && jobY < height)
 				{
-					size_t pixelsLeftX = width - jobX;
-					size_t pixelsLeftY = height - jobY;
-					int jobWidth2 = min(optimalJob.stepSizeX, pixelsLeftX);
-					int jobHeight2 = min(optimalJob.stepSizeY, pixelsLeftY);
+					qint64 pixelsLeftX = width - jobX;
+					qint64 pixelsLeftY = height - jobY;
+					qint64 jobWidth2 = min(optimalJob.stepSizeX, pixelsLeftX);
+					qint64 jobHeight2 = min(optimalJob.stepSizeY, pixelsLeftY);
 
 					if (monteCarloLoop == 1)
 						renderData->statistics.numberOfRenderedPixels += jobHeight2 * jobWidth2;
@@ -616,7 +618,7 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 
 						if (!autoRefreshMode && !monteCarlo)
 						{
-							QRect currentCorners(jobX, jobY, jobWidth2, jobHeight2);
+							const QRect currentCorners = SizedRectangle(jobX, jobY, jobWidth2, jobHeight2);
 							MarkCurrentPendingTile(image, currentCorners);
 						}
 
@@ -638,8 +640,8 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 								sRGB8 color = {pixelCl.colR, pixelCl.colG, pixelCl.colB};
 								unsigned short opacity = pixelCl.opacity;
 								unsigned short alpha = pixelCl.alpha;
-								int xx = x + jobX;
-								int yy = y + jobY;
+								size_t xx = x + jobX;
+								size_t yy = y + jobY;
 
 								if (monteCarlo)
 								{
@@ -690,7 +692,7 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 							noiseTable[gridX + gridY * (gridWidth + 1)] = totalNoiseRect;
 						}
 
-						lastRenderedRects.append(QRect(jobX, jobY, jobWidth2, jobHeight2));
+						lastRenderedRects.append(SizedRectangle(jobX, jobY, jobWidth2, jobHeight2));
 					} // bigNoise
 
 					pixelsRendered += jobWidth2 * jobHeight2;
@@ -793,7 +795,7 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 			}
 
 			double totalNoise = 0.0;
-			for (int i = 0; i < noiseTableSize; i++)
+			for (qint64 i = 0; i < noiseTableSize; i++)
 			{
 				totalNoise += noiseTable[i];
 			}
@@ -975,7 +977,8 @@ bool cOpenClEngineRenderFractal::WriteBuffersToQueue()
 	return true;
 }
 
-bool cOpenClEngineRenderFractal::ProcessQueue(int jobX, int jobY, int pixelsLeftX, int pixelsLeftY)
+bool cOpenClEngineRenderFractal::ProcessQueue(
+	size_t jobX, size_t jobY, size_t pixelsLeftX, size_t pixelsLeftY)
 {
 	//	size_t limitedWorkgroupSize = optimalJob.workGroupSize;
 	//	int stepSize = optimalJob.stepSize;
@@ -995,9 +998,9 @@ bool cOpenClEngineRenderFractal::ProcessQueue(int jobX, int jobY, int pixelsLeft
 	//		}
 	//	}
 
-	int stepSizeX = optimalJob.stepSizeX;
+	size_t stepSizeX = optimalJob.stepSizeX;
 	if (pixelsLeftX < stepSizeX) stepSizeX = pixelsLeftX;
-	int stepSizeY = optimalJob.stepSizeY;
+	size_t stepSizeY = optimalJob.stepSizeY;
 	if (pixelsLeftY < stepSizeY) stepSizeY = pixelsLeftY;
 
 	// optimalJob.stepSize = stepSize;

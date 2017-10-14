@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>transf_spherical_inv_c</class>
+ <class>Form</class>
  <widget class="QWidget" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>772</width>
-    <height>532</height>
+    <width>844</width>
+    <height>551</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -221,6 +221,20 @@
        </property>
       </widget>
      </item>
+     <item row="3" column="0">
+      <widget class="QCheckBox" name="checkBox_transf_function_enabledAw_false">
+       <property name="text">
+        <string>invZ enabled</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QCheckBox" name="checkBox_transf_function_enabled_false">
+       <property name="text">
+        <string>alternate invC mode</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -268,6 +282,7 @@ Cut off at Z=0 to see the inside.</string>
         <property name="text">
          <string notr="true">&lt;p&gt;inverted sphere z &amp; c- A transform from M3D&lt;/p&gt;&lt;table&gt;
 &lt;tr&gt;&lt;th&gt;Reference&lt;/th&gt;&lt;td&gt;&lt;a href=&quot;http://www.fractalforums.com/mandelbulb-3d/custom-formulas-and-transforms-release-t17106/&quot;&gt;http://www.fractalforums.com/mandelbulb-3d/custom-formulas-and-transforms-release-t17106/&lt;br&gt;
+&lt;a href=&quot;updated v2.12&quot;&gt;updated v2.12&lt;br&gt;
 &lt;/td&gt;&lt;/tr&gt;
 &lt;/table&gt;
 &lt;h3&gt;Code&lt;/h3&gt;</string>
@@ -304,6 +319,8 @@ Cut off at Z=0 to see the inside.</string>
   &lt;span style=&quot;color:#2929cc&quot;&gt;// if (rSqrL &amp;lt; 1e-21) rSqrL = 1e-21;&lt;/span&gt;
   rSqrL &lt;span style=&quot;color:#676767&quot;&gt;=&lt;/span&gt; &lt;span style=&quot;color:#ff1493&quot;&gt;1.0&lt;/span&gt; &lt;span style=&quot;color:#676767&quot;&gt;/&lt;/span&gt; rSqrL&lt;span style=&quot;color:#676767&quot;&gt;;&lt;/span&gt;
   z &lt;span style=&quot;color:#676767&quot;&gt;*=&lt;/span&gt; rSqrL&lt;span style=&quot;color:#676767&quot;&gt;;&lt;/span&gt;
+  aux&lt;span style=&quot;color:#676767&quot;&gt;.&lt;/span&gt;DE &lt;span style=&quot;color:#676767&quot;&gt;*=&lt;/span&gt; rSqrL&lt;span style=&quot;color:#676767&quot;&gt;;&lt;/span&gt;
+  z &lt;span style=&quot;color:#676767&quot;&gt;+=&lt;/span&gt; c&lt;span style=&quot;color:#676767&quot;&gt;;&lt;/span&gt;
 &lt;span style=&quot;color:#676767&quot;&gt;}&lt;/span&gt;
 &lt;/pre&gt;
 &lt;/body&gt;</string>

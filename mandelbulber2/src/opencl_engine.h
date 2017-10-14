@@ -62,16 +62,16 @@ class cOpenClEngine : public QObject
 					optimalProcessingCycle(0.1)
 		{
 		}
-		size_t workGroupSize;
-		size_t workGroupSizeOptimalMultiplier;
-		size_t stepSize;
-		size_t stepSizeX;
-		size_t stepSizeY;
-		size_t workGroupSizeMultiplier;
+		qint64 workGroupSize;
+		qint64 workGroupSizeOptimalMultiplier;
+		qint64 stepSize;
+		qint64 stepSizeX;
+		qint64 stepSizeY;
+		qint64 workGroupSizeMultiplier;
 		QElapsedTimer timer;
 		double lastProcessingTime;
-		size_t sizeOfPixel;
-		size_t jobSizeLimit;
+		qint64 sizeOfPixel;
+		qint64 jobSizeLimit;
 		double optimalProcessingCycle;
 	};
 
@@ -95,7 +95,7 @@ protected:
 	bool Build(const QByteArray &programString, QString *errorText);
 	bool CreateKernel(cl::Program *program);
 	void InitOptimalJob(const cParameterContainer *params);
-	void UpdateOptimalJobStart(int pixelsLeft);
+	void UpdateOptimalJobStart(size_t pixelsLeft);
 	void UpdateOptimalJobEnd();
 	virtual size_t CalcNeededMemory() = 0;
 

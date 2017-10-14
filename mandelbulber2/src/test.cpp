@@ -116,7 +116,7 @@ void Test::renderExamples()
 		QElapsedTimer timer;
 		timer.start();
 		QString filename = it.next();
-		if (!IsBenchmarking()) WriteLogCout("trying file: " + filename, 2);
+		if (!IsBenchmarking()) WriteLogCout("trying file: " + filename + "\n", 2);
 		cSettings parSettings(cSettings::formatFullText);
 		parSettings.BeQuiet(true);
 		parSettings.LoadFromFile(filename);
@@ -141,6 +141,7 @@ void Test::renderExamples()
 
 		WriteLog(
 			QString("example: %1 rendered in %2 Milliseconds").arg(filename).arg(timer.elapsed()), 1);
+		testPar->PrintListOfParameters();
 	}
 
 	delete image;
