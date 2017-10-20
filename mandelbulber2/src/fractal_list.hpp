@@ -170,6 +170,7 @@ enum enumFractalFormula
 	quaternionCubic4d = 124,
 	boxFoldBulbPow2V2 = 125,
 	boxFoldBulbPow2V3 = 126,
+	aboxMod13 = 127,
 
 	// 152 to 172 reserved for scator
 	imaginaryScatorPower2 = 152,
@@ -215,7 +216,7 @@ enum enumFractalFormula
 	transfAddConstant4d = 1039,
 	transfBoxFold4d = 1040,
 	transfIterationWeight4d = 1041, // fixed V2.10
-	transfSphericalFold4d = 1042,// updated V2.11
+	transfSphericalFold4d = 1042,		// updated V2.11
 	transfScale4d = 1043,
 	transfFabsAddConstant4d = 1044,
 	transfFabsAddTgladFold4d = 1045,

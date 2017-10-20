@@ -53,6 +53,7 @@
 #include "rectangle.hpp"
 #include "render_data.hpp"
 #include "render_worker.hpp"
+#include <QtAlgorithms>
 
 // custom includes
 #ifdef USE_OPENCL
@@ -544,6 +545,7 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 		}
 
 		double doneMC = 0.0f;
+		QList<QPoint> tileSequence = calculateOptimalTileSequence(gridWidth + 1, gridHeight + 1);
 
 		for (int monteCarloLoop = 1; monteCarloLoop <= numberOfSamples; monteCarloLoop++)
 		{
@@ -556,14 +558,13 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 
 			qint64 pixelsRendered = 0;
 			qint64 pixelsRenderedMC = 0;
-			qint64 gridX = (gridWidth - 1) / 2;
-			qint64 gridY = gridHeight / 2;
-			int dir = 0;
-			int gridPass = 0;
-			int gridStep = 1;
+			int gridStep = 0;
 
 			while (pixelsRendered < numberOfPixels)
 			{
+				int gridX = tileSequence.at(gridStep).x();
+				int gridY = tileSequence.at(gridStep).y();
+				gridStep++;
 				const qint64 jobX = gridX * optimalJob.stepSizeX;
 				const qint64 jobY = gridY * optimalJob.stepSizeY;
 
@@ -595,6 +596,12 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 						// writing data to queue
 						if (!WriteBuffersToQueue()) return false;
 
+						if (!autoRefreshMode && !monteCarlo)
+						{
+							const QRect currentCorners = SizedRectangle(jobX, jobY, jobWidth2, jobHeight2);
+							MarkCurrentPendingTile(image, currentCorners);
+						}
+
 						// processing queue
 						if (!ProcessQueue(jobX, jobY, pixelsLeftX, pixelsLeftY)) return false;
 
@@ -614,12 +621,6 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 							lastRenderedRects.clear();
 							optimalJob.optimalProcessingCycle = 2.0 * timerImageRefresh.elapsed() / 1000.0;
 							if (optimalJob.optimalProcessingCycle < 0.1) optimalJob.optimalProcessingCycle = 0.1;
-						}
-
-						if (!autoRefreshMode && !monteCarlo)
-						{
-							const QRect currentCorners = SizedRectangle(jobX, jobY, jobWidth2, jobHeight2);
-							MarkCurrentPendingTile(image, currentCorners);
 						}
 
 						if (!ReadBuffersFromQueue()) return false;
@@ -726,49 +727,6 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 						return false;
 					}
 				}
-				// selection of next piece
-				switch (dir)
-				{
-					case 0:
-						gridX++;
-						if (gridStep > gridPass)
-						{
-							gridStep = 0;
-							dir = 1;
-						}
-						break;
-
-					case 1:
-						gridY++;
-						if (gridStep > gridPass)
-						{
-							gridStep = 0;
-							gridPass++;
-							dir = 2;
-						}
-						break;
-
-					case 2:
-						gridX--;
-						if (gridStep > gridPass)
-						{
-							gridStep = 0;
-							dir = 3;
-						}
-						break;
-
-					case 3:
-						gridY--;
-						if (gridStep > gridPass)
-						{
-							gridStep = 0;
-							gridPass++;
-							dir = 0;
-						}
-						break;
-				}
-
-				gridStep++;
 			}
 
 			// update last rectangle
@@ -835,6 +793,38 @@ bool cOpenClEngineRenderFractal::Render(cImage *image, bool *stopRequest, sRende
 	{
 		return false;
 	}
+}
+
+QList<QPoint> cOpenClEngineRenderFractal::calculateOptimalTileSequence(int gridWidth, int gridHeight)
+{
+	QList<QPoint> tiles;
+	for(int i = 0; i < gridWidth * gridHeight; i++)
+	{
+		tiles.append(QPoint(i % gridWidth, i / gridWidth));
+	}
+	using namespace std::placeholders;
+	qSort(tiles.begin(), tiles.end(),
+				std::bind(cOpenClEngineRenderFractal::sortByCenterDistanceAsc, _1, _2, gridWidth, gridHeight));
+	return tiles;
+}
+
+bool cOpenClEngineRenderFractal::sortByCenterDistanceAsc(const QPoint &v1, const QPoint &v2, int gridWidth, int gridHeight)
+{
+	// choose the tile with the lower distance to the center
+	QPoint center;
+	center.setX((gridWidth - 1) / 2);
+	center.setY((gridHeight - 1) / 2);
+	QPoint cV1 = center - v1;
+	QPoint cV2 = center - v2;
+	double dist2V1 = cV1.x() * cV1.x() + cV1.y() * cV1.y();
+	double dist2V2 = cV2.x() * cV2.x() + cV2.y() * cV2.y();
+	if(dist2V1 != dist2V2) return dist2V1 < dist2V2;
+
+	// order tiles with same distsance clockwise
+	int quartV1 = cV1.x() > 0 ? (cV1.y() > 0 ? 1 : 0) : (cV1.y() > 0 ? 2 : 3);
+	int quartV2 = cV2.x() > 0 ? (cV2.y() > 0 ? 1 : 0) : (cV2.y() > 0 ? 2 : 3);
+	if(quartV1 != quartV2) return quartV1 < quartV2;
+	return quartV1 < 2 ? v1.y() >= v2.y() : v1.y() < v2.y();
 }
 
 void cOpenClEngineRenderFractal::MarkCurrentPendingTile(cImage *image, QRect corners)
