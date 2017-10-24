@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>box_fold_bulb_pow2_v3</class>
+ <class>Form</class>
  <widget class="QWidget" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>810</width>
-    <height>2762</height>
+    <width>916</width>
+    <height>5162</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1023,7 +1023,7 @@ offset:</string>
     </widget>
    </item>
    <item>
-    <widget class="MyGroupBox" name="groupCheck_transf_function_enabledx_false">
+    <widget class="MyGroupBox" name="groupCheck_transf_function_enabledX_false">
      <property name="toolTip">
       <string/>
      </property>
@@ -2856,34 +2856,6 @@ offset:</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="2">
-      <widget class="MyDoubleSpinBox" name="spinbox_transf_scale_2">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="prefix">
-        <string/>
-       </property>
-       <property name="suffix">
-        <string/>
-       </property>
-       <property name="decimals">
-        <number>6</number>
-       </property>
-       <property name="minimum">
-        <double>0.000000000000000</double>
-       </property>
-       <property name="maximum">
-        <double>99.998999999999995</double>
-       </property>
-       <property name="singleStep">
-        <double>0.100000000000000</double>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="2">
       <widget class="MyDoubleSpinBox" name="spinbox_boxfold_bulbpow2_z_factor">
        <property name="sizePolicy">
@@ -2912,25 +2884,6 @@ offset:</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QSlider" name="slider_transf_scale_2">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximum">
-        <number>20000000</number>
-       </property>
-       <property name="singleStep">
-        <number>1</number>
-       </property>
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-      </widget>
-     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_8">
        <property name="text">
@@ -2938,14 +2891,14 @@ offset:</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QCheckBox" name="checkBox_analyticDE_enabled_false">
-       <property name="text">
-        <string>enable test</string>
-       </property>
-      </widget>
-     </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="checkBox_analyticDE_enabled_false">
+     <property name="text">
+      <string>enable Analytic Logrithmic DE mode2</string>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QGridLayout" name="gridLayout_26">
@@ -3688,8 +3641,6 @@ offset:</string>
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>slider_transf_scale_2</tabstop>
-  <tabstop>spinbox_transf_scale_2</tabstop>
   <tabstop>slider_boxfold_bulbpow2_z_factor</tabstop>
   <tabstop>spinbox_boxfold_bulbpow2_z_factor</tabstop>
   <tabstop>groupCheck_info</tabstop>
