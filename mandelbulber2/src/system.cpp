@@ -255,6 +255,7 @@ bool CreateDefaultFolders()
 	result &= CreateFolder(systemData.GetImagesFolder());
 	result &= CreateFolder(systemData.GetThumbnailsFolder());
 	result &= CreateFolder(systemData.GetToolbarFolder());
+	result &= CreateFolder(systemData.GetHttpCacheFolder());
 	result &= CreateFolder(systemData.GetCustomWindowStateFolder());
 	result &= CreateFolder(systemData.GetSettingsFolder());
 	result &= CreateFolder(systemData.GetSlicesFolder());
@@ -549,6 +550,14 @@ void UpdateUISkin()
 			colorBackground1 = QColor(10, 10, 40);
 			colorBackground2 = QColor(20, 20, 60);
 			colorText1 = QColor(50, 150, 255);
+			colorText2 = Qt::black;
+			break;
+		case 7: // Nasa Font dark brown
+			QFontDatabase::addApplicationFont(":/fonts/fonts/nasalization-rg.ttf");
+			gApplication->setFont(QFont("nasalization"));
+			colorBackground1 = QColor(40, 10, 10);
+			colorBackground2 = QColor(60, 20, 20);
+			colorText1 = QColor(255, 150, 50);
 			colorText2 = Qt::black;
 			break;
 		default: // normal skin

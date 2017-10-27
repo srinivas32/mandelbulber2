@@ -1779,6 +1779,7 @@ void AexionOctopusModIteration(CVector4 &z, const sFractal *fractal, sExtendedAu
 	tempN.x = z.x * z.z * fractal->transformCommon.scale3D111.x;
 	tempN.y = (z.x * z.x - z.z * z.z) * fractal->transformCommon.scale3D111.y;
 	tempN.z = z.y;
+	tempN.w = z.w;
 
 	if (fractal->transformCommon.functionEnabledAx) tempN.x = fabs(tempN.x);
 	if (fractal->transformCommon.functionEnabledAy) tempN.y = fabs(tempN.y);
@@ -3106,8 +3107,7 @@ void BoxFoldQuatIteration(CVector4 &z, const sFractal *fractal, sExtendedAux &au
 
 		if (fractal->analyticDE.enabledFalse)
 		{
-			aux.r_dz =  aux.r_dz  * fractal->analyticDE.scale1
-								 + fractal->analyticDE.offset1;
+			aux.r_dz = aux.r_dz * fractal->analyticDE.scale1 + fractal->analyticDE.offset1;
 		}
 		z = CVector4(z.x * z.x - z.y * z.y - z.z * z.z, z.x * z.y, z.x * z.z, z.w);
 
@@ -3142,9 +3142,9 @@ void CollatzIteration(CVector4 &z, const sFractal *fractal, sExtendedAux &aux)
 	Q_UNUSED(fractal);
 
 	CVector4 xV = CVector4(1.0, 1.0, 1.0, 0.0);
-	CVector4 temp = CVector4(xV + 2.0 * z);
+	CVector4 temp = xV + z * 2.0;
 	temp *= z.RotateAroundVectorByAngle(xV.GetXYZ(), M_PI);
-	z = xV + 4.0 * z - temp;
+	z = xV + z * 4.0 - temp;
 	z /= 4.0;
 	aux.DE = aux.DE * 4.0 + 1.0;
 	aux.r_dz *= 4.0;
@@ -12225,7 +12225,7 @@ void TestingIteration(CVector4 &z, const sFractal *fractal, sExtendedAux &aux)
 			double tempAux = aux.r_dz * avgScale;
 			aux.r_dz = aux.r_dz + (tempAux - aux.r_dz) * fractal->transformCommon.scaleA1;
 
-			//if (fractal->transformCommon.rotationEnabled)
+			// if (fractal->transformCommon.rotationEnabled)
 			//	z = fractal->transformCommon.rotationMatrix.RotateVector(z);
 
 			z += fractal->transformCommon.additionConstant000;

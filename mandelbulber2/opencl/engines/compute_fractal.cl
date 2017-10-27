@@ -99,11 +99,16 @@ formulaOut Fractal(__constant sClInConstants *consts, float3 point, sClCalcParam
 
 	if (calcParam->normalCalculationMode) N *= 5;
 
+	// repeat, move and rotate
+	float3 point2 =
+		modRepeat(point, consts->params.common.repeat) - consts->params.common.fractalPosition;
+	point2 = Matrix33MulFloat3(consts->params.common.mRotFractalRotation, point2);
+
 	float4 z;
-	z.x = point.x;
-	z.y = point.y;
-	z.z = point.z;
-	z.w = 0.0f;
+	z.x = point2.x;
+	z.y = point2.y;
+	z.z = point2.z;
+	z.w = consts->sequence.initialWAxis[0];
 
 	float w = 0;
 
@@ -321,7 +326,7 @@ formulaOut Fractal(__constant sClInConstants *consts, float3 point, sClCalcParam
 				case clColoringFunctionABox2:
 					out.colorIndex = aux.color * 100.0f * aux.foldFactor
 													 + aux.r * fractal->mandelbox.color.factorR / 1e13f
-													 + aux.scaleFactor * r2 * 5000.0f + aux.minRFactor * 1000.0f;
+													 + aux.scaleFactor * r2 * 5000.0f + colorMin * aux.minRFactor * 1000.0f;
 					break;
 				case clColoringFunctionDonut: out.colorIndex = aux.color * 2000.0f / i; break;
 				case clColoringFunctionDefault: out.colorIndex = colorMin * 5000.0f; break;
@@ -332,7 +337,7 @@ formulaOut Fractal(__constant sClInConstants *consts, float3 point, sClCalcParam
 	// end
 	if (dist < 0.0f) dist = 0.0f;
 	out.distance = dist;
-	out.iters = i;
+	out.iters = i + 1;
 	out.z = z;
 
 	return out;
