@@ -1,5 +1,9 @@
 Version history
 
+v2.12-1 (December 2017)
+- OpenCL: fixed bug in shader for auxiliary light sources. There was wrong color of specular reflections
+- Documentation: Added missing chapter about OpenCL
+
 v2.12 (November 2017)
 - OpenCL: Added listing of available OpenCL platforms and devices
 - OpenCL: Added querying of OpenCL platforms and devices properties
