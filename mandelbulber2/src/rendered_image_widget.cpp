@@ -201,7 +201,7 @@ void RenderedImage::DisplayCoordinates()
 		case clickDOFFocus: text = tr("Change DOF focus"); break;
 		case clickPlaceLight:
 			text = tr("Place light #") + QString::number(clickModeData.at(1).toInt());
-			text += tr("\nMouse wheel - light fov / bkw");
+			text += tr("\nCtrl + Mouse wheel - light fov / bkw");
 			break;
 		case clickPlacePrimitive:
 			text = tr("Place ") + PrimitiveNames(fractal::enumObjectType(clickModeData.at(1).toInt()))
@@ -214,7 +214,7 @@ void RenderedImage::DisplayCoordinates()
 			text += tr("\narrow keys - sidewards");
 			text += tr("\nz, x keys - roll");
 			text += tr("\nspacebar - pause");
-			text += tr("\nhold shift key - orthogonal strafe");
+			text += tr("\nhold shift key - orthogonal sidewards");
 			break;
 		case clickDoNothing: text = ""; break;
 		case clickPlaceRandomLightCenter:
