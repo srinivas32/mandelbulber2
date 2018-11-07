@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -90,7 +90,7 @@ PreviewFileDialog::PreviewFileDialog(QWidget *parent) : QFileDialog(parent)
 	vBoxLayout->addStretch();
 
 	// add to existing layout
-	QGridLayout *gridLayout = static_cast<QGridLayout *>(this->layout());
+	QGridLayout *gridLayout = static_cast<QGridLayout *>(layout());
 	gridLayout->addLayout(vBoxLayout, 1, 3, 3, 1);
 
 	connect(
@@ -188,13 +188,14 @@ void PreviewFileDialog::OnCurrentChanged(const QString &_filename)
 }
 
 void PreviewFileDialog::slotUpdateProgressAndStatus(
-	const QString &text, const QString &progressText, double progress) const
+	const QString &text, const QString &progressText, double progress)
 {
 	info->setText(text);
 	if (!progressBar->isVisible()) progressBar->setVisible(true);
 	progressBar->setValue(progress * 1000.0);
 	progressBar->setTextVisible(true);
 	progressBar->setFormat(progressText);
+	update();
 }
 
 void PreviewFileDialog::slotHideProgressBar() const

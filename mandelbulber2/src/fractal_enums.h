@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -43,21 +43,26 @@ enum enumDEMethod
 {
 	preferredDEMethod = 0,
 	forceDeltaDEMethod = 1,
+	forceAnalyticDE = 2
 };
 
 enum enumDEFunctionType
 {
+	undefinedDEFunction = -1,
 	preferredDEFunction = 0,
 	linearDEFunction = 1,
 	logarithmicDEFunction = 2,
 	pseudoKleinianDEFunction = 3,
 	josKleinianDEFunction = 4,
+	// testingDEFunction = 5,
 	numberOfDEFunctions = 4, // used to prepare array
+	// numberOfDEFunctions = 5, // used to prepare array
 	withoutDEFunction = 99
 };
 
 enum enumCPixelAddition
 {
+	cpixelUndefined = -1,
 	cpixelEnabledByDefault = 0,
 	cpixelDisabledByDefault = 1,
 	cpixelAlreadyHas = 2
@@ -65,12 +70,14 @@ enum enumCPixelAddition
 
 enum enumDEType
 {
-	analyticDEType,
-	deltaDEType
+	undefinedDEType = -1,
+	analyticDEType = 0,
+	deltaDEType = 1
 };
 
-enum enumDEAnalyticFunction
+enum enumDEAnalyticFunction // DE function for non hybrid fractals
 {
+	analyticFunctionUndefined = -1,
 	analyticFunctionNone = 0,
 	analyticFunctionLinear = 1,
 	analyticFunctionLogarithmic = 2,
@@ -81,12 +88,13 @@ enum enumDEAnalyticFunction
 
 enum enumColoringFunction
 {
+	coloringFunctionUndefined = -1,
 	coloringFunctionDefault = 0,
 	coloringFunctionABox = 1,
 	coloringFunctionIFS = 2,
 	coloringFunctionAmazingSurf = 3,
-	coloringFunctionABox2 = 4,
-	coloringFunctionDonut = 5,
+	// coloringFunctionABox2 = 4, V2.14 removed
+	coloringFunctionDonut = 4,
 };
 };
 

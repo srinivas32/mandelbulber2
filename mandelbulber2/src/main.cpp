@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -143,10 +143,13 @@ int main(int argc, char *argv[])
 	gNetRender = new CNetRender(systemData.numberOfThreads);
 
 	// loading AppSettings
-	if (QFile(systemData.GetIniFile()).exists())
+	QString iniFileName = systemData.GetIniFile();
+	if (QFile(iniFileName).exists())
 	{
+		QTextStream out(stdout);
+		out << "Settings file: " << iniFileName << endl;
 		cSettings parSettings(cSettings::formatAppSettings);
-		parSettings.LoadFromFile(systemData.GetIniFile());
+		parSettings.LoadFromFile(iniFileName);
 		parSettings.Decode(gPar, gParFractal);
 	}
 
@@ -200,10 +203,14 @@ int main(int argc, char *argv[])
 		dataFoldersUpdated = gMainInterface->DataFolderUpgrade();
 		gMainInterface->AutoRecovery();
 		gMainInterface->InitPeriodicRefresh();
-		gMainInterface->mainWindow->slotPopulateToolbar();
 	}
 
 	gInterfaceReadyForSynchronization = true;
+
+	if (!commandLineInterface.isNoGUI())
+	{
+		gMainInterface->mainWindow->slotPopulateToolbar();
+	}
 
 	commandLineInterface.ProcessCLI();
 

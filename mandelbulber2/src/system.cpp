@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,12 +34,12 @@
 
 #include "system.hpp"
 
-#include <locale.h>
 #include <qstylefactory.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
+#include <clocale>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <iostream>
 
@@ -53,9 +53,12 @@
 
 // custom includes
 #ifndef _WIN32
-#include <signal.h>
+#include <csignal>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#endif
+#if defined(__APPLE__) || defined(__MACOSX)
+#include "CoreFoundation/CoreFoundation.h"
 #endif
 
 //#define CLSUPPORT
@@ -81,10 +84,21 @@ bool InitSystem()
 		QDir::toNativeSeparators(QDir::currentPath() + QDir::separator() + "doc" + QDir::separator());
 #elif SHARED_DIR_IS_APP_DIR
 	/* used for AppImage, which requires fixed data bundled at same location, as the application */
-	systemData.sharedDir = QDir::toNativeSeparators(QDir::currentPath() + QDir::separator());
-	systemData.docDir =
-		QDir::toNativeSeparators(QDir::currentPath() + QDir::separator() + "doc" + QDir::separator());
+	QString sharePath;
+#if defined(__APPLE__) || defined(__MACOSX)
+	CFURLRef appUrlRef = CFBundleCopyBundleURL(CFBundleGetMainBundle());
+	CFStringRef macPath = CFURLCopyFileSystemPath(appUrlRef, kCFURLPOSIXPathStyle);
+	sharePath = QString::fromCFString(macPath);
+	CFRelease(appUrlRef);
+	CFRelease(macPath);
+#else
+	sharePath = QDir::currentPath();
+#endif
+	out << "sharePath directory: " << sharePath << endl;
 
+	systemData.sharedDir = QDir::toNativeSeparators(sharePath + QDir::separator());
+	systemData.docDir =
+		QDir::toNativeSeparators(sharePath + QDir::separator() + "doc" + QDir::separator());
 #else
 	systemData.sharedDir = QDir::toNativeSeparators(QString(SHARED_DIR) + QDir::separator());
 	systemData.docDir = QDir::toNativeSeparators(QString(SHARED_DOC_DIR) + QDir::separator());
@@ -151,12 +165,10 @@ bool InitSystem()
 
 	// get number of columns of console
 	systemData.terminalWidth = 80;
-
 	systemData.loggingVerbosity = 3;
-
 	systemData.settingsLoadedFromCLI = false;
-
 	systemData.globalStopRequest = false;
+	systemData.isOutputTty = IsOutputTty();
 
 #ifndef WIN32
 	handle_winch(-1);
@@ -174,6 +186,8 @@ void handle_winch(int sig)
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 	systemData.terminalWidth = w.ws_col;
 	if (systemData.terminalWidth <= 0) systemData.terminalWidth = 80;
+	if (systemData.terminalWidth >= 150) systemData.terminalWidth = 150;
+	if (!systemData.isOutputTty) systemData.terminalWidth = 80;
 	signal(SIGWINCH, handle_winch);
 #endif
 }
@@ -220,7 +234,7 @@ void WriteLog(QString text, int verbosityLevel)
 		// write to log in window
 		if (gMainInterface && gMainInterface->mainWindow != nullptr)
 		{
-			gMainInterface->mainWindow->AppendToLog(logText);
+			emit gMainInterface->mainWindow->AppendToLog(logText);
 		}
 	}
 }
@@ -362,12 +376,9 @@ int fcopy(QString source, QString dest)
 {
 	// ------ file reading
 
-	FILE *pFile;
-	long int lSize;
 	char *buffer;
-	size_t result;
 
-	pFile = fopen(source.toLocal8Bit().constData(), "rb");
+	FILE *pFile = fopen(source.toLocal8Bit().constData(), "rb");
 	if (pFile == nullptr)
 	{
 		qCritical() << "Can't open source file for copying: " << source << endl;
@@ -377,7 +388,7 @@ int fcopy(QString source, QString dest)
 
 	// obtain file size:
 	fseek(pFile, 0, SEEK_END);
-	lSize = ftell(pFile);
+	const long int lSize = ftell(pFile);
 	rewind(pFile);
 
 	// allocate memory to contain the whole file:
@@ -386,7 +397,7 @@ int fcopy(QString source, QString dest)
 		buffer = new char[lSize];
 
 		// copy the file into the buffer:
-		result = fread(buffer, 1, lSize, pFile);
+		const size_t result = fread(buffer, 1, lSize, pFile);
 		if (result != size_t(lSize))
 		{
 			qCritical() << "Can't read source file for copying: " << source << endl;
@@ -464,6 +475,7 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
 				context.line, context.function);
 			text = QString("Fatal: ") + QString(localMsg.constData()) + " (" + context.file + ":"
 						 + QString::number(context.line) + ", " + context.function;
+			abort();
 			break;
 	}
 	WriteLog(text, 1);
@@ -677,13 +689,13 @@ void CalcPreferredFontSize(bool noGui)
 {
 	if (!noGui)
 	{
-		int fontSize = gApplication->font().pointSizeF();
+		const int fontSize = gApplication->font().pointSizeF();
 		systemData.SetPreferredFontPointSize(fontSize);
 
 		QFontMetrics fm(gApplication->font());
-		int pixelFontSize = fm.height();
+		const int pixelFontSize = fm.height();
 
-		int thumbnailSize = (pixelFontSize * 8);
+		const int thumbnailSize = (pixelFontSize * 8);
 		systemData.SetPreferredThumbnailSize(thumbnailSize);
 	}
 	else
@@ -692,4 +704,46 @@ void CalcPreferredFontSize(bool noGui)
 		systemData.SetPreferredFontSize(10);
 		systemData.SetPreferredThumbnailSize(80);
 	}
+}
+
+QString sSystem::GetIniFile() const
+{
+	double version = MANDELBULBER_VERSION;
+	int versionInt = int(version * 100);
+
+	QString iniFileName = QString("mandelbulber_%1.ini").arg(versionInt);
+	QString fullIniFileName = dataDirectoryHidden + iniFileName;
+
+	// if setting file doesn't exist then look for older files
+	if (!QFile::exists(fullIniFileName))
+	{
+		QString tempFileName;
+		for (int ver = versionInt; ver >= 212; ver--)
+		{
+			if (ver == 212)
+			{
+				tempFileName = QString("mandelbulber.ini");
+			}
+			else
+			{
+				tempFileName = QString("mandelbulber_%1.ini").arg(ver);
+			}
+
+			if (QFile::exists(dataDirectoryHidden + tempFileName))
+			{
+				fcopy(dataDirectoryHidden + tempFileName, fullIniFileName);
+				WriteLogString("Found older settings file", dataDirectoryHidden + tempFileName, 1);
+			}
+		}
+	}
+	return fullIniFileName;
+}
+
+bool IsOutputTty()
+{
+#ifdef _WIN32 /* WINDOWS */
+	return false;
+#else
+	return isatty(fileno(stdout));
+#endif
 }

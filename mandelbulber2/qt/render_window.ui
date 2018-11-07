@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1030</width>
-    <height>1008</height>
+    <width>1422</width>
+    <height>1040</height>
    </rect>
   </property>
   <property name="font">
@@ -77,8 +77,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>810</width>
-            <height>735</height>
+            <width>959</width>
+            <height>783</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="scrollAreaLayoutRenderedImage">
@@ -292,7 +292,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1030</width>
+     <width>1422</width>
      <height>23</height>
     </rect>
    </property>
@@ -313,7 +313,7 @@
     </property>
     <widget class="QMenu" name="menuRecent_Settings_list">
      <property name="title">
-      <string>Recent settings...</string>
+      <string>&amp;Recent settings...</string>
      </property>
      <property name="icon">
       <iconset theme="document-open" resource="icons.qrc">
@@ -387,6 +387,7 @@
     </property>
     <addaction name="actionUser_Manual"/>
     <addaction name="actionUser_News"/>
+    <addaction name="actionUser_HotKeys"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -451,8 +452,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>66</width>
-          <height>114</height>
+          <width>84</width>
+          <height>130</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_19">
@@ -472,7 +473,7 @@
           <number>2</number>
          </property>
          <item>
-          <widget class="cDockImageAdjustments" name="widgetImageAjustments" native="true"/>
+          <widget class="cDockImageAdjustments" name="widgetImageAdjustments" native="true"/>
          </item>
         </layout>
        </widget>
@@ -566,8 +567,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>66</width>
-          <height>114</height>
+          <width>84</width>
+          <height>132</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_26">
@@ -601,7 +602,7 @@
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <property name="windowTitle">
-    <string>Objects</string>
+    <string>Ob&amp;jects</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -633,8 +634,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>66</width>
-          <height>112</height>
+          <width>84</width>
+          <height>132</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_59">
@@ -700,8 +701,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>66</width>
-          <height>114</height>
+          <width>84</width>
+          <height>132</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_46">
@@ -831,7 +832,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_queue_dock">
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Queue tool allows for rendering a collection of settings files in the background.&lt;/p&gt;&lt;p&gt;While the list of settings files is being rendered, you can continue to work in the main window and also add more settings to the queue.&lt;/p&gt;&lt;p&gt;Methods to manage queue:&lt;br/&gt;- by adding items using &lt;span style=&quot; font-style:italic;&quot;&gt;Add current settings&lt;/span&gt; button&lt;br/&gt;- by editing queue.fractlist file&lt;br/&gt;- by puting files into queue folder and use button &lt;span style=&quot; font-style:italic;&quot;&gt;Add orphaned&lt;br/&gt;&lt;/span&gt;- by adding single settings or lists using command line interface&lt;/p&gt;&lt;p&gt;Temporary settings files are stored in $HOME/.mandelbulber/queue folder and the list is in $HOME/.mandelbulber/queue.fractlist&lt;/p&gt;&lt;p&gt;The queue can be rendered in another instance of Mandelbulber program, as the queue is shared between applications. You can also launch another Mandelbulber from command line interface with -q option. Then this application will watch queue and render automatically all new items.&lt;/p&gt;&lt;p&gt;Result images are saved into $HOME/.mandelbulber/images directory (or another if it's specified in application preferences.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Queue tool allows for rendering a collection of settings files in the background.&lt;/p&gt;&lt;p&gt;While the list of settings files is being rendered, you can continue to work in the main window and also add more settings to the queue.&lt;/p&gt;&lt;p&gt;Methods to manage queue:&lt;br/&gt;- by adding items using &lt;span style=&quot; font-style:italic;&quot;&gt;Add current settings&lt;/span&gt; button&lt;br/&gt;- by editing queue.fractlist file&lt;br/&gt;- by putting files into queue folder and use button &lt;span style=&quot; font-style:italic;&quot;&gt;Add orphaned&lt;br/&gt;&lt;/span&gt;- by adding single settings or lists using command line interface&lt;/p&gt;&lt;p&gt;Temporary settings files are stored in $HOME/.mandelbulber/queue folder and the list is in $HOME/.mandelbulber/queue.fractlist&lt;/p&gt;&lt;p&gt;The queue can be rendered in another instance of Mandelbulber program, as the queue is shared between applications. You can also launch another Mandelbulber from command line interface with -q option. Then this application will watch queue and render automatically all new items.&lt;/p&gt;&lt;p&gt;Result images are saved into $HOME/.mandelbulber/images directory (or another if it's specified in application preferences.)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="floating">
     <bool>false</bool>
@@ -869,8 +870,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>197</width>
-          <height>70</height>
+          <width>320</width>
+          <height>84</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_93">
@@ -927,7 +928,38 @@
       <number>2</number>
      </property>
      <item>
-      <widget class="cDockMeasurements" name="widgetDockMeasurements" native="true"/>
+      <widget class="QScrollArea" name="scrollArea_4">
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="scrollAreaWidgetContents_7">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>326</width>
+          <height>130</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_4">
+         <property name="leftMargin">
+          <number>2</number>
+         </property>
+         <property name="topMargin">
+          <number>2</number>
+         </property>
+         <property name="rightMargin">
+          <number>2</number>
+         </property>
+         <property name="bottomMargin">
+          <number>2</number>
+         </property>
+         <item>
+          <widget class="cDockMeasurements" name="widgetDockMeasurements" native="true"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -937,7 +969,7 @@
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
    </property>
    <property name="windowTitle">
-    <string>Material editor</string>
+    <string>Ma&amp;terial editor</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -966,8 +998,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>66</width>
-          <height>114</height>
+          <width>84</width>
+          <height>130</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_materials">
@@ -1045,8 +1077,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>78</width>
-          <height>374</height>
+          <width>318</width>
+          <height>466</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_94">
@@ -1171,7 +1203,7 @@
     <string>Save settings in selected file</string>
    </property>
    <property name="shortcut">
-    <string notr="true">Shift+Ctrl+S</string>
+    <string notr="true">Ctrl+Shift+S</string>
    </property>
   </action>
   <action name="actionProgramPreferences">
@@ -1466,7 +1498,19 @@
      <normaloff>:/system/icons/dialog-information.svg</normaloff>:/system/icons/dialog-information.svg</iconset>
    </property>
    <property name="text">
-    <string>News</string>
+    <string>&amp;News</string>
+   </property>
+  </action>
+  <action name="actionUser_HotKeys">
+   <property name="icon">
+    <iconset theme="dialog-information" resource="icons.qrc">
+     <normaloff>:/system/icons/dialog-information.svg</normaloff>:/system/icons/dialog-information.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;HotKeys</string>
+   </property>
+   <property name="shortcut">
+    <string notr="true">Alt+H</string>
    </property>
   </action>
   <action name="actionDetach_image_from_main_window">

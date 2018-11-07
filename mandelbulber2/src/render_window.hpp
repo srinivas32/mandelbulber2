@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -71,7 +71,7 @@ class RenderWindow : public QMainWindow
 
 public:
 	explicit RenderWindow(QWidget *parent = nullptr);
-	~RenderWindow();
+	~RenderWindow() override;
 
 	// Getters for UI elements
 	cDockAnimation *GetWidgetDockAnimation() const;
@@ -106,6 +106,7 @@ private slots:
 	void slotChangedComboGridType(int index);
 
 	void slotPressedButtonDeletePrimitive() const;
+	void slotPressedButtonAlignPrimitiveAngle() const;
 
 	void slotPressedButtonSetPositionPrimitive() const;
 	void slotResizedScrolledAreaImage(int width, int height) const;
@@ -133,6 +134,7 @@ private slots:
 	void slotMenuAboutQt();
 	void slotMenuAboutManual();
 	void slotMenuAboutNews();
+	void slotMenuAboutHotKeys();
 	void slotMenuAboutThirdParty();
 	void showDescriptionPopup();
 	void slotMenuLoadExample();
@@ -175,9 +177,11 @@ private slots:
 	// rendered image widget
 	static void slotMouseMovedOnImage(int x, int y);
 	void slotMouseClickOnImage(int x, int y, Qt::MouseButton button) const;
-	static void slotKeyPressOnImage(QKeyEvent *event);
-	static void slotKeyReleaseOnImage(QKeyEvent *event);
-	void slotMouseWheelRotatedOnImage(int delta) const;
+	void slotKeyPressOnImage(QKeyEvent *event);
+	void slotKeyReleaseOnImage(QKeyEvent *event);
+	void slotButtonLongPress();
+	void slotKeyHandle();
+	void slotMouseWheelRotatedWithCtrlOnImage(int x, int y, int delta) const;
 
 private:
 	Ui::RenderWindow *ui;
@@ -188,6 +192,9 @@ private:
 
 	QByteArray defaultGeometry;
 	QByteArray defaultState;
+	QTimer *buttonPressTimer;
+	QList<int> currentKeyEvents;
+	Qt::KeyboardModifiers lastKeyEventModifiers;
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);

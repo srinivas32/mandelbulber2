@@ -1,12 +1,12 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
  * see also COPYING file in this folder.    ~+{i%+++
  *
- * scale vary multi- based on DarkBeams maths
+ * scale vary multi- based on DarkBeam's maths
  * @reference
  * http://www.fractalforums.com/mandelbulb-3d/custom-formulas-and-transforms-release-t17106/
 
@@ -66,13 +66,11 @@ REAL4 TransfScaleVaryMultiIteration(REAL4 z, __constant sFractalCl *fractal, sEx
 		}
 		z *= temp;
 		aux->DE = mad(aux->DE, fabs(temp), 1.0f);
-		aux->r_dz *= fabs(temp);
 	}
 	else if (aux->i < fractal->transformCommon.startIterations)
 	{
 		z *= fractal->transformCommon.scaleMain2;
 		aux->DE = mad(aux->DE, fabs(fractal->transformCommon.scaleMain2), 1.0f);
-		aux->r_dz *= fabs(fractal->transformCommon.scaleMain2);
 	}
 	else
 	{
@@ -82,7 +80,6 @@ REAL4 TransfScaleVaryMultiIteration(REAL4 z, __constant sFractalCl *fractal, sEx
 		}
 		z *= aux->actualScaleA;
 		aux->DE = mad(aux->DE, fabs(aux->actualScaleA), 1.0f);
-		aux->r_dz *= fabs(aux->actualScaleA);
 	}
 	return z;
 }

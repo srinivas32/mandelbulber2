@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -77,7 +77,7 @@ void cFileDownloader::downloadFileList()
 	}
 
 	emit updateProgressAndStatus(
-		tr("File downloader"), tr("finished, downloaded %1 files").arg(this->cntFilesDownloaded), 1.0);
+		tr("File downloader"), tr("finished, downloaded %1 files").arg(cntFilesDownloaded), 1.0);
 }
 
 void cFileDownloader::fileListDownloaded()
@@ -91,26 +91,26 @@ void cFileDownloader::fileListDownloaded()
 	{
 		QString temp = tempList.at(i).trimmed();
 		if (temp == "" || temp.startsWith("#")) continue;
-		if (QFile::exists(this->targetDir + QDir::separator() + temp))
+		if (QFile::exists(targetDir + QDir::separator() + temp))
 		{
-			this->cntFilesAlreadyExists++;
+			cntFilesAlreadyExists++;
 			continue;
 		}
-		this->cntFilesToDownload++;
-		this->filesToDownload.append(temp);
+		cntFilesToDownload++;
+		filesToDownload.append(temp);
 	}
 
 	// process all files to download
-	for (int i = 0; i < this->filesToDownload.size(); i++)
+	for (int i = 0; i < filesToDownload.size(); i++)
 	{
-		QString file = this->filesToDownload.at(i);
+		QString file = filesToDownload.at(i);
 		QNetworkReply *replyFile = network->get(QNetworkRequest(QUrl(sourceBaseURL + "/" + file)));
 		if (tempFile)
 		{
 			delete tempFile;
 			tempFile = nullptr;
 		}
-		tempFile = new QFile(this->targetDir + QDir::separator() + file);
+		tempFile = new QFile(targetDir + QDir::separator() + file);
 		if (!tempFile->open(QIODevice::WriteOnly))
 		{
 			qCritical() << "could not open file for writing!";
@@ -136,13 +136,13 @@ void cFileDownloader::fileDownloaded()
 	tempFile->write(reply->readAll());
 	tempFile->flush();
 	tempFile->close();
-	this->cntFilesDownloaded++;
+	cntFilesDownloaded++;
 	QFileInfo fileInfo(tempFile->fileName());
 
 	emit updateProgressAndStatus(tr("File downloader"),
 		tr("file %1 downloaded, %2 of %3")
-			.arg(fileInfo.fileName(), QString::number(this->cntFilesDownloaded),
-				QString::number(this->cntFilesToDownload)),
-		1.0 * this->cntFilesDownloaded / this->cntFilesToDownload);
+			.arg(fileInfo.fileName(), QString::number(cntFilesDownloaded),
+				QString::number(cntFilesToDownload)),
+		1.0 * cntFilesDownloaded / cntFilesToDownload);
 	currentFileFinished = true;
 }

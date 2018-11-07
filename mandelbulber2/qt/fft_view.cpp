@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -56,7 +56,7 @@ cFFTView::~cFFTView()
 	// nothing needed here
 }
 
-void cFFTView::AssignAudioTrack(const cAudioTrack *audiotrack)
+void cFFTView::AssignAudioTrack(const QSharedPointer<cAudioTrack> audiotrack)
 {
 
 	if (audiotrack && audiotrack->isLoaded())
@@ -65,7 +65,7 @@ void cFFTView::AssignAudioTrack(const cAudioTrack *audiotrack)
 		framesPerSecond = audiotrack->getFramesPerSecond();
 		sampleRate = audiotrack->getSampleRate();
 
-		this->setFixedWidth(numberOfFrames);
+		setFixedWidth(numberOfFrames);
 
 		const int height = cAudioFFTData::fftSize / 2;
 
@@ -98,7 +98,7 @@ void cFFTView::AssignAudioTrack(const cAudioTrack *audiotrack)
 		QPainter painter(&fftImage);
 		painter.setRenderHint(QPainter::SmoothPixmapTransform);
 		scaledFftImage =
-			fftImage.scaled(this->width(), height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+			fftImage.scaled(width(), height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 		update();
 		WriteLog("FFTView created", 2);
 	}

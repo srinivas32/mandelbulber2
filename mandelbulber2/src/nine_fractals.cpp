@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -161,16 +161,17 @@ cNineFractals::cNineFractals(const cFractalContainer *par, const cParameterConta
 	// common bailout for all hybrid components
 	if (isHybrid && useDefaultBailout)
 	{
-		for (int i = 0; i < NUMBER_OF_FRACTALS; i++)
+		for (double &bailoutIt : bailout)
 		{
-			bailout[i] = maxBailout;
+			bailoutIt = maxBailout;
 		}
 	}
 
-	if (fractal::enumDEMethod(generalPar->Get<int>("delta_DE_method")) == fractal::forceDeltaDEMethod)
-		forceDeltaDE = true;
-	else
-		forceDeltaDE = false;
+	forceDeltaDE =
+		fractal::enumDEMethod(generalPar->Get<int>("delta_DE_method")) == fractal::forceDeltaDEMethod;
+
+	forceAnalyticDE =
+		fractal::enumDEMethod(generalPar->Get<int>("delta_DE_method")) == fractal::forceAnalyticDE;
 
 	optimizedDEType = fractal::withoutDEFunction;
 	useOptimizedDE = false;
@@ -181,7 +182,9 @@ cNineFractals::cNineFractals(const cFractalContainer *par, const cParameterConta
 
 	if (isHybrid || forceDeltaDE)
 	{
-		DEType[0] = fractal::deltaDEType;
+		DEType[0] = fractal::analyticDEType;
+		useOptimizedDE = true;
+
 		if (fractal::enumDEFunctionType(generalPar->Get<int>("delta_DE_function"))
 				== fractal::preferredDEFunction)
 		{
@@ -214,10 +217,11 @@ cNineFractals::cNineFractals(const cFractalContainer *par, const cParameterConta
 						optimizedDEType = DEFunction;
 					}
 
-					if ((optimizedDEType != DEFunction && DEFunction != fractal::withoutDEFunction)
-							|| fractalList[index].DEType == fractal::deltaDEType)
+					if (!forceAnalyticDE && fractalList[index].DEType == fractal::deltaDEType)
 					{
-						optimizedDEType = fractal::preferredDEFunction;
+						DEType[0] = fractal::deltaDEType;
+						useOptimizedDE = false;
+						forceDeltaDE = true;
 					}
 				}
 			}
@@ -234,17 +238,20 @@ cNineFractals::cNineFractals(const cFractalContainer *par, const cParameterConta
 		}
 		else
 		{
+			for (int f = 0; f < NUMBER_OF_FRACTALS; f++)
+			{
+				fractal::enumFractalFormula formula = fractals[f]->formula;
+				int index = GetIndexOnFractalList(formula);
+				if (!forceAnalyticDE && fractalList[index].DEType == fractal::deltaDEType)
+				{
+					DEType[0] = fractal::deltaDEType;
+				}
+			}
 			DEFunctionType[0] = fractal::enumDEFunctionType(generalPar->Get<int>("delta_DE_function"));
 		}
 
-		// if it's possible to use analyticDEType then use optimized settings
-		if (optimizedDEType > fractal::preferredDEFunction
-				&& optimizedDEType <= fractal::numberOfDEFunctions)
-		{
-			DEType[0] = fractal::analyticDEType;
-			DEFunctionType[0] = optimizedDEType;
-			useOptimizedDE = true;
-		}
+		if (forceDeltaDE) DEType[0] = fractal::deltaDEType;
+		if (forceAnalyticDE) DEType[0] = fractal::analyticDEType;
 	}
 	else
 	{
@@ -393,7 +400,10 @@ QString cNineFractals::GetDETypeString() const
 			case fractal::logarithmicDEFunction: text += " logarithmic"; break;
 			case fractal::linearDEFunction: text += " linear"; break;
 			case fractal::pseudoKleinianDEFunction: text += " pseudo kleinian"; break;
-			case fractal::josKleinianDEFunction: text += " jos kleinian"; break;
+			case fractal::josKleinianDEFunction:
+				text += " jos kleinian";
+				break;
+			// case fractal::testingDEFunction: text += " testing DE"; break;
 			default: text += "unknown"; break;
 		}
 	}
@@ -433,8 +443,8 @@ void cNineFractals::CopyToOpenclData(sClFractalSequence *sequence)
 	for (int i = 0; i < NUMBER_OF_FRACTALS; i++)
 	{
 		sequence->formulaWeight[i] = formulaWeight[i];
-		sequence->DEFunctionType[i] = enumDEFunctionTypeCl(DEFunctionType[i]);
-		sequence->DEType[i] = enumDETypeCl(DEType[i]);
+		sequence->DEFunctionType[i] = static_cast<enumDEFunctionTypeCl>(DEFunctionType[i]);
+		sequence->DEType[i] = static_cast<enumDETypeCl>(DEType[i]);
 		sequence->counts[i] = counts[i];
 		sequence->formulaStartIteration[i] = formulaStartIteration[i];
 		sequence->formulaStopIteration[i] = formulaStopIteration[i];
@@ -446,8 +456,8 @@ void cNineFractals::CopyToOpenclData(sClFractalSequence *sequence)
 		sequence->juliaConstant[i] = toClFloat4(CVector4(juliaConstant[i], 0.0));
 		sequence->constantMultiplier[i] = toClFloat4(CVector4(constantMultiplier[i], 1.0));
 		sequence->initialWAxis[i] = initialWAxis[i];
-		sequence->DEAnalyticFunction[i] = enumDEAnalyticFunctionCl(DEAnalyticFunction[i]);
-		sequence->coloringFunction[i] = enumColoringFunctionCl(coloringFunction[i]);
+		sequence->DEAnalyticFunction[i] = static_cast<enumDEAnalyticFunctionCl>(DEAnalyticFunction[i]);
+		sequence->coloringFunction[i] = static_cast<enumColoringFunctionCl>(coloringFunction[i]);
 	}
 }
 #endif

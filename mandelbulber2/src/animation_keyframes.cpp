@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -42,6 +42,7 @@
 
 #include "ui_dock_animation.h"
 
+#include "animation_path_data.hpp"
 #include "cimage.hpp"
 #include "common_math.h"
 #include "files.h"
@@ -51,6 +52,7 @@
 #include "netrender.hpp"
 #include "render_job.hpp"
 #include "render_window.hpp"
+#include "rendered_image_widget.hpp"
 #include "rendering_configuration.hpp"
 #include "undo.h"
 
@@ -71,7 +73,7 @@ cKeyframeAnimation::cKeyframeAnimation(cInterface *_interface, cKeyframes *_fram
 		: QObject(parent), mainInterface(_interface), keyframes(_frames)
 {
 	image = _image;
-	imageWidget = _imageWidget;
+	imageWidget = dynamic_cast<RenderedImage *>(_imageWidget);
 	params = _params;
 	fractalParams = _fractal;
 
@@ -83,40 +85,37 @@ cKeyframeAnimation::cKeyframeAnimation(cInterface *_interface, cKeyframes *_fram
 		previewSize.setHeight(previewSize.width() * 3 / 4);
 
 		// connect keyframe control buttons
-		QApplication::connect(
-			ui->pushButton_add_keyframe, SIGNAL(clicked()), this, SLOT(slotAddKeyframe()));
-		QApplication::connect(
-			ui->pushButton_insert_keyframe, SIGNAL(clicked()), this, SLOT(slotInsertKeyframe()));
-		QApplication::connect(
-			ui->pushButton_delete_keyframe, SIGNAL(clicked()), this, SLOT(slotDeleteKeyframe()));
-		QApplication::connect(
-			ui->pushButton_modify_keyframe, SIGNAL(clicked()), this, SLOT(slotModifyKeyframe()));
-		QApplication::connect(ui->pushButton_render_keyframe_animation, SIGNAL(clicked()), this,
+		connect(ui->pushButton_add_keyframe, SIGNAL(clicked()), this, SLOT(slotAddKeyframe()));
+		connect(ui->pushButton_insert_keyframe, SIGNAL(clicked()), this, SLOT(slotInsertKeyframe()));
+		connect(ui->pushButton_delete_keyframe, SIGNAL(clicked()), this, SLOT(slotDeleteKeyframe()));
+		connect(ui->pushButton_modify_keyframe, SIGNAL(clicked()), this, SLOT(slotModifyKeyframe()));
+		connect(ui->pushButton_render_keyframe_animation, SIGNAL(clicked()), this,
 			SLOT(slotRenderKeyframes()));
-		QApplication::connect(ui->pushButton_delete_all_keyframe_images, SIGNAL(clicked()), this,
+		connect(ui->pushButton_delete_all_keyframe_images, SIGNAL(clicked()), this,
 			SLOT(slotDeleteAllImages()));
-		QApplication::connect(
+		connect(
 			ui->pushButton_show_keyframe_animation, SIGNAL(clicked()), this, SLOT(slotShowAnimation()));
-		QApplication::connect(
+		connect(
 			ui->pushButton_refresh_keyframe_table, SIGNAL(clicked()), this, SLOT(slotRefreshTable()));
-		QApplication::connect(ui->pushButton_keyframe_to_flight_export, SIGNAL(clicked()), this,
+		connect(ui->pushButton_keyframe_to_flight_export, SIGNAL(clicked()), this,
 			SLOT(slotExportKeyframesToFlight()));
-		QApplication::connect(
-			ui->pushButton_check_for_collisions, SIGNAL(clicked()), this, SLOT(slotValidate()));
-		QApplication::connect(ui->pushButton_set_constant_target_distance, SIGNAL(clicked()), this,
+		connect(ui->pushButton_check_for_collisions, SIGNAL(clicked()), this, SLOT(slotValidate()));
+		connect(ui->pushButton_set_constant_target_distance, SIGNAL(clicked()), this,
 			SLOT(slotSetConstantTargetDistance()));
-		QApplication::connect(ui->button_selectAnimKeyframeImageDir, SIGNAL(clicked()), this,
+		connect(ui->button_selectAnimKeyframeImageDir, SIGNAL(clicked()), this,
 			SLOT(slotSelectKeyframeAnimImageDir()));
-		QApplication::connect(ui->tableWidget_keyframe_animation, SIGNAL(cellChanged(int, int)), this,
+		connect(ui->tableWidget_keyframe_animation, SIGNAL(cellChanged(int, int)), this,
 			SLOT(slotTableCellChanged(int, int)));
-		QApplication::connect(ui->spinboxInt_keyframe_first_to_render, SIGNAL(valueChanged(int)), this,
+		connect(ui->spinboxInt_keyframe_first_to_render, SIGNAL(valueChanged(int)), this,
 			SLOT(slotMovedSliderFirstFrame(int)));
-		QApplication::connect(ui->spinboxInt_keyframe_last_to_render, SIGNAL(valueChanged(int)), this,
+		connect(ui->spinboxInt_keyframe_last_to_render, SIGNAL(valueChanged(int)), this,
 			SLOT(slotMovedSliderLastFrame(int)));
-		QApplication::connect(ui->spinboxInt_frames_per_keyframe, SIGNAL(valueChanged(int)), this,
+		connect(ui->spinboxInt_frames_per_keyframe, SIGNAL(valueChanged(int)), this,
 			SLOT(UpdateLimitsForFrameRange()));
-		QApplication::connect(ui->tableWidget_keyframe_animation, SIGNAL(cellDoubleClicked(int, int)),
-			this, SLOT(slotCellDoubleClicked(int, int)));
+		connect(ui->tableWidget_keyframe_animation, SIGNAL(cellDoubleClicked(int, int)), this,
+			SLOT(slotCellDoubleClicked(int, int)));
+		connect(ui->tableWidget_keyframe_animation, SIGNAL(cellClicked(int, int)), this,
+			SLOT(slotCellClicked(int, int)));
 
 		// connect system tray
 		connect(mainInterface->systemTray, SIGNAL(notifyRenderKeyframes()), this,
@@ -124,10 +123,23 @@ cKeyframeAnimation::cKeyframeAnimation(cInterface *_interface, cKeyframes *_fram
 		connect(this, SIGNAL(notifyRenderKeyframeRenderStatus(QString, QString)),
 			mainInterface->systemTray, SLOT(showMessage(QString, QString)));
 
-		QApplication::connect(this, SIGNAL(QuestionMessage(const QString, const QString,
-																	QMessageBox::StandardButtons, QMessageBox::StandardButton *)),
+		connect(this, SIGNAL(QuestionMessage(const QString, const QString, QMessageBox::StandardButtons,
+										QMessageBox::StandardButton *)),
 			mainInterface->mainWindow, SLOT(slotQuestionMessage(const QString, const QString,
 																	 QMessageBox::StandardButtons, QMessageBox::StandardButton *)));
+
+		connect(ui->checkBox_show_camera_path, SIGNAL(stateChanged(int)), this,
+			SLOT(slotUpdateAnimationPathSelection()));
+		connect(ui->checkBox_show_target_path, SIGNAL(stateChanged(int)), this,
+			SLOT(slotUpdateAnimationPathSelection()));
+		connect(ui->checkBox_show_light_path_1, SIGNAL(stateChanged(int)), this,
+			SLOT(slotUpdateAnimationPathSelection()));
+		connect(ui->checkBox_show_light_path_2, SIGNAL(stateChanged(int)), this,
+			SLOT(slotUpdateAnimationPathSelection()));
+		connect(ui->checkBox_show_light_path_3, SIGNAL(stateChanged(int)), this,
+			SLOT(slotUpdateAnimationPathSelection()));
+		connect(ui->checkBox_show_light_path_4, SIGNAL(stateChanged(int)), this,
+			SLOT(slotUpdateAnimationPathSelection()));
 
 		table = ui->tableWidget_keyframe_animation;
 
@@ -147,9 +159,8 @@ cKeyframeAnimation::cKeyframeAnimation(cInterface *_interface, cKeyframes *_fram
 		table = nullptr;
 	}
 
-	QApplication::connect(this,
-		SIGNAL(showErrorMessage(QString, cErrorMessage::enumMessageType, QWidget *)), gErrorMessage,
-		SLOT(slotShowMessage(QString, cErrorMessage::enumMessageType, QWidget *)));
+	connect(this, SIGNAL(showErrorMessage(QString, cErrorMessage::enumMessageType, QWidget *)),
+		gErrorMessage, SLOT(slotShowMessage(QString, cErrorMessage::enumMessageType, QWidget *)));
 }
 
 void cKeyframeAnimation::slotAddKeyframe()
@@ -193,6 +204,8 @@ void cKeyframeAnimation::NewKeyframe(int index)
 			table->setCellWidget(0, newColumn, thumbWidget);
 		}
 		UpdateLimitsForFrameRange();
+
+		UpdateAnimationPath();
 	}
 	else
 	{
@@ -213,6 +226,7 @@ void cKeyframeAnimation::DeleteKeyframe(int index) const
 		keyframes->DeleteFrames(index, index);
 		table->removeColumn(index + reservedColumns);
 		UpdateLimitsForFrameRange();
+		UpdateAnimationPath();
 	}
 }
 
@@ -249,6 +263,8 @@ void cKeyframeAnimation::slotModifyKeyframe()
 				thumbWidget->AssignParameters(*params, *fractalParams);
 				table->setCellWidget(0, newColumn, thumbWidget);
 			}
+
+			UpdateAnimationPath();
 		}
 		else
 		{
@@ -295,6 +311,18 @@ bool cKeyframeAnimation::slotRenderKeyframes()
 		qCritical() << "gAnimFrames not allocated";
 	}
 	return false;
+}
+
+void cKeyframeAnimation::slotIncreaseCurrentTableIndex()
+{
+	int nextColumn = (table->currentColumn() + 1) % table->columnCount();
+	table->setCurrentCell(table->currentRow(), nextColumn);
+}
+
+void cKeyframeAnimation::slotDecreaseCurrentTableIndex()
+{
+	int nextColumn = (table->columnCount() + table->currentColumn() - 1) % table->columnCount();
+	table->setCurrentCell(table->currentRow(), nextColumn);
 }
 
 void cKeyframeAnimation::PrepareTable()
@@ -522,11 +550,14 @@ bool cKeyframeAnimation::RenderKeyframes(bool *stopRequest)
 	*stopRequest = false;
 
 	// preparing Render Job
-	cRenderJob *renderJob = new cRenderJob(params, fractalParams, image, stopRequest, imageWidget);
-	connect(renderJob, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
-		this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
-	connect(
-		renderJob, SIGNAL(updateStatistics(cStatistics)), this, SIGNAL(updateStatistics(cStatistics)));
+	QScopedPointer<cRenderJob> renderJob(
+		new cRenderJob(params, fractalParams, image, stopRequest, imageWidget));
+	connect(renderJob.data(),
+		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
+		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+	connect(renderJob.data(), SIGNAL(updateStatistics(cStatistics)), this,
+		SIGNAL(updateStatistics(cStatistics)));
+	connect(renderJob.data(), SIGNAL(updateImage()), mainInterface->renderedImage, SLOT(update()));
 
 	cRenderingConfiguration config;
 	config.EnableNetRender();
@@ -557,12 +588,14 @@ bool cKeyframeAnimation::RenderKeyframes(bool *stopRequest)
 			QObject::tr(
 				"There is no frame to render: first frame to render and last frame to render are equals."),
 			cErrorMessage::warningMessage);
-		delete renderJob;
 		return false;
 	}
 
 	if (!systemData.noGui && image->IsMainImage())
+	{
 		mainInterface->mainWindow->GetWidgetDockNavigation()->LockAllFunctions();
+		imageWidget->SetEnableClickModes(false);
+	}
 
 	try
 	{
@@ -654,10 +687,12 @@ bool cKeyframeAnimation::RenderKeyframes(bool *stopRequest)
 			if (deletePreviousRender)
 			{
 				cAnimationFrames::WipeFramesFromFolder(params->Get<QString>("anim_keyframe_dir"));
-				delete renderJob;
 
 				if (!systemData.noGui && image->IsMainImage())
+				{
 					mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+					imageWidget->SetEnableClickModes(true);
+				}
 
 				return RenderKeyframes(stopRequest);
 			}
@@ -735,6 +770,8 @@ bool cKeyframeAnimation::RenderKeyframes(bool *stopRequest)
 				const ImageFileSave::enumImageFileType fileType =
 					ImageFileSave::enumImageFileType(params->Get<int>("keyframe_animation_image_type"));
 				SaveImage(filename, fileType, image, gMainInterface->mainWindow);
+
+				gApplication->processEvents();
 			}
 			//--------------------------------------------------------------------
 		}
@@ -752,33 +789,38 @@ bool cKeyframeAnimation::RenderKeyframes(bool *stopRequest)
 		emit updateProgressAndStatus(
 			resultStatus, progressText.getText(1.0), cProgressText::progress_ANIMATION);
 		emit updateProgressHide();
-		delete renderJob;
 
 		if (!systemData.noGui && image->IsMainImage())
+		{
 			mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+			imageWidget->SetEnableClickModes(true);
+		}
 
 		return false;
 	}
 
-	delete renderJob;
-
 	if (!systemData.noGui && image->IsMainImage())
+	{
 		mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+		imageWidget->SetEnableClickModes(true);
+	}
 
 	return true;
 }
 
 void cKeyframeAnimation::RefreshTable()
 {
-	mainInterface->progressBarAnimation->show();
+	UpdateLimitsForFrameRange(); // it is needed to do it also here, because limits must be set just
+															 // after loading of settings
+	mainInterface->SynchronizeInterface(params, fractalParams, qInterface::read);
+	keyframes->RefreshAllAudioTracks(params);
+
 	PrepareTable();
 	gApplication->processEvents();
 
 	const int noOfFrames = keyframes->GetNumberOfFrames();
 
-	UpdateLimitsForFrameRange(); // it is needed to do it also here, because limits must be set just
-															 // after loading of settings
-	SynchronizeInterfaceWindow(ui->tab_keyframe_animation, params, qInterface::read);
+	keyframes->SetFramesPerKeyframe(params->Get<int>("frames_per_keyframe"));
 
 	cParameterContainer tempPar = *params;
 	cFractalContainer tempFract = *fractalParams;
@@ -807,6 +849,8 @@ void cKeyframeAnimation::RefreshTable()
 	}
 
 	UpdateLimitsForFrameRange();
+
+	UpdateAnimationPath();
 
 	mainInterface->progressBarAnimation->hide();
 }
@@ -958,6 +1002,8 @@ void cKeyframeAnimation::slotTableCellChanged(int row, int column)
 		}
 
 		table->blockSignals(false);
+
+		UpdateAnimationPath();
 	}
 }
 
@@ -1159,7 +1205,7 @@ void cKeyframeAnimation::slotExportKeyframesToFlight()
 		}
 		if (index % 10 == 0)
 		{
-			updateProgressAndStatus(QObject::tr("Exporting"), tr("Exporting keyframes to flight"),
+			emit updateProgressAndStatus(QObject::tr("Exporting"), tr("Exporting keyframes to flight"),
 				double(index) / keyframes->GetNumberOfFrames(), cProgressText::progress_ANIMATION);
 			gApplication->processEvents();
 		}
@@ -1177,10 +1223,8 @@ void cKeyframeAnimation::UpdateLimitsForFrameRange() const
 	if (noOfFrames < 0) noOfFrames = 0;
 
 	ui->spinboxInt_keyframe_first_to_render->setMaximum(noOfFrames);
-	ui->sliderInt_keyframe_first_to_render->setMaximum(noOfFrames);
 
 	ui->spinboxInt_keyframe_last_to_render->setMaximum(noOfFrames);
-	ui->sliderInt_keyframe_last_to_render->setMaximum(noOfFrames);
 
 	if (lastToRenderMax)
 	{
@@ -1212,7 +1256,7 @@ QList<int> cKeyframeAnimation::CheckForCollisions(double minDist, bool *stopRequ
 
 	for (int key = 0; key < keyframes->GetNumberOfFrames() - 1; key++)
 	{
-		updateProgressAndStatus(QObject::tr("Checking for collisions"),
+		emit updateProgressAndStatus(QObject::tr("Checking for collisions"),
 			QObject::tr("Checking for collisions on keyframe # %1").arg(key),
 			double(key) / (keyframes->GetNumberOfFrames() - 1.0), cProgressText::progress_ANIMATION);
 
@@ -1232,7 +1276,7 @@ QList<int> cKeyframeAnimation::CheckForCollisions(double minDist, bool *stopRequ
 		}
 	}
 
-	updateProgressAndStatus(QObject::tr("Checking for collisions"),
+	emit updateProgressAndStatus(QObject::tr("Checking for collisions"),
 		QObject::tr("Checking for collisions finished"), 1.0, cProgressText::progress_ANIMATION);
 
 	return listOfCollisions;
@@ -1248,7 +1292,7 @@ void cKeyframeAnimation::slotValidate()
 
 	// checking for collisions
 	QList<int> listOfCollisions = CheckForCollisions(
-		params->Get<double>("keyframe_collision_thresh"), &gMainInterface->stopRequest);
+		params->Get<double>("keyframe_collision_thresh"), &mainInterface->stopRequest);
 	if (listOfCollisions.size() > 0)
 	{
 		QString collisionText;
@@ -1273,6 +1317,13 @@ void cKeyframeAnimation::slotCellDoubleClicked(int row, int column) const
 	{
 		RenderFrame(column - reservedColumns);
 	}
+}
+
+void cKeyframeAnimation::slotCellClicked(int row, int column) const
+{
+	Q_UNUSED(row);
+	Q_UNUSED(column);
+	UpdateCameraDistanceInformation();
 }
 
 void cKeyframeAnimation::slotSetConstantTargetDistance()
@@ -1323,4 +1374,78 @@ void cKeyframeAnimation::AddAnimSoundColumn() const
 	const int newColumn = table->columnCount();
 	table->insertColumn(newColumn);
 	table->setHorizontalHeaderItem(newColumn, new QTableWidgetItem(tr("Audio")));
+}
+
+void cKeyframeAnimation::UpdateAnimationPath() const
+{
+	int numberOfKeyframes = keyframes->GetNumberOfFrames();
+	int framesPerKey = keyframes->GetFramesPerKeyframe();
+
+	cParameterContainer tempPar = *params;
+	cFractalContainer tempFractPar = *fractalParams;
+	sAnimationPathData animationPathData;
+	animationPathData.framesPeyKey = framesPerKey;
+	animationPathData.numberOfKeyframes = numberOfKeyframes;
+	animationPathData.actualSelectedFrameNo = table->currentColumn() - reservedColumns;
+	if (animationPathData.actualSelectedFrameNo < 0) animationPathData.actualSelectedFrameNo = 0;
+	animationPathData.cameraPathEnable = params->Get<bool>("show_camera_path");
+	animationPathData.targetPathEnable = params->Get<bool>("show_target_path");
+
+	for (int i = 1; i <= 4; i++)
+		animationPathData.lightPathEnable[i - 1] =
+			params->Get<bool>("show_light_path", i) && params->Get<bool>("aux_light_enabled", i);
+
+	for (int keyframe = 0; keyframe < numberOfKeyframes; keyframe++)
+	{
+		for (int interFrame = 0; interFrame < framesPerKey; interFrame++)
+		{
+			int frame = keyframe * framesPerKey + interFrame;
+
+			keyframes->GetInterpolatedFrameAndConsolidate(frame, &tempPar, &tempFractPar);
+			sAnimationPathPoint point;
+			point.camera = tempPar.Get<CVector3>("camera");
+			point.target = tempPar.Get<CVector3>("target");
+			for (int l = 0; l < 4; l++)
+			{
+				point.lights[l] = tempPar.Get<CVector3>("aux_light_position", l + 1);
+				sRGB color16 = tempPar.Get<sRGB>("aux_light_colour", l + 1);
+				sRGB8 color8(color16.R / 256, color16.G / 256, color16.B / 256);
+				point.lightColor[l] = color8;
+			}
+			animationPathData.animationPath.append(point);
+		}
+	}
+	imageWidget->SetAnimationPath(animationPathData);
+	imageWidget->update();
+}
+
+void cKeyframeAnimation::slotUpdateAnimationPathSelection()
+{
+	SynchronizeInterfaceWindow(ui->tab_keyframe_animation, params, qInterface::read);
+	UpdateAnimationPath();
+}
+
+void cKeyframeAnimation::UpdateActualCameraPosition(const CVector3 &cameraPosition)
+{
+	actualCameraPosition = cameraPosition;
+	UpdateCameraDistanceInformation();
+}
+
+void cKeyframeAnimation::UpdateCameraDistanceInformation() const
+{
+	if (keyframes->GetNumberOfFrames() > 0)
+	{
+		int selectedKeyframe = table->currentColumn() - reservedColumns;
+		if (selectedKeyframe < 0) selectedKeyframe = 0;
+
+		cKeyframes::sAnimationFrame keyframe = keyframes->GetFrame(selectedKeyframe);
+
+		if (keyframe.parameters.IfExists("main_camera"))
+		{
+			CVector3 camera = keyframe.parameters.Get<CVector3>("main_camera");
+			double distance = (camera - actualCameraPosition).Length();
+			ui->label_camera_distance_from_keyframe->setText(
+				tr("Camera distance from selected keyframe: %1").arg(distance));
+		}
+	}
 }

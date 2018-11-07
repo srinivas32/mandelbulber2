@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -86,9 +86,8 @@ CVector3 CalculateViewVector(CVector2<double> normalizedPoint, double fov,
 	return viewVector;
 }
 
-CVector3 InvProjection3D(CVector3 point, CVector3 vp, CRotationMatrix mRotInv,
-	params::enumPerspectiveType perspectiveType, double fov, double zoom, double imgWidth,
-	double imgHeight)
+CVector3 InvProjection3D(CVector3 point, CVector3 camera, CRotationMatrix mRotInv,
+	params::enumPerspectiveType perspectiveType, double fov, double imgWidth, double imgHeight)
 {
 	CVector3 screenPoint;
 	CVector3 baseZ(0.0, 1.0, 0.0);
@@ -96,16 +95,7 @@ CVector3 InvProjection3D(CVector3 point, CVector3 vp, CRotationMatrix mRotInv,
 	double aspectRatio = imgWidth / imgHeight;
 	if (perspectiveType == params::perspEquirectangular) aspectRatio = 2.0;
 
-	CVector3 start;
-	if (perspectiveType == params::perspFishEye || perspectiveType == params::perspEquirectangular)
-	{
-		start = vp;
-	}
-	else
-	{
-		start = vp - baseZ * (1.0 / fov * zoom);
-	}
-	CVector3 viewVector = point - start;
+	CVector3 viewVector = point - camera;
 	viewVector = mRotInv.RotateVector(viewVector);
 
 	double x, y, z;
@@ -129,7 +119,7 @@ CVector3 InvProjection3D(CVector3 point, CVector3 vp, CRotationMatrix mRotInv,
 		z = viewVector.y;
 	}
 	screenPoint.x = (x / aspectRatio + 0.5) * imgWidth;
-	screenPoint.y = (y + 0.5) * imgHeight;
+	screenPoint.y = (-y + 0.5) * imgHeight;
 	screenPoint.z = z;
 
 	return screenPoint;

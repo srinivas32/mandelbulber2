@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -47,11 +47,9 @@ cWaveFormView::cWaveFormView(QWidget *parent) : QWidget(parent)
 	failed = false;
 }
 
-cWaveFormView::~cWaveFormView()
-{
-}
+cWaveFormView::~cWaveFormView() = default;
 
-void cWaveFormView::AssignAudioTrack(const cAudioTrack *audiotrack)
+void cWaveFormView::AssignAudioTrack(const QSharedPointer<cAudioTrack> audiotrack)
 {
 	if (audiotrack && audiotrack->isLoaded())
 	{
@@ -66,7 +64,7 @@ void cWaveFormView::AssignAudioTrack(const cAudioTrack *audiotrack)
 		framesPerSecond = audiotrack->getFramesPerSecond();
 		audioFrame *audioBuffer = new audioFrame[numberOfFrames + 1];
 
-		this->setFixedWidth(numberOfFrames);
+		setFixedWidth(numberOfFrames);
 
 		for (int i = 0; i < numberOfSamples; i++)
 		{
@@ -105,7 +103,7 @@ void cWaveFormView::AssignAudioTrack(const cAudioTrack *audiotrack)
 
 		painter.setRenderHint(QPainter::SmoothPixmapTransform);
 		scaledWaveImage =
-			waveImage.scaled(this->width(), height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+			waveImage.scaled(width(), height, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 		update();
 
 		delete[] audioBuffer;
@@ -129,7 +127,7 @@ void cWaveFormView::paintEvent(QPaintEvent *event)
 			QRect textRect = painter.boundingRect(QRect(), Qt::AlignTop | Qt::AlignLeft, progressText);
 			textRect.setHeight(textRect.height() + 2);
 			textRect.moveTopLeft(QPoint(5, 5));
-			this->setFixedWidth(textRect.width() + 5);
+			setFixedWidth(textRect.width() + 5);
 			painter.drawText(textRect, Qt::AlignTop | Qt::AlignLeft, progressText);
 		}
 		else
@@ -145,7 +143,7 @@ void cWaveFormView::paintEvent(QPaintEvent *event)
 		QRect textRect = painter.boundingRect(QRect(), Qt::AlignTop | Qt::AlignLeft, progressText);
 		textRect.setHeight(textRect.height() + 2);
 		textRect.moveTopLeft(QPoint(5, 5));
-		this->setFixedWidth(textRect.width() + 5);
+		setFixedWidth(textRect.width() + 5);
 
 		const QBrush brush(QColor(255, 0, 0));
 		painter.fillRect(textRect, brush);

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -50,13 +50,13 @@
 cOpenClEngineRenderDOF::cOpenClEngineRenderDOF(cOpenClHardware *hardware) : QObject(hardware)
 {
 #ifdef USE_OPENCL
-	dofEnginePhase1 = new cOpenClEngineRenderDOFPhase1(hardware);
-	dofEnginePhase2 = new cOpenClEngineRenderDOFPhase2(hardware);
+	dofEnginePhase1.reset(new cOpenClEngineRenderDOFPhase1(hardware));
+	dofEnginePhase2.reset(new cOpenClEngineRenderDOFPhase2(hardware));
 
-	connect(dofEnginePhase1,
+	connect(dofEnginePhase1.data(),
 		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
 		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
-	connect(dofEnginePhase2,
+	connect(dofEnginePhase2.data(),
 		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
 		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
 
@@ -66,8 +66,6 @@ cOpenClEngineRenderDOF::cOpenClEngineRenderDOF(cOpenClHardware *hardware) : QObj
 cOpenClEngineRenderDOF::~cOpenClEngineRenderDOF()
 {
 #ifdef USE_OPENCL
-	delete dofEnginePhase1;
-	delete dofEnginePhase2;
 #endif
 }
 
@@ -116,6 +114,7 @@ bool cOpenClEngineRenderDOF::RenderDOF(const sParamRender *paramRender,
 		cPostRenderingDOF dof(image);
 		connect(&dof, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
 			SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+		connect(&dof, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 
 		dof.Render(screenRegion,
 			paramRender->DOFRadius * (image->GetWidth() + image->GetHeight()) / 2000.0,
@@ -133,7 +132,7 @@ bool cOpenClEngineRenderDOF::RenderDOF(const sParamRender *paramRender,
 			WriteLog("image->UpdatePreview()", 2);
 			image->UpdatePreview();
 			WriteLog("image->GetImageWidget()->update()", 2);
-			image->GetImageWidget()->update();
+			emit updateImage();
 		}
 		result = true;
 		return result;

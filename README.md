@@ -1,16 +1,33 @@
 ![Banner](https://raw.githubusercontent.com/buddhi1980/mandelbulber2/wiki/assets/images/mandelbulberBanner.png)
+<table>
+<tr>
+    <th>Coverity Scan</th>
+    <th>Build Status</th>
+    <th>Gitter Chat</th>
+</tr>
+<tr>
+    <td><a href="https://scan.coverity.com/projects/mandelbulber-v2">
+        <img alt="Coverity Scan" src="https://scan.coverity.com/projects/4723/badge.svg?flat=1"></a></td>
+    <td>
+        Linux: <a href="https://travis-ci.org/buddhi1980/mandelbulber2">
+                <img alt="Build Status Linux" src="https://travis-ci.org/buddhi1980/mandelbulber2.svg"></a></br>
+        Windows: <a href="https://ci.appveyor.com/project/buddhi1980/mandelbulber2">
+                <img alt="Build Status Windows" src="https://ci.appveyor.com/api/projects/status/urd2h30tu7reg4mp?svg=true"></a></br>
+        OSX: <a href="https://circleci.com/gh/buddhi1980/mandelbulber2">
+                <img alt="Build Status OSX Circle CI" src="https://circleci.com/gh/buddhi1980/mandelbulber2.svg?style=shield">
+</a></td>
+    </td>
+    <td><a href="https://gitter.im/buddhi1980/mandelbulber2?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
+        <img alt="Join the chat" src="https://badges.gitter.im/Join%20Chat.svg"></a></td>
+</tr>
+</table>
 
-|Coverity Scan|Build Status|Gitter Chat|
-|:-:|:-:|:-:|
-|[![Coverity Scan](https://scan.coverity.com/projects/4723/badge.svg?flat=1)](https://scan.coverity.com/projects/mandelbulber-v2)|Linux / OSX: [![Build Status Linux / OSX](https://travis-ci.org/buddhi1980/mandelbulber2.svg)](https://travis-ci.org/buddhi1980/mandelbulber2), Windows: [![Build Status Windows](https://ci.appveyor.com/api/projects/status/urd2h30tu7reg4mp?svg=true)](https://ci.appveyor.com/project/buddhi1980/mandelbulber2)|[![Join the chat at https://gitter.im/buddhi1980/mandelbulber2](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/buddhi1980/mandelbulber2?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)|
 
 
 
 ## Universal Idea
 
-In summary, Mandelbulber generates three-dimensional fractals.
-
-The algorithm computes voxels in Euclidean space available for manufacturing from mesh.
+Mandelbulber creatively generates three-dimensional fractals.
 
 Explore trigonometric, hyper-complex, Mandelbox, IFS, and many other 3D fractals.
 
@@ -30,9 +47,11 @@ The possibilities are literally **infinite**!
 - Program compiled for x86 and x64 CPUs (Linux, Windows, OSX)
 - Simple 3D navigator
 - Distributed Network Rendering
+- Rendering using OpenCL
 - Key-frame animation for all parameters with different interpolations
 - Material management
 - Texture mapping (color, luminosity, diffusion, normal maps, displacement)
+- Exporting of 3D objects
 - Rendering queue
 - Command line interface for headless systems
 
@@ -44,17 +63,17 @@ The possibilities are literally **infinite**!
 
 In render window:
 
-  - <kbd>Up</kbd> / <kbd>Down</kbd>: Move Camera Forward / Backward
-  - <kbd>Left</kbd> / <kbd>Right</kbd>: Move Camera Left / Right
-  - <kbd>Ctrl</kbd>+(<kbd>Up</kbd> / <kbd>Down</kbd>): Move Camera Up / Down
-  - <kbd>Shift</kbd>+(<kbd>Up</kbd> / <kbd>Down</kbd> / <kbd>Left</kbd> / <kbd>Right</kbd>): Rotate Camera
+  - <kbd>Shift</kbd>+<kbd>Up</kbd> or <kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Down</kbd> or <kbd>Z</kbd>: Move Camera Forward / Backward
+  - <kbd>Shift</kbd>+<kbd>Left</kbd> or <kbd>A</kbd> / <kbd>Shift</kbd>+<kbd>Right</kbd> or <kbd>D</kbd>: Move Camera Left / Right
+  - <kbd>W</kbd> / <kbd>S</kbd>: Move Camera Up / Down
+  - <kbd>Up</kbd> / <kbd>Down</kbd> / <kbd>Left</kbd> / <kbd>Right</kbd>: Rotate Camera
   - <kbd>Ctrl</kbd>+(<kbd>Left</kbd> / <kbd>Right</kbd>): Roll Camera Left / Right
 
 ## Building and Deploying 
 
-Download latest stable version from [Releases](https://github.com/buddhi1980/mandelbulber2/releases)
+Download the latest stable version from [Releases](https://github.com/buddhi1980/mandelbulber2/releases)
 
-After downloading, Unpack the file and follow our instructions from README file.
+After downloading, unpack the file and follow our instructions from the README file.
 Please see information in [mandelbulber2/deploy](mandelbulber2/deploy) folder.
 
 ## Easy Preparation for Development
@@ -76,19 +95,22 @@ These scripts install all dependencies, compile the program, and create symbolic
 
 In addition, there exists an MSVC Solution located in this git package. The solution accommodates all dependencies with NUGET for autonomous compilation of OpenCL accelerated Binary.
 
-The system requires the QT5 framework in conjuction with LZO for real-time data compression and GSL for scientific resources.
+The system requires the QT5 framework in conjunction with LZO for real-time data compression and GSL for scientific resources.
 
 ## Resources
+[Video tutorials](https://www.youtube.com/playlist?list=PLOwamUnstvZF0Y9sjxvwHNvrHHF1ZzFql)
 
 [Image Gallery](http://krzysztofmarczak.deviantart.com/gallery/)
 
-[Forum](http://www.fractalforums.com/mandelbulber/)
+[Forum](https://fractalforums.org/mandelbulber/14)
 
 [Forum Gallery](http://www.fractalforums.com/index.php?action=gallery;cat=51)
 
 [Compiled Binaries](http://sourceforge.net/projects/mandelbulber/)
 
 [Coverity Scan](http://scan.coverity.com/projects/4723?tab=overview)
+
+![Open Hub](https://www.openhub.net/p/mandelbulber2/widgets/project_thin_badge.gif)
 
 ## License
 

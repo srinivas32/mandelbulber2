@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -40,7 +40,7 @@ int GetInteger(int byte, __global char *array)
 
 //------------------ MAIN RENDER FUNCTION --------------------
 kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
-	__constant sClInConstants *consts, int initRandomSeed)
+	__constant sClInConstants *consts, image2d_t image2dBackground, int initRandomSeed)
 {
 	// get actual pixel
 	const int imageX = get_global_id(0);
@@ -66,14 +66,15 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	int materialsMainOffset = GetInteger(0, inBuff);
 	int AOVectorsMainOffset = GetInteger(1 * sizeof(int), inBuff);
 	int lightsMainOffset = GetInteger(2 * sizeof(int), inBuff);
+	int primitivesMainOffset = GetInteger(3 * sizeof(int), inBuff);
 
 	//--- main material
 
 	// number of materials
 	int numberOfMaterials = GetInteger(materialsMainOffset, inBuff);
 
-	// materials 0 offset:
-	const int materialAddressOffset = materialsMainOffset + 1 * sizeof(int);
+	// materials 1 offset:
+	const int materialAddressOffset = materialsMainOffset + 2 * sizeof(int);
 	int material0Offset = GetInteger(materialAddressOffset, inBuff);
 
 	// material header
@@ -106,6 +107,21 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	__global sLightCl *__attribute__((aligned(16))) lights =
 		(__global sLightCl *)&inBuff[lightssOffset];
 
+	//--- Primitives
+
+	// primitives count
+	int numberOfPrimitives = GetInteger(primitivesMainOffset, inBuff);
+	int primitivesGlobalPositionOffset = GetInteger(primitivesMainOffset + 1 * sizeof(int), inBuff);
+	int primitivesOffset = GetInteger(primitivesMainOffset + 2 * sizeof(int), inBuff);
+
+	// global position of primitives
+	__global sPrimitiveGlobalPositionCl *primitivesGlobalPosition =
+		(__global sPrimitiveGlobalPositionCl *)&inBuff[primitivesGlobalPositionOffset];
+
+	// data for primitives
+	__global sPrimitiveCl *__attribute__((aligned(16))) primitives =
+		(__global sPrimitiveCl *)&inBuff[primitivesOffset];
+
 	//--------- end of data file ----------------------------------
 
 	// auxiliary vectors
@@ -134,15 +150,26 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	rot = RotateZ(rot, -consts->params.sweetSpotHAngle);
 	rot = RotateX(rot, consts->params.sweetSpotVAngle);
 
+	matrix33 rotInv = TransposeMatrix(rot);
+
 	// starting point for ray-marching
 	float3 start = consts->params.camera;
 
-	// view vector
+// view vector
+#ifdef PERSP_EQUIRECTANGULAR
+	float aspectRatio = 2.0f;
+#else
 	float aspectRatio = width / height;
+#endif
 	float2 normalizedScreenPoint;
 	normalizedScreenPoint.x = (screenPoint.x / width - 0.5f) * aspectRatio;
 	normalizedScreenPoint.y = -(screenPoint.y / height - 0.5f);
 	if (consts->params.legacyCoordinateSystem) normalizedScreenPoint.y *= -1.0f;
+
+#ifdef MONTE_CARLO_ANTI_ALIASING
+	normalizedScreenPoint.x += (Random(1000.0f, &randomSeed) / 1000.0f - 0.5f) / width * aspectRatio;
+	normalizedScreenPoint.y += (Random(1000.0f, &randomSeed) / 1000.0f - 0.5f) / height;
+#endif
 
 	float3 viewVectorNotRotated = CalculateViewVector(normalizedScreenPoint, consts->params.fov);
 	float3 viewVector = Matrix33MulFloat3(rot, viewVectorNotRotated);
@@ -159,6 +186,7 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	float4 color4 = 0.0f;
 	float opacityOut;
 	float3 surfaceColor = 0.0f;
+	float3 iridescence = 0.0f;
 
 	bool found = false;
 	int count;
@@ -176,7 +204,25 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 		sClCalcParams calcParam;
 		calcParam.N = consts->params.N;
 		calcParam.normalCalculationMode = false;
+		calcParam.iterThreshMode = consts->params.iterThreshMode;
 		distThresh = 1e-6f;
+
+		sRenderData renderData;
+		renderData.lightVector = lightVector;
+		renderData.viewVectorNotRotated = viewVectorNotRotated;
+		renderData.material = material;
+		renderData.palette = palette;
+		renderData.AOVectors = AOVectors;
+		renderData.lights = lights;
+		renderData.paletteLength = paletteLength;
+		renderData.numberOfLights = numberOfLights;
+		renderData.AOVectorsCount = AOVectorsCount;
+		renderData.reflectionsMax = 0;
+		renderData.primitives = primitives;
+		renderData.numberOfPrimitives = numberOfPrimitives;
+		renderData.primitivesGlobalPosition = primitivesGlobalPosition;
+		renderData.mRot = rot;
+		renderData.mRotInv = rotInv;
 
 		formulaOut outF;
 		float step = 0.0f;
@@ -191,7 +237,7 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 			distThresh = CalcDistThresh(point, consts);
 			calcParam.distThresh = distThresh;
 			calcParam.detailSize = distThresh;
-			outF = CalculateDistance(consts, point, &calcParam);
+			outF = CalculateDistance(consts, point, &calcParam, &renderData);
 			distance = outF.distance;
 
 			if (distance < distThresh)
@@ -236,7 +282,7 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 						point = start + viewVector * scan;
 					}
 				}
-				outF = CalculateDistance(consts, point, &calcParam);
+				outF = CalculateDistance(consts, point, &calcParam, &renderData);
 				distance = outF.distance;
 				step *= 0.5f;
 			}
@@ -261,32 +307,46 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 		shaderInputData.material = material;
 		shaderInputData.palette = palette;
 		shaderInputData.paletteSize = paletteLength;
-		shaderInputData.AOVectors = AOVectors;
-		shaderInputData.AOVectorsCount = AOVectorsCount;
-		shaderInputData.lights = lights;
-		shaderInputData.numberOfLights = numberOfLights;
 		shaderInputData.stepCount = count;
 		shaderInputData.randomSeed = randomSeed;
 
-		float3 normal = NormalVector(consts, point, distance, distThresh, false, &calcParam);
+		float3 normal =
+			NormalVector(consts, &renderData, point, distance, distThresh, false, &calcParam);
 		shaderInputData.normal = normal;
 
 		float3 specular = 0.0f;
 
 		if (found)
 		{
-			color = ObjectShader(consts, &shaderInputData, &calcParam, &surfaceColor, &specular);
+			color = ObjectShader(
+				consts, &renderData, &shaderInputData, &calcParam, &surfaceColor, &specular, &iridescence);
 			alpha = 1.0f;
 		}
 		else
 		{
-			color = BackgroundShader(consts, &shaderInputData);
+			color = BackgroundShader(consts, &renderData, image2dBackground, &shaderInputData);
 			scan = 1e20f;
 			alpha = 0.0f;
 		}
 
+#ifdef GLOW
+		// glow init
+		float glow = count * consts->params.glowIntensity / 512.0f * consts->params.DEFactor;
+		float glowN = 1.0f - glow;
+		if (glowN < 0.0f) glowN = 0.0f;
+
+		float3 glowColor;
+
+		glowColor = (glowN * consts->params.glowColor1 + consts->params.glowColor2 * glow);
+
+		glow *= 0.7f;
+		float glowOpacity = 1.0f * glow;
+		if (glowOpacity > 1.0f) glowOpacity = 1.0f;
+		color = glow * glowColor + (1.0f - glowOpacity) * color;
+		alpha += glowOpacity;
+#endif // GLOW
+
 		color4 = (float4){color.s0, color.s1, color.s2, alpha};
-		color4 = VolumetricShader(consts, &shaderInputData, &calcParam, color4, &opacityOut);
 
 #ifdef PERSP_FISH_EYE_CUT
 	}

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -57,7 +57,7 @@ public:
 		useMipmaps
 	};
 
-	cTexture(QString filename, enumUseMipmaps mode, bool beQuiet = false);
+	cTexture(QString filename, enumUseMipmaps mode, int frameNo, bool beQuiet);
 	cTexture();
 	cTexture(const cTexture &tex);
 	cTexture &operator=(const cTexture &tex);
@@ -73,8 +73,8 @@ public:
 	QString GetFileName() const { return originalFileName; }
 	void FromQByteArray(QByteArray *buffer, enumUseMipmaps mode);
 	CVector3 NormalMapFromBumpMap(CVector2<double> point, double bump, double pixelSize = 0.0) const;
-	CVector3 NormalMap(CVector2<double> point, double bump, double pixelSize = 0.0) const;
-	void SetInvertGreen(bool invert) { invertGreen = invert; }
+	CVector3 NormalMap(
+		CVector2<double> point, double bump, bool invertGreen, double pixelSize = 0.0) const;
 
 private:
 	sRGBA16 LinearInterpolation(double x, double y) const;
@@ -89,7 +89,6 @@ private:
 	QString originalFileName;
 	QList<QVector<sRGBA16>> mipmaps;
 	QList<CVector2<int>> mipmapSizes;
-	bool invertGreen;
 };
 
 #endif /* MANDELBULBER2_SRC_TEXTURE_HPP_ */

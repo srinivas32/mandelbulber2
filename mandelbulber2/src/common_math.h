@@ -64,7 +64,7 @@ inline double dmix(double a, double b, double x)
 template <typename T>
 inline T clamp(T x, T min, T max)
 {
-	return (((x >= min) ? x : min) <= max) ? x : max;
+	return qBound(min, x, max);
 }
 
 // polynomial smooth min;
@@ -116,5 +116,7 @@ double cubicInterpolate(double p[4], double x);
 double bicubicInterpolate(double p[4][4], double x, double y);
 
 CVector3 wrap(CVector3 x, CVector3 a, CVector3 s);
+
+double MagicRound(double val, double maxError);
 
 #endif /* MANDELBULBER2_SRC_COMMON_MATH_H_ */

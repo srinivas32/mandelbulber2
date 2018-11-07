@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -45,9 +45,7 @@ cMaterialItemModel::cMaterialItemModel(QObject *parent) : QAbstractListModel(par
 	container = nullptr;
 }
 
-cMaterialItemModel::~cMaterialItemModel()
-{
-}
+cMaterialItemModel::~cMaterialItemModel() = default;
 
 void cMaterialItemModel::AssignContainer(cParameterContainer *_parameterContainer)
 {
@@ -189,13 +187,12 @@ void cMaterialItemModel::Regenerate()
 	endRemoveRows();
 
 	QList<QString> list = container->GetListOfParameters();
-	for (int i = 0; i < list.size(); i++)
+	for (auto &parameterName : list)
 	{
-		QString parameterName = list.at(i);
 		if (parameterName.left(3) == "mat")
 		{
 			int positionOfDash = parameterName.indexOf('_');
-			int matIndex = parameterName.mid(3, positionOfDash - 3).toInt();
+			int matIndex = parameterName.midRef(3, positionOfDash - 3).toInt();
 			if (materialIndexes.indexOf(matIndex) < 0)
 			{
 				materialIndexes.append(matIndex);
@@ -214,9 +211,9 @@ int cMaterialItemModel::FindFreeIndex()
 	do
 	{
 		occupied = false;
-		for (int i = 0; i < materialIndexes.size(); i++)
+		for (int indexFromArray : materialIndexes)
 		{
-			if (materialIndex == materialIndexes[i])
+			if (materialIndex == indexFromArray)
 			{
 				occupied = true;
 				materialIndex++;

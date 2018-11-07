@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,9 +34,8 @@
 
 #include "files.h"
 
-#include <string.h>
-
 #include <cstdio>
+#include <cstring>
 
 #include "cimage.hpp"
 #include "error_message.hpp"
@@ -191,11 +190,8 @@ void SaveImage(QString filename, ImageFileSave::enumImageFileType fileType, cIma
 	QObject *updateReceiver)
 {
 	ImageFileSave::ImageConfig imageConfig;
-	QStringList imageChannelNames;
-	imageChannelNames << "color"
-										<< "alpha"
-										<< "zbuffer"
-										<< "normal";
+	QStringList imageChannelNames = ImageFileSave::ImageChannelNames();
+
 	// read image config from preferences
 	for (int i = 0; i < imageChannelNames.size(); i++)
 	{
@@ -431,7 +427,7 @@ bool FileExists(const QString &path)
 
 QString FilePathHelper(const QString &path, const QStringList &pathList)
 {
-	QString newPath;
+	// QString newPath;
 
 	// original file was found
 	if (FileExists(path)) return path;
@@ -448,7 +444,7 @@ QString FilePathHelper(const QString &path, const QStringList &pathList)
 		}
 	}
 
-	qWarning() << "File not found anywhere";
+	qWarning() << QString("Substitute path for %1 not found anywhere").arg(path);
 	return path;
 }
 
@@ -510,4 +506,90 @@ QByteArray LoadUtf8TextFromFile(const QString &fileName)
 		file.close();
 		return text.toUtf8();
 	}
+}
+
+QString AnimatedFileName(
+	const QString &filenameString, int frame, const QList<QString> *netRenderTextureList)
+{
+	QString outFilename = filenameString;
+	if (filenameString.contains('%'))
+	{
+		int firstPercent = filenameString.indexOf('%');
+		int numberOfPercents = 1;
+
+		for (int i = firstPercent; i < filenameString.length(); i++)
+		{
+			if (filenameString.at(i) != '%')
+			{
+				numberOfPercents = i - firstPercent;
+				break;
+			}
+		}
+
+		QString numberString = QString("%1").arg(frame, numberOfPercents, 10, QChar('0'));
+
+		for (int i = firstPercent; i < firstPercent + numberOfPercents; i++)
+		{
+			outFilename[i] = numberString[i - firstPercent];
+		}
+
+		// looking for the texture in NetRender
+		if (netRenderTextureList)
+		{
+			if (netRenderTextureList->length() > 0)
+			{
+				int maxLookupIndex = pow(10, numberOfPercents);
+
+				for (int index = 0; index < maxLookupIndex; index++)
+				{
+					QString tempFilename = filenameString;
+					for (int i = firstPercent; i < firstPercent + numberOfPercents; i++)
+					{
+						QString tempNumberString = QString("%1").arg(index, numberOfPercents, 10, QChar('0'));
+						tempFilename[i] = tempNumberString[i - firstPercent];
+					}
+
+					if (netRenderTextureList->contains(tempFilename))
+					{
+						return tempFilename;
+					}
+				}
+			}
+		}
+		else
+		{
+			// looking for last file number and make sequence as a loop
+			if (!QFile::exists(outFilename))
+			{
+				QFileInfo fileInfo(outFilename);
+				QDir dir = fileInfo.absoluteDir();
+
+				QStringList nameFilters;
+				QString nameFilter = QFileInfo(filenameString).fileName();
+				nameFilter = nameFilter.replace(QChar('%'), QChar('?'));
+				nameFilters.append(nameFilter);
+				dir.setNameFilters(nameFilters);
+				QStringList fileList = dir.entryList(QDir::Files, QDir::Name);
+
+				if (fileList.length() > 0)
+				{
+					QString lastFile = fileList.last();
+					QString maxIndexText = lastFile.mid(
+						firstPercent - filenameString.length() + lastFile.length(), numberOfPercents);
+					int maxIndex = maxIndexText.toInt();
+
+					int frameModulo = frame % (maxIndex + 1);
+
+					// correct frame number
+					numberString = QString("%1").arg(frameModulo, numberOfPercents, 10, QChar('0'));
+					for (int i = firstPercent; i < firstPercent + numberOfPercents; i++)
+					{
+						outFilename[i] = numberString[i - firstPercent];
+					}
+				}
+			}
+		}
+	}
+
+	return outFilename;
 }

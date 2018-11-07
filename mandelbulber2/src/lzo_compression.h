@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -38,9 +38,10 @@
 #ifndef MANDELBULBER2_SRC_LZO_COMPRESSION_H_
 #define MANDELBULBER2_SRC_LZO_COMPRESSION_H_
 
-#include <assert.h>
 #include <lzo/lzo1x.h>
 #include <lzo/lzoconf.h>
+
+#include <cassert>
 
 #include <QByteArray>
 #include <QElapsedTimer>
@@ -52,10 +53,9 @@ QByteArray lzoCompress(QByteArray data)
 {
 	QElapsedTimer time;
 	time.start();
-	void *wrkmem = malloc(LZO1X_1_MEM_COMPRESS);
-
+	char *wrkmem = new char[LZO1X_1_MEM_COMPRESS];
 	size_t len = data.size() + data.size() / 16 + 64 + 3;
-	char *out = (char *)malloc(len);
+	char *out = new char[len];
 
 	int ret = lzo1x_1_compress((lzo_bytep)data.data(), (lzo_uint)data.size(), (lzo_bytep)out,
 		(lzo_uintp)&len, (lzo_voidp)wrkmem);
@@ -72,9 +72,9 @@ QByteArray lzoCompress(QByteArray data)
 		3);
 
 	QByteArray arr;
-	arr.append((char *)out, CastSizeToInt(len));
-	free(wrkmem);
-	free(out);
+	arr.append(out, CastSizeToInt(len));
+	delete[] wrkmem;
+	delete[] out;
 	return arr;
 }
 
@@ -83,16 +83,16 @@ QByteArray lzoUncompress(QByteArray data)
 	QElapsedTimer time;
 	time.start();
 	lzo_uint len;
-	void *tmp = nullptr;
+	char *tmp = nullptr;
 	int decompressionFactor = 10;
 
 	while (true)
 	{
 		len = data.size() * decompressionFactor;
-		if (tmp) free(tmp);
-		tmp = malloc(len);
+		if (tmp) delete[] tmp;
+		tmp = new char[len];
 
-		if (lzo1x_decompress_safe((lzo_bytep)data.data(), data.size(), (lzo_bytep)tmp, &len, NULL)
+		if (lzo1x_decompress_safe((lzo_bytep)data.data(), data.size(), (lzo_bytep)tmp, &len, nullptr)
 				== LZO_E_OUTPUT_OVERRUN)
 		{
 			decompressionFactor *= 2;
@@ -111,8 +111,8 @@ QByteArray lzoUncompress(QByteArray data)
 		3);
 
 	QByteArray arr;
-	arr.append((char *)tmp, len);
-	free(tmp);
+	arr.append(tmp, len);
+	delete[] tmp;
 	return arr;
 }
 

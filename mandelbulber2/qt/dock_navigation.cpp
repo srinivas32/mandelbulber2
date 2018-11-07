@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -126,8 +126,6 @@ void cDockNavigation::ConnectSignals() const
 	connect(ui->vect3_camera_rotation_z, SIGNAL(editingFinished()), this, SLOT(slotRotationEdited()));
 	connect(ui->logedit_camera_distance_to_target, SIGNAL(editingFinished()), this,
 		SLOT(slotCameraDistanceEdited()));
-	connect(ui->logslider_camera_distance_to_target, SIGNAL(sliderMoved(int)), this,
-		SLOT(slotCameraDistanceSlider(int)));
 	connect(ui->comboBox_camera_absolute_distance_mode, SIGNAL(currentIndexChanged(int)), this,
 		SLOT(slotMovementStepModeChanged(int)));
 	connect(ui->comboBox_camera_movement_mode, SIGNAL(currentIndexChanged(int)), this,
@@ -142,14 +140,15 @@ void cDockNavigation::ConnectSignals() const
 
 void cDockNavigation::slotCameraMove() const
 {
-	QString buttonName = this->sender()->objectName();
-	gMainInterface->MoveCamera(buttonName);
+	QString buttonName = sender()->objectName();
+	gMainInterface->MoveCamera(buttonName, true);
 }
 
 void cDockNavigation::slotCameraRotation() const
 {
-	QString buttonName = this->sender()->objectName();
-	gMainInterface->RotateCamera(buttonName);
+	QString buttonName = sender()->objectName();
+
+	gMainInterface->RotateCamera(buttonName, true);
 }
 
 void cDockNavigation::slotCameraOrTargetEdited()
@@ -216,8 +215,6 @@ void cDockNavigation::slotCameraMovementModeChanged(int index)
 
 void cDockNavigation::EnableOpenCLModeComboBox(bool enabled) const
 {
-#ifdef USE_OPENCL
 	ui->comboBox_opencl_mode->setVisible(enabled);
 	ui->label_opencl_mode->setVisible(enabled);
-#endif
 }

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -57,15 +57,14 @@ cDockFractal::cDockFractal(QWidget *parent) : QWidget(parent), ui(new Ui::cDockF
 	fractalTabs = new cTabFractal *[NUMBER_OF_FRACTALS];
 	for (int i = 0; i < NUMBER_OF_FRACTALS; i++)
 	{
-		fractalTabs[i] = this->ui->tabWidget_fractals->findChild<cTabFractal *>(
-			QString("widgetTabFractal_%1").arg(i + 1));
+		fractalTabs[i] =
+			ui->tabWidget_fractals->findChild<cTabFractal *>(QString("widgetTabFractal_%1").arg(i + 1));
 	}
 
 	automatedWidgets = new cAutomatedWidgets(this);
 	automatedWidgets->ConnectSignalsForSlidersInWindow(this);
 
 	ui->label_repeat_from->setEnabled(false);
-	ui->sliderInt_repeat_from->setEnabled(false);
 	ui->spinboxInt_repeat_from->setEnabled(false);
 	ui->label_fractals_remark_julia->setVisible(false);
 
@@ -208,7 +207,7 @@ void cDockFractal::InitializeFractalUi() const
 	//{
 	//		uiFile.open(QFile::ReadOnly);
 	//		fractalWidgets[0] = loader.load(&uiFile);
-	//		ui->verticalLayout_fractal_1->addWidget(this->fractalWidgets[0]);
+	//		ui->verticalLayout_fractal_1->addWidget(fractalWidgets[0]);
 	//		fractalWidgets[0]->show();
 
 	for (int i = 0; i < NUMBER_OF_FRACTALS; i++)
@@ -291,7 +290,7 @@ void cDockFractal::slotChangedCheckBoxBooleanOperators(bool state) const
 
 		fractalTabs[i]->FormulaTransformSetVisible(state);
 
-		fractal::enumCPixelAddition cPixelAddition =
+		const fractal::enumCPixelAddition cPixelAddition =
 			fractalList[fractalTabs[i]->GetCurrentFractalIndexOnList()].cpixelAddition;
 
 		if (cPixelAddition == fractal::cpixelAlreadyHas)
@@ -331,7 +330,6 @@ void cDockFractal::slotChangedCheckBoxHybridFractal(int state) const
 
 	ui->label_fractals_remark_hybrid->setVisible(!state);
 	ui->label_repeat_from->setEnabled(state);
-	ui->sliderInt_repeat_from->setEnabled(state);
 	ui->spinboxInt_repeat_from->setEnabled(state);
 }
 
@@ -363,7 +361,7 @@ void cDockFractal::slotChangedJuliaPoint() const
 		SynchronizeInterfaceWindow(ui->groupCheck_julia_mode, &params, qInterface::read);
 		params.SetContainerName("juliaPreview");
 
-		double cameraDistance = params.Get<double>("julia_preview_distance");
+		const double cameraDistance = params.Get<double>("julia_preview_distance");
 		CVector3 target(0.0, 0.0, 0.0);
 		CVector3 direction = gPar->Get<CVector3>("camera") - gPar->Get<CVector3>("target");
 		direction.Normalize();
@@ -393,7 +391,7 @@ void cDockFractal::slotPressedButtonGetJuliaConstant()
 
 void cDockFractal::slotPressedButtonNewPrimitive() const
 {
-	QString buttonName = this->sender()->objectName();
+	QString buttonName = sender()->objectName();
 	QString primitiveName = buttonName.mid(buttonName.lastIndexOf('_') + 1);
 	gMainInterface->NewPrimitive(primitiveName);
 }
@@ -411,14 +409,14 @@ void cDockFractal::slotChangedFractalTab(int index)
 				message->addButton(tr("Enable hybrid fractals"), QMessageBox::AcceptRole);
 			QPushButton *buttonBoolean =
 				message->addButton(tr("Enable boolean mode"), QMessageBox::AcceptRole);
-			QPushButton *buttonCancel = message->addButton(QMessageBox::Cancel);
+			const QPushButton *buttonCancel = message->addButton(QMessageBox::Cancel);
 
 			message->setText(tr(
 				"You have selected next fractal formula.\nDo you want to enable hybrid fractals or boolean "
 				"mode?"));
 			message->setWindowTitle(tr("More fractals..."));
 			message->setIcon(QMessageBox::Question);
-			int result = message->exec();
+			const int result = message->exec();
 			Q_UNUSED(result);
 
 			if (message->clickedButton() != buttonCancel)

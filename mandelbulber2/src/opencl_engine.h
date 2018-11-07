@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,6 +34,8 @@
 
 #ifndef MANDELBULBER2_SRC_OPENCL_ENGINE_H_
 #define MANDELBULBER2_SRC_OPENCL_ENGINE_H_
+
+#include <utility>
 
 #include <QtCore>
 
@@ -77,19 +79,51 @@ class cOpenClEngine : public QObject
 
 public:
 	cOpenClEngine(cOpenClHardware *hardware);
-	~cOpenClEngine();
+	~cOpenClEngine() override;
 
 #ifdef USE_OPENCL
+	struct sClInputOutputBuffer
+	{
+		sClInputOutputBuffer(qint64 itemSize, qint64 length, QString name)
+				: itemSize(itemSize), length(length), name(std::move(name))
+		{
+		}
+
+		static void Deleter(char *charArray) { delete[] charArray; }
+
+		qint64 size() const { return itemSize * length; }
+		qint64 itemSize;
+		qint64 length;
+		QString name;
+		QSharedPointer<char> ptr;
+		QSharedPointer<cl::Buffer> clPtr;
+	};
 
 	void Lock();
 	void Unlock();
+	static void DeleteKernelCache();
 	void Reset();
 	virtual bool LoadSourcesAndCompile(const cParameterContainer *params) = 0;
 	bool CreateKernel4Program(const cParameterContainer *params);
-	virtual bool PreAllocateBuffers(const cParameterContainer *params) = 0;
+	virtual bool PreAllocateBuffers(const cParameterContainer *params);
+	virtual void RegisterInputOutputBuffers(const cParameterContainer *params) = 0;
+	bool WriteBuffersToQueue();
+	bool ReadBuffersFromQueue();
 	bool CreateCommandQueue();
+	void SetUseBuildCache(bool useCache) { useBuildCache = useCache; }
+	void SetUseFastRelaxedMath(bool usefastMath) { useFastRelaxedMath = usefastMath; }
+	void ReleaseMemory();
+	bool AssignParametersToKernel();
+	virtual bool AssignParametersToKernelAdditional(int argIterator)
+	{
+		Q_UNUSED(argIterator);
+		return true;
+	}
 
 protected:
+	QList<sClInputOutputBuffer> inputBuffers;
+	QList<sClInputOutputBuffer> outputBuffers;
+	QList<sClInputOutputBuffer> inputAndOutputBuffers;
 	virtual QString GetKernelName() = 0;
 	static bool checkErr(cl_int err, QString functionName);
 	bool Build(const QByteArray &programString, QString *errorText);
@@ -99,9 +133,9 @@ protected:
 	void UpdateOptimalJobEnd();
 	virtual size_t CalcNeededMemory() = 0;
 
-	cl::Program *program;
-	cl::Kernel *kernel;
-	cl::CommandQueue *queue;
+	QScopedPointer<cl::Program> program;
+	QScopedPointer<cl::Kernel> kernel;
+	QScopedPointer<cl::CommandQueue> queue;
 
 	sOptimalJob optimalJob;
 	bool programsLoaded;
@@ -117,6 +151,8 @@ protected:
 private:
 	QMutex lock;
 	bool locked;
+	bool useBuildCache;
+	bool useFastRelaxedMath;
 	QByteArray lastProgramHash;
 	QByteArray lastBuildParametersHash;
 

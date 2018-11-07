@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -57,9 +57,7 @@ cHeadless::cHeadless() : QObject()
 {
 }
 
-cHeadless::~cHeadless()
-{
-}
+cHeadless::~cHeadless() = default;
 
 void cHeadless::RenderStillImage(QString filename, QString imageFileFormat)
 {
@@ -101,7 +99,7 @@ void cHeadless::RenderStillImage(QString filename, QString imageFileFormat)
 		ImageFileSave::ImageConfig imageConfig;
 		imageConfig.insert(ImageFileSave::IMAGE_CONTENT_COLOR, saveImageChannel);
 		bool appendAlpha = (imageFileFormat == "png16alpha");
-		ImageFileSavePNG imageSaver(filenameWithoutExtension + ext, image, imageConfig);
+		ImageFileSavePNG imageSaver(filenameWithoutExtension, image, imageConfig);
 		imageSaver.SetAppendAlphaCustom(appendAlpha);
 		imageSaver.SaveImage();
 	}
@@ -113,7 +111,7 @@ void cHeadless::RenderStillImage(QString filename, QString imageFileFormat)
 	}
 
 	QTextStream out(stdout);
-	out << "Image saved to: " << filenameWithoutExtension << ext << "\n";
+	out << tr("Image saved to: %1\n").arg(filenameWithoutExtension + ext);
 
 	delete renderJob;
 	delete image;
@@ -134,10 +132,20 @@ void cHeadless::RenderQueue()
 
 		cErrorMessage::showMessage(
 			"Queue is empty. Waiting for something to do.", cErrorMessage::infoMessage);
+		int intProgress = 0;
+		QTextStream out(stdout);
 		do
 		{
 			gApplication->processEvents();
 			Wait(100);
+			if (!systemData.isOutputTty) continue;
+
+			QString progressChars = "|\\-/";
+			intProgress = (intProgress + 1) % progressChars.length();
+			QString text = colorize(progressChars.mid(intProgress, 1), ansiBlue, noExplicitColor, true)
+										 + QString(" Waiting ...") + "\r";
+			out << text;
+			out.flush();
 		} while (gQueue->GetQueueSize() == 0);
 
 		gQueue->slotQueueRender();
@@ -353,7 +361,7 @@ void cHeadless::RenderingProgressOutput(
 		if (useHeader != "") useHeader += ": ";
 		int freeWidth = systemData.terminalWidth - progressTxt.length() - useHeader.length() - 4;
 		int intProgress = freeWidth * percentDone;
-		text = "\r";
+		if (systemData.isOutputTty) text = "\r";
 		text += colorize(useHeader, ansiYellow, noExplicitColor, true);
 		text += formattedText;
 		text += colorize("[", ansiBlue, noExplicitColor, true);
@@ -373,10 +381,8 @@ void cHeadless::RenderingProgressOutput(
 QString cHeadless::colorize(
 	QString text, ansiColor foregroundColor, ansiColor backgroundColor, bool bold)
 {
-// more information on ANSI escape codes here: https://en.wikipedia.org/wiki/ANSI_escape_code
-#ifdef _WIN32 /* WINDOWS */
-	return text;
-#else
+	// more information on ANSI escape codes here: https://en.wikipedia.org/wiki/ANSI_escape_code
+	if (!systemData.isOutputTty) return text;
 	if (!systemData.useColor) return text;
 
 	QStringList ansiSequence;
@@ -392,14 +398,11 @@ QString cHeadless::colorize(
 	colorizedString += text;
 	colorizedString += "\033[0m"; // reset color and bold after string
 	return colorizedString;
-#endif
 }
 
 QString cHeadless::formatLine(const QString &text)
 {
-#ifdef _WIN32 /* WINDOWS */
-	return text;
-#else
+	if (!systemData.isOutputTty) return text;
 	if (!systemData.useColor) return text;
 	QList<QRegularExpression> reType;
 	reType.append(
@@ -422,9 +425,9 @@ QString cHeadless::formatLine(const QString &text)
 											 ")(voraussichtlich noch: )(.*)"));
 
 	QRegularExpressionMatch matchType;
-	for (int i = 0; i < reType.size(); i++)
+	for (const auto &i : reType)
 	{
-		matchType = reType.at(i).match(text);
+		matchType = i.match(text);
 		if (matchType.hasMatch()) break;
 	}
 
@@ -449,7 +452,6 @@ QString cHeadless::formatLine(const QString &text)
 	}
 
 	return out;
-#endif
 }
 
 bool cHeadless::ConfirmMessage(QString message)
@@ -464,20 +466,15 @@ bool cHeadless::ConfirmMessage(QString message)
 
 void cHeadless::EraseLine()
 {
-#ifdef _WIN32 /* WINDOWS */
-	return;
-#else
+	if (!systemData.isOutputTty) return;
 	QTextStream out(stdout);
 	out << "\033[2K";
 	out.flush();
-#endif
 }
 
 void cHeadless::MoveCursor(int leftRight, int downUp)
 {
-#ifdef _WIN32 /* WINDOWS */
-	return;
-#else
+	if (!systemData.isOutputTty) return;
 	QTextStream out(stdout);
 	if (leftRight != 0)
 	{
@@ -494,5 +491,4 @@ void cHeadless::MoveCursor(int leftRight, int downUp)
 		out << code;
 	}
 	out.flush();
-#endif
 }

@@ -1,6 +1,6 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
@@ -19,7 +19,6 @@
 REAL4 BenesiMagTransformsIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *aux)
 {
 	REAL4 c = aux->const_c;
-
 	if (fractal->transformCommon.benesiT1Enabled && aux->i >= fractal->transformCommon.startIterations
 			&& aux->i < fractal->transformCommon.stopIterations)
 	{
@@ -31,9 +30,8 @@ REAL4 BenesiMagTransformsIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 		REAL tempL = length(temp);
 		z = fabs(z) * fractal->transformCommon.scale3D222;
 		// if (tempL < 1e-21f) tempL =  1e-21f;
-		REAL avgScale = native_divide(length(z), tempL);
+		REAL avgScale = native_divide(length(z), tempL); // pos
 
-		aux->r_dz *= avgScale;
 		aux->DE = mad(aux->DE, avgScale, 1.0f);
 
 		tempXZ = (z.y + z.x) * SQRT_1_2;
@@ -75,7 +73,7 @@ REAL4 BenesiMagTransformsIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 			z.y = mad(
 				fractal->transformCommon.constantMultiplier100.z, tempC.y, (2.0f * t * temp.y * temp.z));
 		}
-		aux->r_dz = mad(aux->r * aux->r_dz, 2.0f, 1.0f);
+		aux->DE = mad(aux->r * aux->DE, 2.0f, 1.0f);
 	}
 	if (fractal->transformCommon.juliaMode)
 	{
@@ -121,7 +119,6 @@ REAL4 BenesiMagTransformsIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 					tempL = length(temp);
 					// if (tempL < 1e-21f) tempL = 1e-21f;
 					avgScale = native_divide(length(z), tempL);
-					aux->r_dz *= avgScale;
 					aux->DE = mad(aux->DE, avgScale, 1.0f);
 					tempXZ = (z.y + z.x) * SQRT_1_2;
 					z = (REAL4){z.z * SQRT_1_3 + tempXZ * SQRT_2_3, (z.y - z.x) * SQRT_1_2,
@@ -137,7 +134,6 @@ REAL4 BenesiMagTransformsIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 					tempL = length(temp);
 					// if (tempL < 1e-21f) tempL = 1e-21f;
 					avgScale = native_divide(length(z), tempL);
-					aux->r_dz *= avgScale;
 					aux->DE = mad(aux->DE, avgScale, 1.0f);
 					z = (fabs(z + fractal->transformCommon.offset111)
 							 - fabs(z - fractal->transformCommon.offset111) - z);
@@ -160,7 +156,6 @@ REAL4 BenesiMagTransformsIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 					z = fabs(z) * fractal->transformCommon.scale3D444;
 					// if (tempL < 1e-21f) tempL = 1e-21f;
 					avgScale = native_divide(length(z), tempL);
-					aux->r_dz *= avgScale;
 					aux->DE = mad(aux->DE, avgScale, 1.0f);
 					tempXZ = (z.y + z.x) * SQRT_1_2;
 					z = (REAL4){z.z * SQRT_1_3 + tempXZ * SQRT_2_3, (z.y - z.x) * SQRT_1_2,

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -78,10 +78,12 @@ bool cRenderer::RenderImage()
 	{
 		image->SetImageParameters(params->imageAdjustments);
 
+		image->SetFastPreview(true);
+
 		int progressiveSteps;
 		if (data->configuration.UseProgressive())
 			progressiveSteps =
-				int(log(double(max(image->GetWidth(), image->GetHeight()))) / log(2.0)) - 3;
+				int(log(double(max(image->GetWidth(), image->GetHeight()))) / log(2.0)) - 2;
 		else
 			progressiveSteps = 0;
 
@@ -131,7 +133,7 @@ bool cRenderer::RenderImage()
 
 		QElapsedTimer timerRefresh;
 		timerRefresh.start();
-		qint64 lastRefreshTime = 0;
+		qint64 lastRefreshTime = 100;
 		QList<int> listToRefresh;
 		QList<int> listToSend;
 
@@ -142,6 +144,7 @@ bool cRenderer::RenderImage()
 		do
 		{
 			WriteLogDouble("Progressive loop", scheduler->GetProgressiveStep(), 2);
+
 			for (int i = 0; i < data->configuration.GetNumberOfThreads(); i++)
 			{
 				WriteLog(QString("Thread ") + QString::number(i) + " create", 3);
@@ -166,6 +169,15 @@ bool cRenderer::RenderImage()
 						|| systemData.globalStopRequest)
 				{
 					scheduler->Stop();
+
+					image->CompileImage();
+					image->ConvertTo8bit();
+					if (data->configuration.UseImageRefresh())
+					{
+						image->SetFastPreview(true);
+						image->UpdatePreview();
+						emit updateImage();
+					}
 				}
 
 				Wait(10); // wait 10ms
@@ -227,8 +239,9 @@ bool cRenderer::RenderImage()
 
 						if (data->configuration.UseImageRefresh())
 						{
+							image->SetFastPreview(true);
 							image->UpdatePreview(&listToRefresh);
-							image->GetImageWidget()->update();
+							emit updateImage();
 						}
 
 						// sending rendered lines to NetRender server
@@ -355,6 +368,7 @@ bool cRenderer::RenderImage()
 				connect(&rendererSSAO,
 					SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
 					SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+				connect(&rendererSSAO, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 
 				if (data->stereo.isEnabled() && (data->stereo.GetMode() == cStereo::stereoLeftRight
 																					|| data->stereo.GetMode() == cStereo::stereoTopBottom))
@@ -379,6 +393,7 @@ bool cRenderer::RenderImage()
 				cPostRenderingDOF dof(image);
 				connect(&dof, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
 					this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+				connect(&dof, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 
 				if (data->stereo.isEnabled() && (data->stereo.GetMode() == cStereo::stereoLeftRight
 																					|| data->stereo.GetMode() == cStereo::stereoTopBottom))
@@ -421,12 +436,14 @@ bool cRenderer::RenderImage()
 
 		if (image->IsPreview())
 		{
+			image->SetFastPreview(*data->stopRequest || data->configuration.GetMaxRenderTime() < 1e49);
+
 			WriteLog("image->ConvertTo8bit()", 2);
 			image->ConvertTo8bit();
 			WriteLog("image->UpdatePreview()", 2);
 			image->UpdatePreview();
 			WriteLog("image->GetImageWidget()->update()", 2);
-			image->GetImageWidget()->update();
+			emit updateImage();
 		}
 
 		WriteLog("Rendering finished", 2);

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -1135,8 +1135,8 @@ void cOldSettings::ConvertToNewContainer(cParameterContainer *par, cFractalConta
 	par->Set("fake_lights_max_iter", oldData->fractal.fakeLightsMaxIter);
 
 	cColorPalette palette;
-	for (int i = 0; i < 256; i++)
-		palette.AppendColor(oldData->palette[i]);
+	for (auto color : oldData->palette)
+		palette.AppendColor(color);
 	par->Set("mat1_surface_color_palette", palette);
 
 	if (oldData->fractal.primitives.boxEnable)
@@ -1205,7 +1205,9 @@ void cOldSettings::ConvertToNewContainer(cParameterContainer *par, cFractalConta
 		par->Set("primitive_water_1_color", oldData->primitiveWaterColour);
 		par->Set("primitive_water_1_reflection", oldData->doubles.primitiveWaterReflect);
 		par->Set("primitive_water_1_enabled", oldData->fractal.primitives.waterEnable);
-		par->Set("primitive_water_1_amplitude", oldData->fractal.doubles.primitives.waterAmplitude);
+		par->Set(
+			"primitive_water_1_relative_amplitude", oldData->fractal.doubles.primitives.waterAmplitude
+																								/ oldData->fractal.doubles.primitives.waterLength);
 		par->Set("primitive_water_1_length", oldData->fractal.doubles.primitives.waterLength);
 		par->Set("primitive_water_1_iterations", oldData->fractal.primitives.waterIterations);
 		par->Set("primitive_water_1_rotation",
@@ -1329,9 +1331,9 @@ void cOldSettings::ConvertToNewContainer(cParameterContainer *par, cFractalConta
 				oldSettings::enumOldFractalFormula formula =
 					oldData->fractal.hybridFormula[fractalsListTemp.at(i)];
 				bool found = false;
-				for (int l = 0; l < fractalList.size(); l++)
+				for (const auto &fractalDescription : fractalList)
 				{
-					if (formula == oldSettings::enumOldFractalFormula(fractalList.at(l).internalID))
+					if (formula == oldSettings::enumOldFractalFormula(fractalDescription.internalID))
 					{
 						found = true;
 						break;

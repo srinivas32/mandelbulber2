@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -105,9 +105,8 @@ void cErrorMessage::showMessage(QString text, enumMessageType messageType, QWidg
 		else if (messageType == errorMessage)
 		{
 			header = cHeadless::colorize(
-				QObject::tr("\nError: "), cHeadless::ansiRed, cHeadless::noExplicitColor, true);
-			messageText =
-				cHeadless::colorize(text, cHeadless::ansiRed, cHeadless::noExplicitColor, false);
+				QObject::tr("\nError: "), cHeadless::ansiRed, cHeadless::ansiWhite, true);
+			messageText = cHeadless::colorize(text, cHeadless::ansiRed, cHeadless::ansiWhite, false);
 		}
 		else if (messageType == infoMessage)
 		{
@@ -117,7 +116,7 @@ void cErrorMessage::showMessage(QString text, enumMessageType messageType, QWidg
 				cHeadless::colorize(text, cHeadless::ansiGreen, cHeadless::noExplicitColor, false);
 		}
 
-		out << header << messageText << "\n\n";
+		out << header << messageText << "\n";
 	}
 }
 

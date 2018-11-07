@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -39,6 +39,7 @@
 #include "fractparams.hpp"
 #include "global_data.hpp"
 #include "opencl_hardware.h"
+#include "parameters.hpp"
 #include "progress_text.hpp"
 
 cOpenClEngineRenderSSAO::cOpenClEngineRenderSSAO(cOpenClHardware *_hardware)
@@ -50,13 +51,9 @@ cOpenClEngineRenderSSAO::cOpenClEngineRenderSSAO(cOpenClHardware *_hardware)
 	paramsSSAO.width = 0;
 	paramsSSAO.height = 0;
 	paramsSSAO.quality = 0;
+	paramsSSAO.random_mode = false;
 	intensity = 0.0;
 	numberOfPixels = 0;
-	inCLZBuffer = nullptr;
-	inZBuffer = nullptr;
-	outBuffer = nullptr;
-	outCl = nullptr;
-
 	optimalJob.sizeOfPixel = 0; // memory usage doens't depend on job size
 	optimalJob.optimalProcessingCycle = 0.5;
 #endif
@@ -65,26 +62,11 @@ cOpenClEngineRenderSSAO::cOpenClEngineRenderSSAO(cOpenClHardware *_hardware)
 cOpenClEngineRenderSSAO::~cOpenClEngineRenderSSAO()
 {
 #ifdef USE_OPENCL
-	if (inCLZBuffer) delete inCLZBuffer;
-	if (outCl) delete outCl;
-	if (inZBuffer) delete[] inZBuffer;
-	if (outBuffer) delete[] outBuffer;
+	ReleaseMemory();
 #endif
 }
 
 #ifdef USE_OPENCL
-
-void cOpenClEngineRenderSSAO::ReleaseMemory()
-{
-	if (inCLZBuffer) delete inCLZBuffer;
-	inCLZBuffer = nullptr;
-	if (outCl) delete outCl;
-	outCl = nullptr;
-	if (inZBuffer) delete[] inZBuffer;
-	inZBuffer = nullptr;
-	if (outBuffer) delete[] outBuffer;
-	outBuffer = nullptr;
-}
 
 QString cOpenClEngineRenderSSAO::GetKernelName()
 {
@@ -98,8 +80,11 @@ void cOpenClEngineRenderSSAO::SetParameters(const sParamRender *paramRender)
 	paramsSSAO.fov = paramRender->fov;
 	paramsSSAO.quality = paramRender->ambientOcclusionQuality * paramRender->ambientOcclusionQuality;
 	if (paramsSSAO.quality < 3) paramsSSAO.quality = 3;
+	paramsSSAO.random_mode = paramRender->SSAO_random_mode;
 	numberOfPixels = paramsSSAO.width * paramsSSAO.height;
 	intensity = paramRender->ambientOcclusion;
+
+	definesCollector.clear();
 }
 
 bool cOpenClEngineRenderSSAO::LoadSourcesAndCompile(const cParameterContainer *params)
@@ -119,7 +104,7 @@ bool cOpenClEngineRenderSSAO::LoadSourcesAndCompile(const cParameterContainer *p
 	QStringList clHeaderFiles;
 	clHeaderFiles.append("opencl_typedefs.h"); // definitions of common opencl types
 	clHeaderFiles.append("ssao_cl.h");				 // main data structures
-
+	clHeaderFiles.append("opencl_algebra.h");	// definitions of common math functions
 	for (int i = 0; i < clHeaderFiles.size(); i++)
 	{
 		programEngine.append("#include \"" + openclPath + clHeaderFiles.at(i) + "\"\n");
@@ -128,6 +113,8 @@ bool cOpenClEngineRenderSSAO::LoadSourcesAndCompile(const cParameterContainer *p
 	QString engineFileName = "ssao.cl";
 	QString engineFullFileName = openclEnginePath + engineFileName;
 	programEngine.append(LoadUtf8TextFromFile(engineFullFileName));
+
+	SetUseFastRelaxedMath(params->Get<bool>("opencl_use_fast_relaxed_math"));
 
 	// building OpenCl kernel
 	QString errorString;
@@ -149,113 +136,25 @@ bool cOpenClEngineRenderSSAO::LoadSourcesAndCompile(const cParameterContainer *p
 	return programsLoaded;
 }
 
-bool cOpenClEngineRenderSSAO::PreAllocateBuffers(const cParameterContainer *params)
+void cOpenClEngineRenderSSAO::RegisterInputOutputBuffers(const cParameterContainer *params)
 {
 	Q_UNUSED(params);
-
-	cl_int err;
-
-	if (hardware->ContextCreated())
-	{
-
-		// output buffer
-		size_t buffSize = numberOfPixels * sizeof(cl_float);
-		if (outBuffer) delete[] outBuffer;
-		outBuffer = new cl_float[numberOfPixels];
-
-		if (outCl) delete outCl;
-		outCl = new cl::Buffer(
-			*hardware->getContext(), CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, buffSize, outBuffer, &err);
-		if (!checkErr(
-					err, "*context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, buffSize, outBuffer, &err"))
-		{
-			emit showErrorMessage(
-				QObject::tr("OpenCL %1 cannot be created!").arg(QObject::tr("output buffer")),
-				cErrorMessage::errorMessage, nullptr);
-			return false;
-		}
-
-		// input z-buffer
-		if (inZBuffer) delete[] inZBuffer;
-		inZBuffer = new cl_float[numberOfPixels];
-
-		if (inCLZBuffer) delete inCLZBuffer;
-		inCLZBuffer = new cl::Buffer(*hardware->getContext(), CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-			numberOfPixels * sizeof(cl_float), inZBuffer, &err);
-		if (!checkErr(err,
-					"Buffer::Buffer(*hardware->getContext(), CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, "
-					"sizeof(sClInBuff), inZBuffer, &err)"))
-		{
-			emit showErrorMessage(
-				QObject::tr("OpenCL %1 cannot be created!").arg(QObject::tr("buffer for zBuffer")),
-				cErrorMessage::errorMessage, nullptr);
-			return false;
-		}
-	}
-	else
-	{
-		emit showErrorMessage(
-			QObject::tr("OpenCL context is not ready"), cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
-	return true;
+	inputBuffers << sClInputOutputBuffer(sizeof(cl_float), numberOfPixels, "z-buffer");
+	inputBuffers << sClInputOutputBuffer(
+		sizeof(cl_float), 2 * paramsSSAO.quality, "sine-cosine buffer");
+	outputBuffers << sClInputOutputBuffer(sizeof(cl_float), numberOfPixels, "output buffer");
 }
 
-bool cOpenClEngineRenderSSAO::AssignParametersToKernel()
+bool cOpenClEngineRenderSSAO::AssignParametersToKernelAdditional(int argIterator)
 {
-	int err = kernel->setArg(0, *inCLZBuffer); // input data in global memory
-	if (!checkErr(err, "kernel->setArg(0, *inCLZBuffer)"))
-	{
-		emit showErrorMessage(
-			QObject::tr("Cannot set OpenCL argument for %1").arg(QObject::tr("Z-Buffer data")),
-			cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
-	err = kernel->setArg(1, *outCl); // output buffer
-	if (!checkErr(err, "kernel->setArg(1, *outCl)"))
-	{
-		emit showErrorMessage(
-			QObject::tr("Cannot set OpenCL argument for %1").arg(QObject::tr("output data")),
-			cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
-	err = kernel->setArg(2, paramsSSAO); // pixel offset
-	if (!checkErr(err, "kernel->setArg(2, pixelIndex)"))
+	int err = kernel->setArg(argIterator++, paramsSSAO); // pixel offset
+	if (!checkErr(err, "kernel->setArg(" + QString::number(argIterator) + ", paramsSSAO)"))
 	{
 		emit showErrorMessage(
 			QObject::tr("Cannot set OpenCL argument for %1").arg(QObject::tr("SSAO params")),
 			cErrorMessage::errorMessage, nullptr);
 		return false;
 	}
-
-	return true;
-}
-
-bool cOpenClEngineRenderSSAO::WriteBuffersToQueue()
-{
-	cl_int err = queue->enqueueWriteBuffer(
-		*inCLZBuffer, CL_TRUE, 0, numberOfPixels * sizeof(cl_float), inZBuffer);
-
-	if (!checkErr(err, "CommandQueue::enqueueWriteBuffer(inCLBuffer)"))
-	{
-		emit showErrorMessage(
-			QObject::tr("Cannot enqueue writing OpenCL %1").arg(QObject::tr("input buffers")),
-			cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
-	err = queue->finish();
-	if (!checkErr(err, "CommandQueue::finish() - inCLBuffer"))
-	{
-		emit showErrorMessage(
-			QObject::tr("Cannot finish writing OpenCL %1").arg(QObject::tr("input buffers")),
-			cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
 	return true;
 }
 
@@ -300,29 +199,6 @@ bool cOpenClEngineRenderSSAO::ProcessQueue(qint64 pixelsLeft, qint64 pixelIndex)
 	return true;
 }
 
-bool cOpenClEngineRenderSSAO::ReadBuffersFromQueue()
-{
-	size_t buffSize = numberOfPixels * sizeof(cl_float);
-
-	cl_int err = queue->enqueueReadBuffer(*outCl, CL_TRUE, 0, buffSize, outBuffer);
-	if (!checkErr(err, "CommandQueue::enqueueReadBuffer()"))
-	{
-		emit showErrorMessage(QObject::tr("Cannot enqueue reading OpenCL output buffers"),
-			cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
-	err = queue->finish();
-	if (!checkErr(err, "CommandQueue::finish() - ReadBuffer"))
-	{
-		emit showErrorMessage(QObject::tr("Cannot finish reading OpenCL output buffers"),
-			cErrorMessage::errorMessage, nullptr);
-		return false;
-	}
-
-	return true;
-}
-
 bool cOpenClEngineRenderSSAO::Render(cImage *image, bool *stopRequest)
 {
 	if (programsLoaded)
@@ -339,12 +215,17 @@ bool cOpenClEngineRenderSSAO::Render(cImage *image, bool *stopRequest)
 		QElapsedTimer timer;
 		timer.start();
 
-		QList<int> lastRenderedLines;
-
 		// copy zBuffer to input buffer
 		for (int i = 0; i < numberOfPixels; i++)
 		{
-			inZBuffer[i] = image->GetZBufferPtr()[i];
+			((cl_float *)inputBuffers[zBufferIndex].ptr.data())[i] = image->GetZBufferPtr()[i];
+		}
+		for (int i = 0; i < paramsSSAO.quality; i++)
+		{
+			((cl_float *)inputBuffers[sineCosineIndex].ptr.data())[i] =
+				sin(float(i) / paramsSSAO.quality * 2.0 * M_PI);
+			((cl_float *)inputBuffers[sineCosineIndex].ptr.data())[i + paramsSSAO.quality] =
+				cos(float(i) / paramsSSAO.quality * 2.0 * M_PI);
 		}
 
 		// writing data to queue
@@ -354,7 +235,8 @@ bool cOpenClEngineRenderSSAO::Render(cImage *image, bool *stopRequest)
 		// insert device for loop here
 		// requires initialization for all opencl devices
 		// requires optimalJob for all opencl devices
-		for (qint64 pixelIndex = 0; pixelIndex < width * height; pixelIndex += optimalJob.stepSize)
+		for (qint64 pixelIndex = 0; pixelIndex < qint64(width) * qint64(height);
+				 pixelIndex += optimalJob.stepSize)
 		{
 			size_t pixelsLeft = width * height - pixelIndex;
 			UpdateOptimalJobStart(pixelsLeft);
@@ -386,7 +268,8 @@ bool cOpenClEngineRenderSSAO::Render(cImage *image, bool *stopRequest)
 			{
 				for (int x = 0; x < width; x++)
 				{
-					cl_float total_ambient = outBuffer[x + y * width];
+					cl_float total_ambient =
+						((cl_float *)outputBuffers[outputIndex].ptr.data())[x + y * width];
 					unsigned short opacity16 = image->GetPixelOpacity(x, y);
 					float opacity = opacity16 / 65535.0f;
 					sRGB8 colour = image->GetPixelColor(x, y);
@@ -413,7 +296,7 @@ bool cOpenClEngineRenderSSAO::Render(cImage *image, bool *stopRequest)
 				WriteLog("image->UpdatePreview()", 2);
 				image->UpdatePreview();
 				WriteLog("image->GetImageWidget()->update()", 2);
-				image->GetImageWidget()->update();
+				emit updateImage();
 			}
 		}
 
@@ -430,7 +313,7 @@ bool cOpenClEngineRenderSSAO::Render(cImage *image, bool *stopRequest)
 
 size_t cOpenClEngineRenderSSAO::CalcNeededMemory()
 {
-	return numberOfPixels * sizeof(cl_float);
+	return numberOfPixels * sizeof(cl_float) + paramsSSAO.quality * 2 * sizeof(cl_float);
 }
 
-#endif // USE_OPEMCL
+#endif // USE_OPENCL

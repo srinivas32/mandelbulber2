@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,15 +34,19 @@
 
 #include "displacement_map.hpp"
 
+#include "compute_fractal.hpp"
+#include "fractparams.hpp"
 #include "render_data.hpp"
 #include "texture_mapping.hpp"
 
-double DisplacementMap(double oldDistance, CVector3 point, int objectId, sRenderData *data)
+double DisplacementMap(
+	double oldDistance, CVector3 point, int objectId, sRenderData *data, double reduce)
 {
 	double distance = oldDistance;
 	if (data)
 	{
 		const cMaterial *mat = &data->materials[data->objectData[objectId].materialId];
+
 		if (mat->displacementTexture.IsLoaded())
 		{
 			CVector2<double> textureCoordinates;
@@ -51,9 +55,31 @@ double DisplacementMap(double oldDistance, CVector3 point, int objectId, sRender
 				+ CVector2<double>(0.5, 0.5);
 			sRGBFloat bump3 = mat->displacementTexture.Pixel(textureCoordinates);
 			double bump = bump3.R;
-			distance -= bump * mat->displacementTextureHeight;
+			distance -= bump * mat->displacementTextureHeight / reduce;
 			if (distance < 0.0) distance = 0.0;
 		}
 	}
 	return distance;
+}
+
+CVector3 FractalizeTexture(const CVector3 &point, sRenderData *data, const sParamRender &params,
+	const cNineFractals &fractals, int objectId, double *reduceDisplacement)
+{
+	int forcedFormulaIndex = objectId;
+	if (objectId < 0) objectId = 0;
+
+	CVector3 pointFractalized = point;
+	if (data)
+	{
+		const cMaterial *mat = &data->materials[data->objectData[objectId].materialId];
+		if (mat->textureFractalize)
+		{
+			sFractalIn fractIn(point, 0, params.N, params.common, forcedFormulaIndex, mat);
+			sFractalOut fractOut;
+			Compute<fractal::calcModeCubeOrbitTrap>(fractals, fractIn, &fractOut);
+			pointFractalized = fractOut.z;
+			*reduceDisplacement = pow(2.0, fractOut.iters);
+		}
+	}
+	return pointFractalized;
 }

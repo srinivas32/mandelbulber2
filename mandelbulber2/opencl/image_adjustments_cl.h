@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -47,6 +47,7 @@
 
 #ifndef OPENCL_KERNEL_CODE
 #include "common_params_cl.hpp"
+#include "fractal_cl.h"
 #include "opencl_algebra.h"
 
 #include "src/common_params.hpp"
@@ -62,16 +63,18 @@ typedef struct
 	cl_float brightness;
 	cl_float contrast;
 	cl_float imageGamma;
+	cl_float saturation;
 	cl_int hdrEnabled;
 } sImageAdjustmentsCl;
 
 #ifndef OPENCL_KERNEL_CODE
-inline sImageAdjustmentsCl clCopySImageAdjustmentsCl(sImageAdjustments &source)
+inline sImageAdjustmentsCl clCopySImageAdjustmentsCl(const sImageAdjustments &source)
 {
 	sImageAdjustmentsCl target;
 	target.brightness = source.brightness;
 	target.contrast = source.contrast;
 	target.imageGamma = source.imageGamma;
+	target.saturation = source.saturation;
 	target.hdrEnabled = source.hdrEnabled;
 	return target;
 }

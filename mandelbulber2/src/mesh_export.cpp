@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -27,7 +27,7 @@
  *
  * ###########################################################################
  *
- * Authors: Stanislaw Adaszewski
+ * Authors: Stanislaw Adaszewski, Sebastian Jennen (jenzebas@gmail.com)
  *
  * cMeshExport - exports the fractal volume in ply format.
  */
@@ -41,9 +41,12 @@
 #include "file_mesh.hpp"
 #include "fractal_container.hpp"
 #include "fractparams.hpp"
+#include "global_data.hpp"
 #include "initparameters.hpp"
 #include "marchingcubes.h"
+#include "material.h"
 #include "nine_fractals.hpp"
+#include "render_data.hpp"
 
 cMeshExport::cMeshExport(int w, int h, int l, CVector3 limitMin, CVector3 limitMax,
 	QString outputFileName, int maxIter, MeshFileSave::structSaveMeshConfig meshConfig)
@@ -60,68 +63,7 @@ cMeshExport::cMeshExport(int w, int h, int l, CVector3 limitMin, CVector3 limitM
 	stop = false;
 }
 
-cMeshExport::~cMeshExport()
-{
-}
-
-struct ProgressFtor
-{
-	cMeshExport *meshExport;
-
-	ProgressFtor(cMeshExport *meshExport) { this->meshExport = meshExport; }
-
-	void operator()(int i) const { meshExport->updateProgressAndStatus(i); }
-};
-
-struct FormulaFtor
-{
-	double dist_thresh;
-	sParamRender *params;
-	const cNineFractals *fractals;
-	FormulaFtor(double dist_thresh, sParamRender *params, const cNineFractals *fractals)
-	{
-
-		this->dist_thresh = dist_thresh;
-		this->params = params;
-		this->fractals = fractals;
-	}
-
-#ifdef USE_OFFLOAD
-	__declspec(target(mic))
-#endif // USE_OFFLOAD
-
-		double
-		operator()(double x, double y, double z, double *colorIndex) const
-	{
-		CVector3 point;
-		point.x = x;
-		point.y = y;
-		point.z = z;
-
-		sDistanceOut distanceOut;
-		sDistanceIn distanceIn(point, dist_thresh, false);
-
-		double dist = CalculateDistance(*params, *fractals, distanceIn, &distanceOut);
-
-		// if (dist <= dist_thresh) {
-
-		sFractalIn fractIn(point, params->minN, params->N, params->common, -1);
-		sFractalOut fractOut;
-
-		Compute<fractal::calcModeColouring>(*fractals, fractIn, &fractOut);
-
-		*colorIndex = fractOut.colorIndex;
-		//    return 1;
-		// } else {
-		//    *colorIndex = 0;
-		//    return 0;
-		// }
-
-		return dist;
-
-		// return (double)(dist <= dist_thresh);
-	}
-};
+cMeshExport::~cMeshExport() = default;
 
 void cMeshExport::updateProgressAndStatus(int i)
 {
@@ -136,46 +78,101 @@ void cMeshExport::updateProgressAndStatus(int i)
 
 void cMeshExport::ProcessVolume()
 {
-	QScopedPointer<const cNineFractals> fractals(new cNineFractals(gParFractal, gPar));
-	QScopedPointer<sParamRender> params(new sParamRender(gPar));
+	QScopedPointer<sRenderData> renderData(new sRenderData);
+	renderData->objectData.resize(NUMBER_OF_FRACTALS);
+
+	QScopedPointer<cNineFractals> fractals(new cNineFractals(gParFractal, gPar));
+	QScopedPointer<sParamRender> params(new sParamRender(gPar, &renderData->objectData));
+
+	CreateMaterialsMap(gPar, &renderData.data()->materials, true);
+
+	renderData->ValidateObjects();
 
 	params->N = maxIter;
 
-	double stepX = (limitMax.x - limitMin.x) * (1.0 / w);
-	double stepY = (limitMax.y - limitMin.y) * (1.0 / h);
-	double stepZ = (limitMax.z - limitMin.z) * (1.0 / l);
-	double dist_thresh = 0.5 * dMin(stepX, stepY, stepZ) / params->detailLevel;
+	// calculate uniform mesh step
+	double sizeX = (limitMax.x - limitMin.x);
+	double sizeY = (limitMax.y - limitMin.y);
+	double sizeZ = (limitMax.z - limitMin.z);
+	double maxSize = dMax(sizeX, sizeY, sizeZ);
+	double step = maxSize / w;
+
+	double dist_thresh;
+	if (!params->constantDEThreshold)
+		dist_thresh = 0.5 * step / params->detailLevel;
+	else
+		dist_thresh = params->DEThresh;
+
+	// extension by one at each side
+	double extension = step + dist_thresh;
+	limitMax += CVector3(extension, extension, extension);
+	limitMin -= CVector3(extension, extension, extension);
+
+	w = sizeX / step;
+	h = sizeY / step;
+	l = sizeZ / step;
+
+	limitMax.x = limitMin.x + w * step;
+	limitMax.y = limitMin.y + h * step;
+	limitMax.z = limitMin.z + l * step;
+
+	// update fractal limits to calculated box
+	params.data()->limitMin = limitMin + CVector3(extension, extension, extension);
+	params.data()->limitMax = limitMax - CVector3(extension, extension, extension);
 
 	progressText.ResetTimer();
 
-	double lower[] = {limitMin.x, limitMin.y, limitMin.z};
-	double upper[] = {limitMax.x, limitMax.y, limitMax.z};
 	vector<double> vertices;
 	vector<long long> polygons;
 	vector<double> colorIndices;
 
-	ProgressFtor progressFtor(this);
-	FormulaFtor formulaFtor(dist_thresh, params.data(), fractals.data());
-
 	WriteLog("Starting marching cubes...", 2);
+	MarchingCubes *marchingCube;
+	try
+	{
+		marchingCube =
+			new MarchingCubes(gPar, gParFractal, params.data(), fractals.data(), renderData.data(), w, h,
+				l, limitMin, limitMax, dist_thresh, &stop, vertices, polygons, colorIndices);
+	}
+	catch (std::bad_alloc &ba)
+	{
+		QString errorMessage = QString("bad_alloc caught in MarchingCubes: ") + ba.what()
+													 + ", maybe required mesh dimension to big?";
+		qCritical() << errorMessage;
+		emit updateProgressAndStatus(errorMessage, "Error occured", 0.0);
+		emit finished();
+		return;
+	}
 
-	mc::marching_cubes<double, double[3], FormulaFtor, ProgressFtor>(lower, upper, w, h, l,
-		formulaFtor, dist_thresh, vertices, polygons, &stop, progressFtor, colorIndices);
+	QThread *thread = new QThread();
+	marchingCube->moveToThread(thread);
+	QObject::connect(
+		marchingCube, SIGNAL(updateProgressAndStatus(int)), this, SLOT(updateProgressAndStatus(int)));
+	connect(thread, SIGNAL(started()), marchingCube, SLOT(RunMarchingCube()));
+	connect(marchingCube, SIGNAL(finished()), thread, SLOT(quit()));
+	connect(thread, SIGNAL(finished()), marchingCube, SLOT(deleteLater()));
+	connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+	thread->start();
+	while (!thread->isFinished())
+	{
+		gApplication->processEvents();
+		Wait(100); // wait till finished
+	}
 
 	WriteLog("Marching cubes done.", 2);
 
 	cColorPalette palette = gPar->Get<cColorPalette>("mat1_surface_color_palette");
 	std::vector<sRGB8> colorsRGB;
 
-	for (unsigned int i = 0; i < colorIndices.size(); i++)
+	for (double colorIndice : colorIndices)
 	{
-		sRGB color = palette.IndexToColour(colorIndices[i]);
+		sRGB color = palette.IndexToColour(colorIndice);
 		sRGB8 color8(color.R, color.G, color.B);
 		colorsRGB.push_back(color8);
 	}
 
 	// Save to file
-	MeshFileSave::structSaveMeshData meshData(vertices, polygons, colorsRGB);
+	MeshFileSave::structSaveMeshData meshData(&vertices, &polygons, &colorsRGB);
 	MeshFileSave *meshFileSave = MeshFileSave::create(outputFileName, meshConfig, meshData);
 	QObject::connect(meshFileSave,
 		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -76,8 +76,34 @@ void cDockRenderingEngine::ConnectSignals() const
 	connect(ui->logedit_detail_level, SIGNAL(returnPressed()), this, SLOT(slotDetailLevelChanged()));
 	connect(ui->comboBox_delta_DE_method, SIGNAL(currentIndexChanged(int)), this,
 		SLOT(slotChangedComboDistanceEstimationMethod(int)));
+
+	// Limits
 	connect(ui->bu_bounding_box_to_limit, SIGNAL(clicked()), this,
 		SLOT(slotPressedButtonSetBoundingBoxAsLimits()));
+	connect(ui->bu_bounding_box_size_x_up, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxSizeXUp()));
+	connect(ui->bu_bounding_box_size_x_down, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxSizeXDown()));
+	connect(ui->bu_bounding_box_size_y_up, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxSizeYUp()));
+	connect(ui->bu_bounding_box_size_y_down, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxSizeYDown()));
+	connect(ui->bu_bounding_box_size_z_up, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxSizeZUp()));
+	connect(ui->bu_bounding_box_size_z_down, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxSizeZDown()));
+	connect(ui->bu_bounding_box_move_x_neg, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxMoveXNeg()));
+	connect(ui->bu_bounding_box_move_x_pos, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxMoveXPos()));
+	connect(ui->bu_bounding_box_move_y_neg, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxMoveYNeg()));
+	connect(ui->bu_bounding_box_move_y_pos, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxMoveYPos()));
+	connect(ui->bu_bounding_box_move_z_neg, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxMoveZNeg()));
+	connect(ui->bu_bounding_box_move_z_pos, SIGNAL(clicked()), this,
+		SLOT(slotPressedButtonBoundingBoxMoveZPos()));
 
 	// NetRender
 	connect(ui->bu_netrender_connect, SIGNAL(clicked()), this, SLOT(slotNetRenderClientConnect()));
@@ -99,6 +125,9 @@ void cDockRenderingEngine::ConnectSignals() const
 
 	connect(ui->checkBox_connect_detail_level_2, SIGNAL(stateChanged(int)), this,
 		SIGNAL(stateChangedConnectDetailLevel(int)));
+
+	connect(ui->pushButton_calculate_dist_thresh, SIGNAL(clicked()), this,
+		SLOT(slotCalculateDistanceThreshold()));
 }
 
 void cDockRenderingEngine::slotNetRenderServerStart() const
@@ -147,10 +176,14 @@ void cDockRenderingEngine::slotNetRenderClientListUpdate() const
 	if (table->columnCount() == 0)
 	{
 		QStringList header;
-		header << tr("Name") << tr("Host") << tr("CPUs") << tr("Status") << tr("Lines done");
+		header << tr("Name") << tr("Host") << tr("CPUs") << tr("Status") << tr("Lines done")
+					 << tr("Actions");
 		table->setColumnCount(header.size());
 		table->setHorizontalHeaderLabels(header);
 	}
+
+	QHeaderView *headers = table->horizontalHeader();
+	headers->setSectionResizeMode(QHeaderView::ResizeToContents);
 
 	// change table
 	if (table->rowCount() != gNetRender->GetClientCount())
@@ -203,6 +236,23 @@ void cDockRenderingEngine::slotNetRenderClientListUpdate(int i, int j) const
 			break;
 		}
 		case 4: cell->setText(QString::number(gNetRender->GetClient(i).linesRendered)); break;
+		case 5:
+		{
+			QFrame *frame = new QFrame;
+			QGridLayout *gridLayout = new QGridLayout;
+			QToolButton *actionKickAndKill = new QToolButton;
+			actionKickAndKill->setIcon(actionKickAndKill->style()->standardIcon(QStyle::SP_TrashIcon));
+			actionKickAndKill->setFixedSize(24, 24);
+			actionKickAndKill->setObjectName(QString::number(i));
+			gridLayout->setContentsMargins(2, 2, 2, 2);
+			QObject::connect(
+				actionKickAndKill, SIGNAL(clicked()), this, SLOT(slotNetRenderKickAndKill()));
+			gridLayout->addWidget(actionKickAndKill, 0, 0);
+			gridLayout->setSpacing(0);
+			frame->setLayout(gridLayout);
+			table->setCellWidget(i, j, frame);
+			break;
+		}
 		default: break;
 	}
 }
@@ -244,9 +294,15 @@ void cDockRenderingEngine::slotCheckBoxDisableNetRender(bool on)
 	}
 }
 
+void cDockRenderingEngine::slotNetRenderKickAndKill()
+{
+	QString buttonName = sender()->objectName();
+	gNetRender->KickAndKillClient(buttonName.toInt());
+}
+
 void cDockRenderingEngine::SynchronizeInterfaceDistanceEstimation(cParameterContainer *par) const
 {
-	SynchronizeInterfaceWindow(ui->groupBox_distanceEstimation, par, qInterface::write);
+	SynchronizeInterfaceWindow(ui->groupBox_detailLevel, par, qInterface::write);
 }
 
 void cDockRenderingEngine::ComboDeltaDEFunctionSetEnabled(bool enabled) const
@@ -261,9 +317,9 @@ int cDockRenderingEngine::ComboDeltaDEMethodCurrentIndex() const
 
 void cDockRenderingEngine::slotChangedComboDistanceEstimationMethod(int index) const
 {
-	ui->comboBox_delta_DE_function->setEnabled(
-		gMainInterface->mainWindow->GetWidgetDockFractal()->AreHybridFractalsEnabled()
-		|| index == int(fractal::forceDeltaDEMethod));
+	// ui->comboBox_delta_DE_function->setEnabled(
+	//	gMainInterface->mainWindow->GetWidgetDockFractal()->AreHybridFractalsEnabled()
+	//	|| index == int(fractal::forceDeltaDEMethod));
 }
 
 void cDockRenderingEngine::CheckboxConnectDetailLevelSetCheckState(Qt::CheckState state) const
@@ -283,7 +339,6 @@ void cDockRenderingEngine::UpdateLabelUsedDistanceEstimation(const QString &text
 
 void cDockRenderingEngine::slotChangedCheckBoxUseDefaultBailout(int state) const
 {
-	ui->logslider_bailout->setEnabled(!state);
 	ui->logedit_bailout->setEnabled(!state);
 }
 
@@ -313,5 +368,65 @@ void cDockRenderingEngine::slotPressedButtonOptimizeForHQ()
 }
 void cDockRenderingEngine::slotPressedButtonSetBoundingBoxAsLimits()
 {
-	gMainInterface->SetBoundingBoxAsLimits();
+	gMainInterface->SetBoundingBoxAsLimitsTotal();
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxSizeXUp()
+{
+	gMainInterface->BoundingBoxMove('x', 0.05, 0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxSizeXDown()
+{
+	gMainInterface->BoundingBoxMove('x', -0.05, -0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxSizeYUp()
+{
+	gMainInterface->BoundingBoxMove('y', 0.05, 0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxSizeYDown()
+{
+	gMainInterface->BoundingBoxMove('y', -0.05, -0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxSizeZUp()
+{
+	gMainInterface->BoundingBoxMove('z', 0.05, 0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxSizeZDown()
+{
+	gMainInterface->BoundingBoxMove('z', -0.05, -0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxMoveXNeg()
+{
+	gMainInterface->BoundingBoxMove('x', -0.05, 0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxMoveXPos()
+{
+	gMainInterface->BoundingBoxMove('x', 0.05, -0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxMoveYNeg()
+{
+	gMainInterface->BoundingBoxMove('y', -0.05, 0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxMoveYPos()
+{
+	gMainInterface->BoundingBoxMove('y', 0.05, -0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxMoveZNeg()
+{
+	gMainInterface->BoundingBoxMove('z', -0.05, 0.05);
+}
+void cDockRenderingEngine::slotPressedButtonBoundingBoxMoveZPos()
+{
+	gMainInterface->BoundingBoxMove('z', 0.05, -0.05);
+}
+
+void cDockRenderingEngine::slotCalculateDistanceThreshold()
+{
+	gMainInterface->SynchronizeInterface(gPar, gParFractal, qInterface::read);
+	double distance = gMainInterface->GetDistanceForPoint(gPar->Get<CVector3>("camera"));
+	double detailLevel = gPar->Get<double>("detail_level");
+	double imageWidth = gPar->Get<int>("image_width");
+	double fov = gPar->Get<int>("fov");
+	double distThresh = fov / detailLevel / imageWidth * distance * 0.5;
+	gPar->Set("DE_thresh", distThresh);
+	gMainInterface->SynchronizeInterface(gPar, gParFractal, qInterface::write);
 }

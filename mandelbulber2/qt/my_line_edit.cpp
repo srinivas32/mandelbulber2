@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -36,16 +36,29 @@
 
 #include <qapplication.h>
 
+#include <QByteArray>
+#include <QLocale>
 #include <QMenu>
+#include <QSlider>
+
+#include "frame_slider_popup.h"
 
 #include "src/animation_flight.hpp"
 #include "src/animation_keyframes.hpp"
+#include "src/common_math.h"
+#include "src/system.hpp"
 
 MyLineEdit::MyLineEdit(QWidget *parent) : QLineEdit(parent), CommonMyWidgetWrapper(this)
 {
 	actionResetVectorToDefault = nullptr;
 	actionCopyVectorToClipboard = nullptr;
 	actionPasteVectorFromClipboard = nullptr;
+	slider = nullptr;
+}
+
+MyLineEdit::~MyLineEdit()
+{
+	if (slider) delete slider;
 }
 
 void MyLineEdit::paintEvent(QPaintEvent *event)
@@ -268,4 +281,131 @@ void MyLineEdit::slotPasteVector()
 void MyLineEdit::slotResetVector()
 {
 	ResetVectorToDefault();
+}
+
+void MyLineEdit::focusInEvent(QFocusEvent *event)
+{
+	QLineEdit::focusInEvent(event);
+
+	QString type = GetType(objectName());
+	if (type != "text")
+	{
+		if (!slider)
+		{
+			QWidget *topWidget = window();
+			slider = new cFrameSliderPopup(topWidget);
+			slider->setFocusPolicy(Qt::NoFocus);
+			slider->hide();
+		}
+
+		QWidget *topWidget = window();
+		QPoint windowPoint = mapTo(topWidget, QPoint());
+		int width = this->width();
+		int hOffset = height();
+
+		slider->adjustSize();
+		slider->setFixedWidth(width);
+
+		if (windowPoint.y() + slider->height() + hOffset > topWidget->height())
+			hOffset = -slider->height();
+
+		slider->move(windowPoint.x(), windowPoint.y() + hOffset);
+		slider->show();
+
+		connect(slider, SIGNAL(timerTrigger()), this, SLOT(slotSliderTimerUpdateValue()));
+		connect(slider, SIGNAL(resetPressed()), this, SLOT(slotResetToDefault()));
+		connect(slider, SIGNAL(zeroPressed()), this, SLOT(slotZeroValue()));
+		connect(slider, SIGNAL(halfPressed()), this, SLOT(slotHalfValue()));
+		connect(slider, SIGNAL(doublePressed()), this, SLOT(slotDoubleValue()));
+		connect(slider, SIGNAL(intPressed()), this, SLOT(slotRoundValue()));
+	}
+}
+
+void MyLineEdit::focusOutEvent(QFocusEvent *event)
+{
+	QLineEdit::focusOutEvent(event);
+
+	if (slider)
+	{
+		slider->disconnect();
+		slider->hide();
+		slider->deleteLater();
+		slider = nullptr;
+	}
+}
+
+void MyLineEdit::slotSliderTimerUpdateValue()
+{
+	const double value = systemData.locale.toDouble(text());
+	int iDiff = slider->value() - 500;
+	if (iDiff != 0)
+	{
+		double sign = (iDiff > 0) ? 1.0 : -1.0;
+
+		if (objectName().left(3) == QString("log"))
+		{
+			double dDiff = iDiff / 1000.0;
+			double change = pow(10.0, dDiff * dDiff * sign);
+			const QString text = QString("%L1").arg(value * change, 0, 'g', 16);
+			setText(text);
+		}
+		else
+		{
+			double dDiff = abs(iDiff) / 33.0 - 15.0;
+			double change = pow(10.0, dDiff) * sign;
+			const QString text = QString("%L1").arg(value + change, 0, 'g', 16);
+			setText(text);
+		}
+		emit editingFinished();
+	}
+}
+
+void MyLineEdit::slotResetToDefault()
+{
+	resetToDefault();
+	emit returnPressed();
+}
+
+void MyLineEdit::slotZeroValue()
+{
+	setText("0");
+	emit returnPressed();
+}
+
+void MyLineEdit::slotDoubleValue()
+{
+	const double value = systemData.locale.toDouble(text());
+	const QString text = QString("%L1").arg(value * 2.0, 0, 'g', 16);
+	setText(text);
+	emit returnPressed();
+}
+
+void MyLineEdit::slotHalfValue()
+{
+	const double value = systemData.locale.toDouble(text());
+	const QString text = QString("%L1").arg(value * 0.5, 0, 'g', 16);
+	setText(text);
+	emit returnPressed();
+}
+
+void MyLineEdit::slotRoundValue()
+{
+	const double value = systemData.locale.toDouble(text());
+	const QString text = QString("%L1").arg(MagicRound(value, 0.05), 0, 'g', 16);
+	setText(text);
+	emit returnPressed();
+}
+
+void MyLineEdit::wheelEvent(QWheelEvent *event)
+{
+	if (slider) // if it's edit field with slider (not text)
+	{
+		double change = event->delta() / 360.0;
+		double multiplier = (1.0 + change / 10.0);
+		const double value = systemData.locale.toDouble(text());
+		const QString text = QString("%L1").arg(value * multiplier, 0, 'g', 16);
+		setText(text);
+		emit returnPressed();
+		event->accept();
+	}
 }

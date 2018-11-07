@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -32,8 +32,8 @@
  * Normal vector calculation for opencl
  */
 
-float3 NormalVector(__constant sClInConstants *consts, float3 point, float mainDistance,
-	float distThresh, float invertMode, sClCalcParams *calcParam)
+float3 NormalVector(__constant sClInConstants *consts, sRenderData *renderData, float3 point,
+	float mainDistance, float distThresh, float invertMode, sClCalcParams *calcParam)
 {
 #ifndef SLOW_SHADING
 	float delta = distThresh * consts->params.smoothness;
@@ -43,14 +43,20 @@ float3 NormalVector(__constant sClInConstants *consts, float3 point, float mainD
 
 	calcParam->distThresh = distThresh;
 	calcParam->normalCalculationMode = true;
-	float sx1 = CalculateDistance(consts, point + (float3){delta, 0.0f, 0.0f}, calcParam).distance;
-	float sx2 = CalculateDistance(consts, point + (float3){-delta, 0.0f, 0.0f}, calcParam).distance;
+	float sx1 =
+		CalculateDistance(consts, point + (float3){delta, 0.0f, 0.0f}, calcParam, renderData).distance;
+	float sx2 =
+		CalculateDistance(consts, point + (float3){-delta, 0.0f, 0.0f}, calcParam, renderData).distance;
 
-	float sy1 = CalculateDistance(consts, point + (float3){0.0f, delta, 0.0f}, calcParam).distance;
-	float sy2 = CalculateDistance(consts, point + (float3){0.0f, -delta, 0.0f}, calcParam).distance;
+	float sy1 =
+		CalculateDistance(consts, point + (float3){0.0f, delta, 0.0f}, calcParam, renderData).distance;
+	float sy2 =
+		CalculateDistance(consts, point + (float3){0.0f, -delta, 0.0f}, calcParam, renderData).distance;
 
-	float sz1 = CalculateDistance(consts, point + (float3){0.0f, 0.0f, delta}, calcParam).distance;
-	float sz2 = CalculateDistance(consts, point + (float3){0.0f, 0.0f, -delta}, calcParam).distance;
+	float sz1 =
+		CalculateDistance(consts, point + (float3){0.0f, 0.0f, delta}, calcParam, renderData).distance;
+	float sz2 =
+		CalculateDistance(consts, point + (float3){0.0f, 0.0f, -delta}, calcParam, renderData).distance;
 
 	float3 normal = (float3){sx1 - sx2, sy1 - sy2, sz1 - sz2};
 	normal = normalize(normal);
@@ -81,7 +87,7 @@ float3 NormalVector(__constant sClInConstants *consts, float3 point, float mainD
 			for (point2.z = -1.0f; point2.z <= 1.0f; point2.z += 0.2f)
 			{
 				point3 = point + point2 * delta;
-				float dist = CalculateDistance(consts, point3, calcParam).distance;
+				float dist = CalculateDistance(consts, point3, calcParam, renderData).distance;
 				normal += point2 * dist;
 			}
 		}

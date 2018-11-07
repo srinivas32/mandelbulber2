@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,15 +34,22 @@
 
 #include "my_group_box.h"
 
-#include <QLineEdit>
+#include <qaction.h>
+#include <qicon.h>
+#include <qlist.h>
+#include <qmenu.h>
+#include <qnamespace.h>
+#include <qobject.h>
+#include <qobjectdefs.h>
+#include <qstring.h>
 
-#include "src/animation_flight.hpp"
-#include "src/animation_keyframes.hpp"
+#include "src/parameters.hpp"
 
 MyGroupBox::MyGroupBox(QWidget *parent) : QGroupBox(parent), CommonMyWidgetWrapper(this)
 {
 	defaultValue = false;
 	firstDisplay = true;
+	actionResetAllToDefault = nullptr;
 	connect(this, SIGNAL(toggled(bool)), this, SLOT(slotToggled(bool)));
 }
 
@@ -97,21 +104,42 @@ bool MyGroupBox::GetDefault()
 
 void MyGroupBox::slotToggled(bool on) const
 {
-	QList<QWidget *> list = this->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
-	for (int i = 0; i < list.size(); ++i)
+	QList<QWidget *> list = findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly);
+	for (auto &widget : list)
 	{
 		if (on)
 		{
-			list[i]->show();
+			widget->show();
 		}
 		else
 		{
-			list[i]->hide();
+			widget->hide();
 		}
 	}
 }
 
 void MyGroupBox::contextMenuEvent(QContextMenuEvent *event)
 {
-	CommonMyWidgetWrapper::contextMenuEvent(event);
+	QMenu *menu = new QMenu;
+	QIcon iconReset = QIcon(":system/icons/edit-undo.png");
+
+	actionResetAllToDefault = menu->addAction(tr("Reset all to default"));
+	actionResetAllToDefault->setIcon(iconReset);
+
+	connect(actionResetAllToDefault, SIGNAL(triggered()), this, SLOT(slotResetAllToDefault()));
+	CommonMyWidgetWrapper::contextMenuEvent(event, menu);
+}
+
+void MyGroupBox::slotResetAllToDefault()
+{
+	QList<QWidget *> listOfWidgets = findChildren<QWidget *>();
+
+	foreach (QWidget *widget, listOfWidgets)
+	{
+		CommonMyWidgetWrapper *myWidget = dynamic_cast<CommonMyWidgetWrapper *>(widget);
+		if (myWidget)
+		{
+			myWidget->resetToDefault();
+		}
+	}
 }

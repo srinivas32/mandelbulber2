@@ -264,10 +264,10 @@
     <GenDir>$(SourceDir)build-win</GenDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='x64'">
-    <QtDir>$(SourceDir)\packages\bulbqt-msvc14-x64.5.7.0.10783\build\native\</QtDir>
+    <QtDir>$(SourceDir)\packages\bulbqt-msvc-x64.5.9.4.10785\build\native\</QtDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Platform)'=='Win32'">
-    <QtDir>$(SourceDir)\packages\bulbqt-msvc14-x86.5.7.0.10783\build\native\</QtDir>
+    <QtDir>$(SourceDir)\packages\bulbqt-msvc-x86.5.9.4.10785\build\native\</QtDir>
   </PropertyGroup>
   <PropertyGroup>
     <Moc>$(QtDir)/bin/moc.exe</Moc>
@@ -331,6 +331,9 @@
     <Exec Command="copy /Y &quot;$(SourceDir)\mandelbulber2\deploy\NEWS&quot; &quot;$(OutDir)doc\NEWS&quot;" />
     <Exec Command="copy /Y &quot;$(SourceDir)\mandelbulber2\deploy\COPYING&quot; &quot;$(OutDir)COPYING.txt&quot;" />
     <Exec Command="copy /Y &quot;$(SourceDir)\mandelbulber2\deploy\win32\mandelbulber2.ico&quot; &quot;$(OutDir)mandelbulber2.ico&quot;" />
+    <Exec Command="copy /Y &quot;$(SourceDir)\mandelbulber2\tools\TDR__disable.bat&quot; &quot;$(OutDir)TDR__disable.bat&quot;" />
+    <Exec Command="copy /Y &quot;$(SourceDir)\mandelbulber2\tools\TDR_deprovision.bat&quot; &quot;$(OutDir)TDR_deprovision.bat&quot;" />
+    <Exec Command="copy /Y &quot;$(SourceDir)\mandelbulber2\tools\TDR_enable.bat&quot; &quot;$(OutDir)TDR_enable.bat&quot;" />
     <Exec Command="mkdir &quot;$(OutDir)source&quot;" />
     <Exec Command="xcopy /Y /Q /I &quot;$(SourceDir)\mandelbulber2\src&quot; &quot;$(OutDir)source\src&quot;" />
     <Exec Command="xcopy /Y /Q /I &quot;$(SourceDir)\mandelbulber2\qt&quot; &quot;$(OutDir)source\qt&quot;" />

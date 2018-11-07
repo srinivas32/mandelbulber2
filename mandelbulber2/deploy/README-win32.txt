@@ -1,5 +1,5 @@
 
-                                                            MANDELBULBER 2.11
+                                 MANDELBULBER 2.15-alpha2
 
 1. What is Mandelbulber
 -----------------------
@@ -45,17 +45,12 @@ or run Mandelbulber v2-2.xx-Setup.exe if it is provided.
 5. TESTED ON
 ------------
 
-- Windows XP 32-bit
-- Windows Vista 64-bit
 - Windows 7 32-bit
 - Windows 8 64-bit
 - Windows 10 64-bit
 
-- gcc 5.4.0
-- clang 3.7.0
-- msvc14
 - msvc16
-- Qt 5.6.1
+- Qt 5.9.4
 
 6. USAGE
 --------
@@ -83,6 +78,8 @@ Options:
   -v, --version          Displays version information.
   -n, --nogui            Starts the program without a GUI.
   -o, --output <N>       Saves rendered image(s) to this file / folder.
+  --logfilepath <N>      Specify custom system log filepath (default is:
+                         ~/.mandelbulber_log.txt).
   -K, --keyframe         Renders keyframe animation.
   -F, --flight           Renders flight animation.
   -X, --never-delete     Never delete data, instead Exit CLI application.
@@ -91,12 +88,13 @@ Options:
   -L, --list             Lists all possible parameters '<KEY>' with
                          corresponding default value '<VALUE>'.
   -f, --format <FORMAT>  Image output format:
-                          jpg - JPEG format (default)
-                          png - PNG format
+                          jpg  - JPEG format (default)
+                          png  - PNG format
+                          exr  - EXR format
+                          tiff - TIFF format
+                         Legacy formats for still frames:
                           png16 - 16-bit PNG format
                           png16alpha - 16-bit PNG with alpha channel format
-                          exr - EXR format
-                          tiff - TIFF format
   -r, --res <WxH>        Overrides image resolution. Specify as width and
                          height separated by 'x'
   --fpk <N>              Overrides frames per key parameter.
@@ -118,7 +116,7 @@ Options:
                          settings file)
   -V, --voxel <FORMAT>   Renders the voxel volume. Output formats are:
                           slice - stack of PNG images into one folder (default)
-                          ply - Polygon File Format (single 3d file)
+                          ply   - Polygon File Format (single 3d file)
 
   -O, --override <...>   <KEY=VALUE> overrides item '<KEY>' from settings file
                          with new value '<VALUE>'.
@@ -128,8 +126,11 @@ Options:
                          Override fractal parameter in the form
                          'fractal<N>_KEY=VALUE' with <N> being index of fractal
   --stats                Shows statistics while rendering in CLI mode.
+  -g, --gpu              Runs the program in opencl mode and selects first
+                         available gpu device.
   --help-input           Shows help about input.
   --help-examples        Shows example commands.
+  --help-opencl          Shows commands regarding OpenCL.
 
 Arguments:
   settings_file          file with fractal settings (program also tries

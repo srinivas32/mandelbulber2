@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -27,307 +27,158 @@
  *
  * ###########################################################################
  *
- * Authors: pmneila
+ * Authors: pmneila, Sebastian Jennen (jenzebas@gmail.com)
  *
  * Re-licensed with the written authorization of P. M. Neila
- * for use with Mandelbulber.
+ * for use with Mandelbulber. See here for original code:
+ * https://github.com/pmneila/PyMCubes/
  */
 
 #ifndef MANDELBULBER2_SRC_MARCHINGCUBES_H_
 #define MANDELBULBER2_SRC_MARCHINGCUBES_H_
 
-#include <stddef.h>
-
+#include <cstddef>
 #include <vector>
 
-namespace mc
+#include <QObject>
+
+#include "algebra.hpp"
+
+struct sParamRender;
+class cNineFractals;
+struct sRenderData;
+class cParameterContainer;
+class cFractalContainer;
+
+class MarchingCubes : public QObject
 {
+	Q_OBJECT
 
-extern int edge_table[256];
-extern int triangle_table[256][16];
+public:
+	MarchingCubes(const cParameterContainer *paramsContainer,
+		const cFractalContainer *fractalContainer, sParamRender *params, cNineFractals *fractals,
+		sRenderData *renderData, int numx, int numy, int numz, const CVector3 &lower,
+		const CVector3 &upper, double dist_thresh, bool *stop, std::vector<double> &vertices,
+		std::vector<long long> &polygons, std::vector<double> &colorIndices);
 
-namespace private_
-{
+	~MarchingCubes() override { FreeBuffers(); }
 
-double mc_isovalue_interpolation(double isovalue, double f1, double f2, double x1, double x2);
-void mc_add_vertex(double x1, double y1, double z1, double c2, int axis, double f1, double f2,
-	double isovalue, std::vector<double> *vertices, double colorIndex_1, double colorIndex_2,
-	std::vector<double> *colorIndices);
-}
+public slots:
+	void RunMarchingCube();
 
-template <typename coord_type, typename vector3, typename formula, typename progressFtor>
-void marching_cubes(const vector3 &lower, const vector3 &upper, long long numx, long long numy,
-	long long numz, formula f, double isovalue, std::vector<double> &vertices,
-	std::vector<long long> &polygons, bool *stop, progressFtor progress,
-	std::vector<double> &colorIndices)
-{
-	using namespace private_;
-
-	// typedef decltype(lower[0]) coord_type;
-
-	// numx, numy and numz are the numbers of evaluations in each direction
-	--numx;
-	--numy;
-	--numz;
-
-	coord_type dx = (upper[0] - lower[0]) / static_cast<coord_type>(numx);
-	coord_type dy = (upper[1] - lower[1]) / static_cast<coord_type>(numy);
-	coord_type dz = (upper[2] - lower[2]) / static_cast<coord_type>(numz);
-
-	long long *shared_indices = new long long[2 * numy * numz * 3];
-
-	long long numyb = numy + 1;
-	long long numzb = numz + 1;
-	long long numyzb = numyb * numzb;
+private:
+	void FreeBuffers();
+	static int edge_table[256];
+	static int triangle_table[256][16];
 
 #ifdef USE_OFFLOAD
 	__declspec(target(mic))
 #endif // USE_OFFLOAD
-
-		double *voxelBuffer = new double[2 * numyzb];
+		long long *shared_indices;
 
 #ifdef USE_OFFLOAD
 	__declspec(target(mic))
 #endif // USE_OFFLOAD
+		double *voxelBuffer;
 
-		double *colorBuffer = new double[2 * numyzb];
+#ifdef USE_OFFLOAD
+	__declspec(target(mic))
+#endif // USE_OFFLOAD
+		double *colorBuffer;
 
-	const int z3 = numz * 3;
-	const int yz3 = numy * z3;
+	int numx;
+	int numy;
+	int numz;
+	double dx;
+	double dy;
+	double dz;
+	CVector3 lower;
+	CVector3 upper;
+	long long numyb;
+	long long numzb;
+	long long numyzb;
+	int z3;
+	int yz3;
+	sParamRender *params;
+	cNineFractals *fractals;
+	sRenderData *renderData;
+	double dist_thresh;
+	const cParameterContainer *paramsContainer;
+	const cFractalContainer *fractalContainer;
+	bool coloredMesh;
 
-	for (long long i = 0; i < numx; ++i)
+	bool *stop;
+	std::vector<double> &vertices;
+	std::vector<long long> &polygons;
+	std::vector<double> &colorIndices;
+
+	void calculateVoxelPlane(int i);
+
+	void calculateEdges(int i);
+
+	double getDistance(double x, double y, double z, double *colorIndex) const;
+
+	inline double mc_isovalue_interpolation(
+		double isovalue, double f1, double f2, double x1, double x2)
 	{
-		progress(i);
+		if (f2 == f1) return (x2 + x1) / 2;
+		return (x2 - x1) * (isovalue - f1) / (f2 - f1) + x1;
+	}
 
-		coord_type x = lower[0] + dx * i;
-		coord_type x_dx = lower[0] + dx * (i + 1);
-		const int i_mod_2 = i % 2;
-		const int i_mod_2_inv = (i_mod_2 ? 0 : 1);
-
-		// shift voxel planes
-		if (i > 0)
+	inline void mc_add_vertex(double x1, double y1, double z1, double c2, int axis, double f1,
+		double f2, double isovalue, std::vector<double> *vertices, double colorIndex_1,
+		double colorIndex_2, std::vector<double> *colorIndices)
+	{
+		switch (axis)
 		{
-			for (long long jk = 0; jk < numyzb; ++jk)
+			case 0:
 			{
-				long long ptr = jk;
-				long long ptr2 = ptr + numyzb;
-				voxelBuffer[ptr] = voxelBuffer[ptr2];
-				colorBuffer[ptr] = colorBuffer[ptr2];
+				double x = mc_isovalue_interpolation(isovalue, f1, f2, x1, c2);
+				vertices->push_back(x);
+				vertices->push_back(y1);
+				vertices->push_back(z1);
+
+				// double f = (x - x1) / (c2 - x1);
+				double colorIndex = mc_isovalue_interpolation(isovalue, f1, f2, colorIndex_1,
+					colorIndex_2); // f * colorIndex_2 + (1.0 - f) * colorIndex_1;
+				colorIndices->push_back(colorIndex);
+
+				return;
 			}
-		}
-
-		// calculate voxel plane
-		long long start = (i == 0) ? 0 : 1;
-		for (long long ii = start; ii < 2; ++ii)
-		{
-			coord_type xx = lower[0] + dx * (ii + i);
-
-			for (long long jj = 0; jj < numyb; ++jj)
+			case 1:
 			{
-				if (*stop)
-				{
-					progress(-1);
-					goto bailout;
-				}
+				double y = mc_isovalue_interpolation(isovalue, f1, f2, y1, c2);
+				vertices->push_back(x1);
+				vertices->push_back(y);
+				vertices->push_back(z1);
 
-				coord_type yy = lower[1] + dy * jj;
+				// double f = (y - y1) / (c2 - y1);
+				double colorIndex = mc_isovalue_interpolation(isovalue, f1, f2, colorIndex_1,
+					colorIndex_2); // f * colorIndex_2 + (1.0 - f) * colorIndex_1;
+				colorIndices->push_back(colorIndex);
 
-#ifdef USE_OFFLOAD
-#pragma offload target(mic) inout(voxelBuffer) inout(colorBuffer) nocopy(f)
-#endif // USE_OFFLOAD
-
-#pragma omp parallel for schedule(dynamic, 1)
-				for (long long kk = 0; kk < numzb; ++kk)
-				{
-					long long ptr = ii * numyzb + jj * numzb + kk;
-
-					coord_type zz = lower[2] + dz * kk;
-					voxelBuffer[ptr] = f(xx, yy, zz, &colorBuffer[ptr]);
-				}
+				return;
 			}
-		}
-
-		for (long long j = 0; j < numy; ++j)
-		{
-			if (*stop)
+			case 2:
 			{
-				progress(-1);
-				goto bailout;
-			}
+				double z = mc_isovalue_interpolation(isovalue, f1, f2, z1, c2);
+				vertices->push_back(x1);
+				vertices->push_back(y1);
+				vertices->push_back(z);
 
-			coord_type y = lower[1] + dy * j;
-			coord_type y_dy = lower[1] + dy * (j + 1);
+				// double f = (z - z1) / (c2 - z1);
+				double colorIndex = mc_isovalue_interpolation(isovalue, f1, f2, colorIndex_1,
+					colorIndex_2); // f * colorIndex_2 + (1.0 - f) * colorIndex_1;
+				colorIndices->push_back(colorIndex);
 
-			for (long long k = 0; k < numz; ++k)
-			{
-				coord_type z = lower[2] + dz * k;
-				coord_type z_dz = lower[2] + dz * (k + 1);
-
-				double v[8];
-				double colorIndex[8];
-				v[0] = voxelBuffer[j * numzb + k];
-				v[1] = voxelBuffer[numyzb + j * numzb + k];
-				v[2] = voxelBuffer[numyzb + (j + 1) * numzb + k];
-				v[3] = voxelBuffer[(j + 1) * numzb + k];
-				v[4] = voxelBuffer[j * numzb + k + 1];
-				v[5] = voxelBuffer[numyzb + j * numzb + k + 1];
-				v[6] = voxelBuffer[numyzb + (j + 1) * numzb + k + 1];
-				v[7] = voxelBuffer[(j + 1) * numzb + k + 1];
-
-				colorIndex[0] = colorBuffer[j * numzb + k];
-				colorIndex[1] = colorBuffer[numyzb + j * numzb + k];
-				colorIndex[2] = colorBuffer[numyzb + (j + 1) * numzb + k];
-				colorIndex[3] = colorBuffer[(j + 1) * numzb + k];
-				colorIndex[4] = colorBuffer[j * numzb + k + 1];
-				colorIndex[5] = colorBuffer[numyzb + j * numzb + k + 1];
-				colorIndex[6] = colorBuffer[numyzb + (j + 1) * numzb + k + 1];
-				colorIndex[7] = colorBuffer[(j + 1) * numzb + k + 1];
-
-				unsigned int cubeindex = 0;
-
-				for (int m = 0; m < 8; ++m)
-					if (v[m] <= isovalue) cubeindex |= 1 << m;
-
-				// Generate vertices AVOIDING DUPLICATES.
-
-				int edges = edge_table[cubeindex];
-				std::vector<long long> indices(12, -1);
-				if (edges & 0x040)
-				{
-					indices[6] = vertices.size() / 3;
-					shared_indices[i_mod_2 * yz3 + j * z3 + k * 3 + 0] = indices[6];
-					mc_add_vertex(x_dx, y_dy, z_dz, x, 0, v[6], v[7], isovalue, &vertices, colorIndex[6],
-						colorIndex[7], &colorIndices);
-				}
-				if (edges & 0x020)
-				{
-					indices[5] = vertices.size() / 3;
-					shared_indices[i_mod_2 * yz3 + j * z3 + k * 3 + 1] = indices[5];
-					mc_add_vertex(x_dx, y, z_dz, y_dy, 1, v[5], v[6], isovalue, &vertices, colorIndex[5],
-						colorIndex[6], &colorIndices);
-				}
-				if (edges & 0x400)
-				{
-					indices[10] = vertices.size() / 3;
-					shared_indices[i_mod_2 * yz3 + j * z3 + k * 3 + 2] = indices[10];
-					mc_add_vertex(x_dx, y + dx, z, z_dz, 2, v[2], v[6], isovalue, &vertices, colorIndex[2],
-						colorIndex[6], &colorIndices);
-				}
-
-				if (edges & 0x001)
-				{
-					if (j == 0 || k == 0)
-					{
-						indices[0] = vertices.size() / 3;
-						mc_add_vertex(x, y, z, x_dx, 0, v[0], v[1], isovalue, &vertices, colorIndex[0],
-							colorIndex[1], &colorIndices);
-					}
-					else
-						indices[0] = shared_indices[i_mod_2 * yz3 + (j - 1) * z3 + (k - 1) * 3 + 0];
-				}
-				if (edges & 0x002)
-				{
-					if (k == 0)
-					{
-						indices[1] = vertices.size() / 3;
-						mc_add_vertex(x_dx, y, z, y_dy, 1, v[1], v[2], isovalue, &vertices, colorIndex[1],
-							colorIndex[2], &colorIndices);
-					}
-					else
-						indices[1] = shared_indices[i_mod_2 * yz3 + j * z3 + (k - 1) * 3 + 1];
-				}
-				if (edges & 0x004)
-				{
-					if (k == 0)
-					{
-						indices[2] = vertices.size() / 3;
-						mc_add_vertex(x_dx, y_dy, z, x, 0, v[2], v[3], isovalue, &vertices, colorIndex[2],
-							colorIndex[3], &colorIndices);
-					}
-					else
-						indices[2] = shared_indices[i_mod_2 * yz3 + j * z3 + (k - 1) * 3 + 0];
-				}
-				if (edges & 0x008)
-				{
-					if (i == 0 || k == 0)
-					{
-						indices[3] = vertices.size() / 3;
-						mc_add_vertex(x, y_dy, z, y, 1, v[3], v[0], isovalue, &vertices, colorIndex[3],
-							colorIndex[0], &colorIndices);
-					}
-					else
-						indices[3] = shared_indices[i_mod_2_inv * yz3 + j * z3 + (k - 1) * 3 + 1];
-				}
-				if (edges & 0x010)
-				{
-					if (j == 0)
-					{
-						indices[4] = vertices.size() / 3;
-						mc_add_vertex(x, y, z_dz, x_dx, 0, v[4], v[5], isovalue, &vertices, colorIndex[4],
-							colorIndex[5], &colorIndices);
-					}
-					else
-						indices[4] = shared_indices[i_mod_2 * yz3 + (j - 1) * z3 + k * 3 + 0];
-				}
-				if (edges & 0x080)
-				{
-					if (i == 0)
-					{
-						indices[7] = vertices.size() / 3;
-						mc_add_vertex(x, y_dy, z_dz, y, 1, v[7], v[4], isovalue, &vertices, colorIndex[7],
-							colorIndex[4], &colorIndices);
-					}
-					else
-						indices[7] = shared_indices[i_mod_2_inv * yz3 + j * z3 + k * 3 + 1];
-				}
-				if (edges & 0x100)
-				{
-					if (i == 0 || j == 0)
-					{
-						indices[8] = vertices.size() / 3;
-						mc_add_vertex(x, y, z, z_dz, 2, v[0], v[4], isovalue, &vertices, colorIndex[0],
-							colorIndex[4], &colorIndices);
-					}
-					else
-						indices[8] = shared_indices[i_mod_2_inv * yz3 + (j - 1) * z3 + k * 3 + 2];
-				}
-				if (edges & 0x200)
-				{
-					if (j == 0)
-					{
-						indices[9] = vertices.size() / 3;
-						mc_add_vertex(x_dx, y, z, z_dz, 2, v[1], v[5], isovalue, &vertices, colorIndex[1],
-							colorIndex[3], &colorIndices);
-					}
-					else
-						indices[9] = shared_indices[i_mod_2 * yz3 + (j - 1) * z3 + k * 3 + 2];
-				}
-				if (edges & 0x800)
-				{
-					if (i == 0)
-					{
-						indices[11] = vertices.size() / 3;
-						mc_add_vertex(x, y_dy, z, z_dz, 2, v[3], v[7], isovalue, &vertices, colorIndex[3],
-							colorIndex[7], &colorIndices);
-					}
-					else
-						indices[11] = shared_indices[i_mod_2_inv * yz3 + j * z3 + k * 3 + 2];
-				}
-
-				int tri;
-				int *triangle_table_ptr = triangle_table[cubeindex];
-				for (int m = 0; tri = triangle_table_ptr[m], tri != -1; ++m)
-					polygons.push_back(indices[tri]);
+				return;
 			}
 		}
 	}
 
-bailout:
-
-	delete[] shared_indices;
-	delete[] voxelBuffer;
-	delete[] colorBuffer;
-}
-}
+signals:
+	int updateProgressAndStatus(int i);
+	void finished();
+};
 
 #endif /* MANDELBULBER2_SRC_MARCHINGCUBES_H_ */

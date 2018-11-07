@@ -1,6 +1,6 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
@@ -22,7 +22,7 @@ REAL4 EiffieMsltoeIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAu
 
 	z.y = native_cos(psi) * lengthYZ;
 	z.z = native_sin(psi) * lengthYZ;
-	aux->r_dz = aux->r_dz * 2.0f * aux->r;
+	aux->DE = aux->DE * 2.0f * aux->r;
 
 	REAL4 z2 = z * z;
 	REAL rr = z2.x + z2.y + z2.z;
@@ -46,20 +46,25 @@ REAL4 EiffieMsltoeIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAu
 		z.y += sign(z.y) * tempFAB.y;
 		z.z += sign(z.z) * tempFAB.z;
 	}
-	REAL lengthTempZ = length(-z);
+	REAL lengthTempZ = -length(z);
 	// if (lengthTempZ > -1e-21f) lengthTempZ = -1e-21f;   //  z is neg.)
 	z *= 1.0f + native_divide(fractal->transformCommon.offset, lengthTempZ);
 	z *= fractal->transformCommon.scale1;
-	aux->DE = mad(aux->DE, fabs(fractal->transformCommon.scale1), 1.0f);
-	// aux->r_dz *= fabs(fractal->transformCommon.scale1);
+	/*aux->DE = mad(aux->DE, fabs(fractal->transformCommon.scale1), 1.0f);
+	// aux->DE *= fabs(fractal->transformCommon.scale1);
 
 	if (fractal->analyticDE.enabledFalse)
-	{ // analytic log DE adjustment
-		aux->r_dz *= fabs(fractal->transformCommon.scale1) * fractal->analyticDE.scale1;
+	{ // analytic DE adjustment
+		aux->DE *= fabs(fractal->transformCommon.scale1) * fractal->analyticDE.scale1;
 	}
 	else
 	{
-		aux->r_dz *= fabs(fractal->transformCommon.scale1);
-	}
+		aux->DE *= fabs(fractal->transformCommon.scale1);
+	}*/
+	if (!fractal->analyticDE.enabledFalse)
+		aux->DE = mad(aux->DE, fabs(fractal->transformCommon.scale1), 1.0f);
+	else
+		aux->DE = mad(aux->DE * fabs(fractal->transformCommon.scale1), fractal->analyticDE.scale1,
+			fractal->analyticDE.offset1);
 	return z;
 }

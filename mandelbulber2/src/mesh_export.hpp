@@ -27,7 +27,7 @@
  *
  * ###########################################################################
  *
- * Authors: Stanislaw Adaszewski
+ * Authors: Stanislaw Adaszewski, Sebastian Jennen (jenzebas@gmail.com)
  *
  * cMeshExport - exports the fractal volume in ply format.
  */
@@ -48,9 +48,7 @@ class cMeshExport : public QObject
 public:
 	cMeshExport(int w, int h, int l, CVector3 limitMin, CVector3 limitMax, QString outputFileName,
 		int maxIter, MeshFileSave::structSaveMeshConfig meshConfig);
-	~cMeshExport();
-
-	void updateProgressAndStatus(int i);
+	~cMeshExport() override;
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);
@@ -59,6 +57,7 @@ signals:
 public slots:
 	void Stop() { stop = true; }
 	void ProcessVolume();
+	void updateProgressAndStatus(int i);
 
 private:
 	int w, h, l;

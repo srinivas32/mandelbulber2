@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -38,6 +38,8 @@
 #ifndef MANDELBULBER2_SRC_ANIMATION_FRAMES_HPP_
 #define MANDELBULBER2_SRC_ANIMATION_FRAMES_HPP_
 
+#include <utility>
+
 #include <QtGui>
 
 #include "audio_track_collection.h"
@@ -64,8 +66,8 @@ public:
 	{
 		sParameterDescription(QString _parameterName, QString _containerName,
 			parameterContainer::enumVarType _varType, parameterContainer::enumMorphType _morphType)
-				: parameterName(_parameterName),
-					containerName(_containerName),
+				: parameterName(std::move(_parameterName)),
+					containerName(std::move(_containerName)),
 					varType(_varType),
 					morphType(_morphType)
 		{
@@ -122,7 +124,7 @@ public:
 	void RemoveAllAudioParameters(cParameterContainer *params = nullptr);
 	void LoadAllAudioFiles(cParameterContainer *params = nullptr);
 
-	cAudioTrack *GetAudioPtr(const QString fullParameterName) const;
+	QSharedPointer<cAudioTrack> GetAudioPtr(const QString fullParameterName) const;
 
 	cOneParameter ApplyAudioAnimation(int frame, const cOneParameter &parameter,
 		const QString &parameterName, const cParameterContainer *params) const;

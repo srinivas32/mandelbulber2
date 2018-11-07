@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -36,8 +36,25 @@
 
 #include <QLineEdit>
 
+#include "frame_slider_popup.h"
+
 #include "src/animation_flight.hpp"
 #include "src/animation_keyframes.hpp"
+#include "src/common_math.h"
+#include "src/system.hpp"
+
+MyDoubleSpinBox::MyDoubleSpinBox(QWidget *parent)
+		: QDoubleSpinBox(parent), CommonMyWidgetWrapper(this)
+{
+	defaultValue = 0;
+	slider = nullptr;
+	hasDial = false;
+};
+
+MyDoubleSpinBox::~MyDoubleSpinBox()
+{
+	if (slider) delete slider;
+}
 
 void MyDoubleSpinBox::paintEvent(QPaintEvent *event)
 {
@@ -104,4 +121,134 @@ QString MyDoubleSpinBox::getFullParameterName()
 void MyDoubleSpinBox::contextMenuEvent(QContextMenuEvent *event)
 {
 	CommonMyWidgetWrapper::contextMenuEvent(event, lineEdit()->createStandardContextMenu());
+}
+
+void MyDoubleSpinBox::focusInEvent(QFocusEvent *event)
+{
+	QDoubleSpinBox::focusInEvent(event);
+
+	QString type = GetType(objectName());
+	if (type != "text")
+	{
+		if (!slider)
+		{
+			QWidget *topWidget = window();
+			slider = new cFrameSliderPopup(topWidget);
+			slider->setFocusPolicy(Qt::NoFocus);
+
+			if (type == QString("spinboxd") || type == QString("spinboxd3")
+					|| type == QString("spinboxd4"))
+			{
+				int dialScale = pow(10.0, double(decimals()));
+				slider->SetDialMode(dialScale, value());
+				hasDial = true;
+			}
+
+			slider->hide();
+		}
+
+		QWidget *topWidget = window();
+		QPoint windowPoint = mapTo(topWidget, QPoint());
+		int width = this->width();
+		int hOffset = height();
+		slider->adjustSize();
+		slider->setFixedWidth(width);
+
+		if (windowPoint.y() + slider->height() + hOffset > topWidget->height())
+			hOffset = -slider->height();
+
+		slider->move(windowPoint.x(), windowPoint.y() + hOffset);
+		slider->show();
+
+		connect(slider, SIGNAL(resetPressed()), this, SLOT(slotResetToDefault()));
+		connect(slider, SIGNAL(intPressed()), this, SLOT(slotRoundValue()));
+
+		if (hasDial)
+		{
+			connect(this, SIGNAL(valueChanged(double)), slider, SLOT(slotUpdateValue(double)));
+			connect(slider, SIGNAL(valueChanged(double)), this, SLOT(setValue(double)));
+			connect(slider, SIGNAL(upPressed()), this, SLOT(slotZeroValue()));
+			connect(slider, SIGNAL(downPressed()), this, SLOT(slot180Value()));
+			connect(slider, SIGNAL(rightPressed()), this, SLOT(slot90Value()));
+			connect(slider, SIGNAL(leftPressed()), this, SLOT(slotMinus90Value()));
+		}
+		else
+		{
+			connect(slider, SIGNAL(timerTrigger()), this, SLOT(slotSliderTimerUpdateValue()));
+			connect(slider, SIGNAL(zeroPressed()), this, SLOT(slotZeroValue()));
+			connect(slider, SIGNAL(halfPressed()), this, SLOT(slotHalfValue()));
+			connect(slider, SIGNAL(doublePressed()), this, SLOT(slotDoubleValue()));
+		}
+	}
+}
+
+void MyDoubleSpinBox::focusOutEvent(QFocusEvent *event)
+{
+	QDoubleSpinBox::focusOutEvent(event);
+
+	if (slider)
+	{
+		slider->disconnect();
+		slider->hide();
+		slider->deleteLater();
+		slider = nullptr;
+	}
+}
+
+void MyDoubleSpinBox::slotSliderTimerUpdateValue()
+{
+	const double val = value();
+	int iDiff = slider->value() - 500;
+	if (iDiff != 0)
+	{
+		double sign = (iDiff > 0) ? 1.0 : -1.0;
+		double digits = decimals();
+		double dDiff = abs(iDiff) / (600.0 / digits) - digits;
+		double change = pow(10.0, dDiff) * sign;
+		setValue(val + change);
+		emit editingFinished();
+	}
+}
+
+void MyDoubleSpinBox::slotResetToDefault()
+{
+	resetToDefault();
+}
+
+void MyDoubleSpinBox::slotZeroValue()
+{
+	setValue(0.0);
+}
+
+void MyDoubleSpinBox::slotDoubleValue()
+{
+	const double val = value();
+	setValue(val * 2.0);
+}
+
+void MyDoubleSpinBox::slotHalfValue()
+{
+	const double val = value();
+	setValue(val * 0.5);
+}
+
+void MyDoubleSpinBox::slot180Value()
+{
+	setValue(180.0);
+}
+
+void MyDoubleSpinBox::slot90Value()
+{
+	setValue(90.0);
+}
+
+void MyDoubleSpinBox::slotMinus90Value()
+{
+	setValue(-90.0);
+}
+
+void MyDoubleSpinBox::slotRoundValue()
+{
+	const double val = value();
+	setValue(MagicRound(val, 0.05));
 }

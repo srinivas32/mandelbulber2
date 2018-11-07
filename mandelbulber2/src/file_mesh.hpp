@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -37,6 +37,8 @@
 
 #ifndef MANDELBULBER2_SRC_FILE_MESH_HPP_
 #define MANDELBULBER2_SRC_FILE_MESH_HPP_
+
+#include <utility>
 
 #include <QtCore>
 
@@ -76,7 +78,7 @@ public:
 		}
 		structSaveMeshConfig(enumMeshFileType _fileType, QList<enumMeshContentType> _contentTypes,
 			enumMeshFileModeType _fileModeType)
-				: fileType(_fileType), contentTypes(_contentTypes), fileModeType(_fileModeType)
+				: fileType(_fileType), contentTypes(std::move(_contentTypes)), fileModeType(_fileModeType)
 		{
 		}
 
@@ -87,15 +89,21 @@ public:
 
 	struct structSaveMeshData
 	{
-		structSaveMeshData() {}
-		structSaveMeshData(std::vector<double> &_vertices, std::vector<long long> &_polygons,
-			std::vector<sRGB8> &_colorIndices)
+		structSaveMeshData()
+		{
+			vertices = nullptr;
+			polygons = nullptr;
+			colorIndices = nullptr;
+		}
+
+		structSaveMeshData(std::vector<double> *_vertices, std::vector<long long> *_polygons,
+			std::vector<sRGB8> *_colorIndices)
 				: vertices(_vertices), polygons(_polygons), colorIndices(_colorIndices)
 		{
 		}
-		std::vector<double> vertices;
-		std::vector<long long> polygons;
-		std::vector<sRGB8> colorIndices;
+		std::vector<double> *vertices;
+		std::vector<long long> *polygons;
+		std::vector<sRGB8> *colorIndices;
 	};
 
 	static QString MeshFileExtension(enumMeshFileType meshFileType);

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>1120</height>
+    <width>255</width>
+    <height>931</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -106,6 +106,9 @@
      </item>
      <item>
       <widget class="QComboBox" name="comboBox_opencl_mode">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Modes for OpenCL computation (GPU support):&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;no OpenCL&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; - use only CPU&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;fast&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; - very fast rendering on GPU. Fractal has visible shape, but colors and effects are not calculated. It is very good mode for fast camera navigation and looking for interesting fractal shapes in auto-refresh mode.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;medium&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; - medium rendering speed on GPU. There is calculated color of the fractal, light sources with shadows are used. There is used only first defined material. Reflections and volumetric effects are not calculated.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;full&lt;/span&gt;&lt;span style=&quot; font-weight:400;&quot;&gt; - the most accurate and the the slowest rendering. Uses more GPU resources. All effects are calculated (except texture mapping which is not implemented yet in OpenCL rendering engine) &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <item>
         <property name="text">
          <string>no OpenCL</string>
@@ -118,7 +121,7 @@
        </item>
        <item>
         <property name="text">
-         <string>limited</string>
+         <string>medium</string>
         </property>
        </item>
        <item>
@@ -156,8 +159,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>392</width>
-        <height>993</height>
+        <width>229</width>
+        <height>810</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_coordinates">
@@ -466,7 +469,7 @@
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selection of camera / target movement mode&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Move camera and target&lt;/span&gt; - moves camera and target by the same distance&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;:/tooltips/tooltips_images/move camera and target.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Move camera&lt;/span&gt; - moves only camera. Target stays in the same prace. Camera rotates to look at stationary target.&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;:/tooltips/tooltips_images/move only camera.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;Move target - moves only target. Camera stays in the same place. Camera rotates to look at moving target.&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;:/tooltips/tooltips_images/move only target.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selection of camera / target movement mode&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Move camera and target&lt;/span&gt; - moves camera and target by the same distance&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;:/tooltips/tooltips_images/move camera and target.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-style:italic;&quot;&gt;Move camera&lt;/span&gt; - moves only camera. Target stays in the same place. Camera rotates to look at stationary target.&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;:/tooltips/tooltips_images/move only camera.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;Move target - moves only target. Camera stays in the same place. Camera rotates to look at moving target.&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;:/tooltips/tooltips_images/move only target.png&quot;/&gt;&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <item>
                <property name="text">
@@ -517,31 +520,6 @@ to target:</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="QSlider" name="logslider_camera_distance_to_target">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="sizeIncrement">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="minimum">
-                 <number>-1500</number>
-                </property>
-                <property name="maximum">
-                 <number>300</number>
-                </property>
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
@@ -675,7 +653,7 @@ to target:</string>
              </layout>
             </item>
             <item>
-             <widget class="QFrame" name="single_camera_movenent_step_de">
+             <widget class="QFrame" name="single_camera_movement_step_de">
               <property name="frameShape">
                <enum>QFrame::StyledPanel</enum>
               </property>
@@ -724,31 +702,6 @@ to target:</string>
                   </widget>
                  </item>
                 </layout>
-               </item>
-               <item>
-                <widget class="QSlider" name="logslider_camera_movement_step">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="sizeIncrement">
-                  <size>
-                   <width>0</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="minimum">
-                  <number>-200</number>
-                 </property>
-                 <property name="maximum">
-                  <number>100</number>
-                 </property>
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                </widget>
                </item>
               </layout>
              </widget>
@@ -967,7 +920,7 @@ to target:</string>
              </layout>
             </item>
             <item>
-             <widget class="QFrame" name="single_camera_movenent_step_de_3">
+             <widget class="QFrame" name="single_camera_movement_step_de_3">
               <property name="frameShape">
                <enum>QFrame::StyledPanel</enum>
               </property>
@@ -1193,7 +1146,7 @@ to target:</string>
          <item>
           <widget class="QGroupBox" name="groupBox_11">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sweet spot position used especially for fuldome images or animations.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Sweet spot position used especially for fulldome images or animations.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="title">
             <string>Sweet spot angle:</string>
@@ -1222,33 +1175,7 @@ to target:</string>
               <property name="spacing">
                <number>2</number>
               </property>
-              <item row="1" column="1">
-               <widget class="QDial" name="dial_sweet_spot_vertical_angle">
-                <property name="minimum">
-                 <number>-9000</number>
-                </property>
-                <property name="maximum">
-                 <number>9000</number>
-                </property>
-                <property name="wrapping">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
               <item row="1" column="0">
-               <widget class="QDial" name="dial_sweet_spot_horizontal_angle">
-                <property name="minimum">
-                 <number>-18000</number>
-                </property>
-                <property name="maximum">
-                 <number>18000</number>
-                </property>
-                <property name="wrapping">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
                <widget class="MyDoubleSpinBox" name="spinboxd_sweet_spot_horizontal_angle">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
@@ -1276,7 +1203,7 @@ to target:</string>
                 </property>
                </widget>
               </item>
-              <item row="2" column="1">
+              <item row="1" column="1">
                <widget class="MyDoubleSpinBox" name="spinboxd_sweet_spot_vertical_angle">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
@@ -1383,7 +1310,6 @@ to target:</string>
   <tabstop>pushButton_reset_view</tabstop>
   <tabstop>comboBox_camera_movement_mode</tabstop>
   <tabstop>logedit_camera_distance_to_target</tabstop>
-  <tabstop>logslider_camera_distance_to_target</tabstop>
   <tabstop>bu_move_forward</tabstop>
   <tabstop>bu_move_backward</tabstop>
   <tabstop>bu_move_up</tabstop>
@@ -1391,7 +1317,6 @@ to target:</string>
   <tabstop>bu_move_down</tabstop>
   <tabstop>bu_move_right</tabstop>
   <tabstop>logedit_camera_movement_step</tabstop>
-  <tabstop>logslider_camera_movement_step</tabstop>
   <tabstop>comboBox_camera_absolute_distance_mode</tabstop>
   <tabstop>bu_rotate_roll_left</tabstop>
   <tabstop>bu_rotate_up</tabstop>
@@ -1405,9 +1330,7 @@ to target:</string>
   <tabstop>vect3_camera_rotation_y</tabstop>
   <tabstop>vect3_camera_rotation_x</tabstop>
   <tabstop>vect3_camera_rotation_z</tabstop>
-  <tabstop>dial_sweet_spot_horizontal_angle</tabstop>
   <tabstop>spinboxd_sweet_spot_horizontal_angle</tabstop>
-  <tabstop>dial_sweet_spot_vertical_angle</tabstop>
   <tabstop>spinboxd_sweet_spot_vertical_angle</tabstop>
  </tabstops>
  <resources>

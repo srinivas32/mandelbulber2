@@ -58,7 +58,7 @@ class cRenderJob : public QObject
 public:
 	cRenderJob(const cParameterContainer *_params, const cFractalContainer *_fractal, cImage *_image,
 		bool *_stopRequest, QWidget *_qWidget = nullptr);
-	~cRenderJob();
+	~cRenderJob() override;
 	// QWidget *parent is needed to connect signals for refreshing progress and status bar.
 	// If _parent is not nullptr then parent has to have slot slotUpdateProgressAndStatus()
 
@@ -74,7 +74,7 @@ public:
 	bool Execute();
 	cImage *GetImagePtr() const { return image; }
 	int GetNumberOfCPUs() const { return totalNumberOfCPUs; }
-	void UseSizeFromImage(bool mode) { useSizeFromImage = mode; }
+	void UseSizeFromImage(bool modeInput) { useSizeFromImage = modeInput; }
 	void ChangeCameraTargetPosition(cCameraTarget &cameraTarget) const;
 
 	void UpdateParameters(const cParameterContainer *_params, const cFractalContainer *_fractal);

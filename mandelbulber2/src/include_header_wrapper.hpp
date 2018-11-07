@@ -48,6 +48,11 @@
 
 // custom includes
 #ifdef USE_OPENCL
+
+#ifndef CL_TARGET_OPENCL_VERSION
+#define CL_TARGET_OPENCL_VERSION 120
+#endif
+
 #ifdef _WIN32
 #ifndef _MSC_VER
 // clew for cross compile
@@ -64,7 +69,7 @@
 #endif // USE_OPENCL
 
 // include math header here with opencl
-#include <math.h>
+#include <cmath>
 
 #if defined(_MSC_VER)
 #pragma warning(pop)

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -95,24 +95,23 @@ cPrimitives::cPrimitives(const cParameterContainer *par, QVector<cObjectData> *o
 	QList<sPrimitiveItem> listOfPrimitives;
 
 	// generating fresh list of primitives based of parameter list
-	for (int i = 0; i < listOfParameters.size(); i++)
+	for (auto parameterName : listOfParameters)
 	{
-		QString parameterName = listOfParameters.at(i);
 		if (parameterName.left(9) == "primitive")
 		{
 			isAnyPrimitive = true;
 
-			QString primitiveName = parameterName.left(parameterName.lastIndexOf('_'));
 			QStringList split = parameterName.split('_');
+			QString primitiveName = split.at(0) + "_" + split.at(1) + "_" + split.at(2);
 			QString typeName = split.at(1);
 			fractal::enumObjectType type = PrimitiveNameToEnum(typeName);
 			int index = split.at(2).toInt();
 
 			// check if item is already on the list
 			bool found = false;
-			for (int l = 0; l < listOfPrimitives.size(); l++)
+			for (const auto &listOfPrimitive : listOfPrimitives)
 			{
-				if (listOfPrimitives.at(l).id == index && listOfPrimitives.at(l).type == type)
+				if (listOfPrimitive.id == index && listOfPrimitive.type == type)
 				{
 					found = true;
 					break;
@@ -125,10 +124,8 @@ cPrimitives::cPrimitives(const cParameterContainer *par, QVector<cObjectData> *o
 		}
 	}
 
-	for (int i = 0; i < listOfPrimitives.size(); i++)
+	for (auto item : listOfPrimitives)
 	{
-		sPrimitiveItem item = listOfPrimitives.at(i);
-
 		using namespace fractal;
 		sPrimitiveBasic *primitive;
 
@@ -167,10 +164,13 @@ cPrimitives::cPrimitives(const cParameterContainer *par, QVector<cObjectData> *o
 				primitive = new sPrimitiveWater;
 				sPrimitiveWater *obj = static_cast<sPrimitiveWater *>(primitive);
 				obj->empty = par->Get<bool>(item.name + "_empty");
-				obj->amplitude = par->Get<double>(item.name + "_amplitude");
+				obj->relativeAmplitude = par->Get<double>(item.name + "_relative_amplitude");
 				obj->length = par->Get<double>(item.name + "_length");
 				obj->animSpeed = par->Get<double>(item.name + "_anim_speed");
 				obj->iterations = par->Get<int>(item.name + "_iterations");
+				obj->waveFromObjectsEnable = par->Get<bool>(item.name + "_wave_from_objects_enable");
+				obj->waveFromObjectsRelativeAmplitude =
+					par->Get<double>(item.name + "_wave_from_objects_relative_amplitude");
 				obj->animFrame = par->Get<int>("frame_no");
 				obj->size = CVector3(1.0, 1.0, 1.0);
 				break;
@@ -207,12 +207,12 @@ cPrimitives::cPrimitives(const cParameterContainer *par, QVector<cObjectData> *o
 				sPrimitiveTorus *obj = static_cast<sPrimitiveTorus *>(primitive);
 				obj->empty = par->Get<bool>(item.name + "_empty");
 				obj->radius = par->Get<double>(item.name + "_radius");
-				obj->radius_lpow = par->Get<double>(item.name + "_radius_lpow");
-				obj->tube_radius = par->Get<double>(item.name + "_tube_radius");
-				obj->tube_radius_lpow = par->Get<double>(item.name + "_tube_radius_lpow");
+				obj->radiusLPow = par->Get<double>(item.name + "_radius_lpow");
+				obj->tubeRadius = par->Get<double>(item.name + "_tube_radius");
+				obj->tubeRadiusLPow = par->Get<double>(item.name + "_tube_radius_lpow");
 				obj->repeat = par->Get<CVector3>(item.name + "_repeat");
-				obj->size = CVector3((obj->radius + obj->tube_radius) * 2.0,
-					(obj->radius + obj->tube_radius) * 2.0, obj->tube_radius);
+				obj->size = CVector3((obj->radius + obj->tubeRadius) * 2.0,
+					(obj->radius + obj->tubeRadius) * 2.0, obj->tubeRadius);
 				break;
 			}
 			case objCircle:
@@ -351,7 +351,7 @@ double sPrimitiveCone::PrimitiveDistance(CVector3 _point) const
 	point = point.mod(repeat);
 
 	point.z -= height;
-	float q = sqrt(point.x * point.x + point.y * point.y);
+	double q = sqrt(point.x * point.x + point.y * point.y);
 	CVector2<double> vect(q, point.z);
 	double dist = wallNormal.Dot(vect);
 	if (!caps) dist = fabs(dist);
@@ -361,20 +361,42 @@ double sPrimitiveCone::PrimitiveDistance(CVector3 _point) const
 
 double sPrimitiveWater::PrimitiveDistance(CVector3 _point) const
 {
+	Q_UNUSED(_point);
+	return 0.0;
+}
+
+double sPrimitiveWater::PrimitiveDistanceWater(CVector3 _point, double distanceFromAnother) const
+{
 	// TODO to use rendering technique from here: //https://www.shadertoy.com/view/Ms2SD1
 
 	CVector3 point = _point - position;
 	point = rotationMatrix.RotateVector(point);
 
+	if (waveFromObjectsEnable)
+	{
+		point.x +=
+			length * 20.0 * exp(-distanceFromAnother / length / 5.0) * waveFromObjectsRelativeAmplitude;
+	}
+
+	double amplitude = length * relativeAmplitude;
+	double objectWave = 0.0;
+
 	double planeDistance = point.z;
 	if (planeDistance < amplitude * 10.0)
 	{
 		double phase = animSpeed * animFrame * 0.1;
+
+		if (waveFromObjectsEnable)
+		{
+			objectWave = sin(distanceFromAnother / length * 5.0 - phase * 2.0)
+									 * exp(-distanceFromAnother / length / 5.0) * waveFromObjectsRelativeAmplitude;
+		}
+
 		double k = 0.23;
 		double waveXTemp;
 		double waveYTemp;
-		double waveX = 0;
-		double waveY = 0;
+		double waveX = objectWave;
+		double waveY = -objectWave;
 		double p = 1.0;
 		double p2 = 0.05;
 		for (int i = 1; i <= iterations; i++)
@@ -404,8 +426,8 @@ double sPrimitiveTorus::PrimitiveDistance(CVector3 _point) const
 	point = rotationMatrix.RotateVector(point);
 	point = point.mod(repeat);
 
-	double d1 = CVector2<double>(point.x, point.y).LengthPow(pow(2, radius_lpow)) - radius;
-	double dist = CVector2<double>(d1, point.z).LengthPow(pow(2, tube_radius_lpow)) - tube_radius;
+	double d1 = CVector2<double>(point.x, point.y).LengthPow(pow(2, radiusLPow)) - radius;
+	double dist = CVector2<double>(d1, point.z).LengthPow(pow(2, tubeRadiusLPow)) - tubeRadius;
 	return empty ? fabs(dist) : dist;
 }
 
@@ -421,13 +443,21 @@ double cPrimitives::TotalDistance(
 		CVector3 point2 = point - allPrimitivesPosition;
 		point2 = mRotAllPrimitivesRotation.RotateVector(point2);
 
-		for (int i = 0; i < allPrimitives.size(); i++)
+		for (auto primitive : allPrimitives)
 		{
-			const sPrimitiveBasic *primitive = allPrimitives.at(i);
 			if (primitive->enable)
 			{
-				double distTemp = primitive->PrimitiveDistance(point);
-				distTemp = DisplacementMap(distTemp, point, primitive->objectId, data);
+				sPrimitiveWater *water = dynamic_cast<sPrimitiveWater *>(primitive);
+				double distTemp;
+				if (water)
+				{
+					distTemp = water->PrimitiveDistanceWater(point2, distance);
+				}
+				else
+				{
+					distTemp = primitive->PrimitiveDistance(point2);
+				}
+				distTemp = DisplacementMap(distTemp, point2, primitive->objectId, data);
 				if (distTemp < distance)
 				{
 					closestObject = primitive->objectId;

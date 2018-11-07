@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -37,6 +37,10 @@
 
 #include "algebra.hpp"
 #include "fractal_list.hpp"
+
+#ifndef M_PI_180
+#define M_PI_180 0.01745329251994329576923690768489
+#endif
 
 // forward declarations
 class cParameterContainer;
@@ -77,7 +81,6 @@ struct sExtendedAux
 	double pos_neg;
 	double cw;
 
-	double r_dz;
 	double r;
 	double DE;
 	double pseudoKleinianDE;
@@ -88,10 +91,8 @@ struct sExtendedAux
 
 	double color;
 	double colorHybrid;
-	double foldFactor;
-	double minRFactor;
-	double scaleFactor;
-	double oldHybridFactor;
+
+	// temp for trial
 	double temp100;
 	double addDist;
 };
@@ -99,39 +100,26 @@ struct sExtendedAux
 struct sFoldColor
 {
 	CVector3 factor;
+
 	CVector4 factor4D;
 	double factorR;
 	double factorSp1;
 	double factorSp2;
-	double colorMin;
-	double compFold0;
-	double compFold;
-	double compMinR;
-	double compScale;
-	double oldScale1;
-	double parabScale0;
-	double newScale0;
-	double limitMin0;
-	double limitMax9999;
 	double scaleA0;
 	double scaleB0;
-	double scaleC0;
 	double scaleD0;
-	double scaleE0;
 	double scaleF0;
-	double scaleG0;
 	double scaleA1;
 	double scaleB1;
 	double scaleC1;
-	double period1;
-	double trigAdd1;
 
 	int intAx0;
 	int intAy0;
 	int intAz0;
-	bool parabEnabledFalse;
-	bool cosEnabledFalse;
+
+	bool auxColorEnabled;
 	bool auxColorEnabledFalse;
+
 	bool distanceEnabledFalse;
 };
 
@@ -338,6 +326,20 @@ struct sFractalSurfFolds
 	enumMulti_orderOfFolds orderOfFolds5;
 };
 
+// asurf mod2
+enum enumMulti_orderOf3Folds
+{
+	multi_orderOf3Folds_type1,
+	multi_orderOf3Folds_type2,
+	multi_orderOf3Folds_type3
+};
+struct sFractalASurf3Folds
+{
+	enumMulti_orderOf3Folds orderOf3Folds1;
+	enumMulti_orderOf3Folds orderOf3Folds2;
+	enumMulti_orderOf3Folds orderOf3Folds3;
+};
+
 // benesi mag transforms
 enum enumMulti_orderOfTransf
 {
@@ -431,21 +433,23 @@ struct sFractalCpara
 
 struct sFractalAnalyticDE
 {
+	bool enabled;
 	bool enabledFalse;
-	bool enabledAuxR2False;
+	// bool enabledAuxR2False; // only used once. Remove
 	double scale1;
 	double tweak005;
 	double offset0;
 	double offset1;
 	double offset2;
-	double factor2;
-	double scaleLin;
-	double offsetLin;
+	// double factor2;
+	// double scaleLin; // out of date name, only 4 uses. Remove
+	// double offsetLin; // out of date name, only 4 uses. Remove
 };
 
 // common parameters for transforming formulas
 struct sFractalTransformCommon
 {
+	double angle0;
 	double alphaAngleOffset;
 	double betaAngleOffset;
 	double foldingValue;
@@ -462,7 +466,6 @@ struct sFractalTransformCommon
 	double offset2;
 	double offset4;
 	double multiplication;
-	double minRNeg1;
 	double minR0;
 	double minR05;
 	double minR06;
@@ -504,6 +507,7 @@ struct sFractalTransformCommon
 	int startIterations;
 	int startIterations250;
 	int stopIterations;
+	int stopIterations15;
 	int startIterationsA;
 	int stopIterationsA;
 	int startIterationsB;
@@ -518,6 +522,10 @@ struct sFractalTransformCommon
 	int stopIterationsE;
 	int startIterationsF;
 	int stopIterationsF;
+	int startIterationsG;
+	int stopIterationsG;
+	int startIterationsH;
+	int stopIterationsH;
 	int startIterationsM;
 	int stopIterationsM;
 	int startIterationsP;
@@ -543,6 +551,7 @@ struct sFractalTransformCommon
 	int intA;
 	int intB;
 	int int1;
+	int int6;
 	int int8X;
 	int int8Y;
 	int int8Z;
@@ -588,6 +597,7 @@ struct sFractalTransformCommon
 
 	CVector3 rotation; // vec3s
 	CVector3 rotation2;
+	CVector3 rotationVary;
 	CVector3 rotation44a; //.........................
 	CVector3 rotation44b; //..........................
 
@@ -611,8 +621,8 @@ struct sFractalTransformCommon
 
 	CRotationMatrix rotationMatrix;
 	CRotationMatrix rotationMatrix2;
+	CRotationMatrix rotationMatrixVary;
 	CRotationMatrix44 rotationMatrix44; //....................
-	CRotationMatrix tempRotMatrix;
 
 	bool addCpixelEnabled;
 	bool addCpixelEnabledFalse;
@@ -663,6 +673,7 @@ struct sFractalTransformCommon
 	bool functionEnabledXFalse;
 	bool juliaMode;
 	bool rotationEnabled;
+	bool rotation2EnabledFalse;
 };
 
 struct sFractal
@@ -691,6 +702,7 @@ struct sFractal
 	sFractalMagTransforms magTransf;
 	sFractalCpara Cpara;
 	sFractalCombo combo;
+	sFractalASurf3Folds aSurf3Folds;
 
 #ifdef USE_OPENCL
 //	double customParameters[15];

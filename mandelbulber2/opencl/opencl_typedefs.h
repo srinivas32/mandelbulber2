@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -37,6 +37,7 @@
 
 typedef float4 cl_float4;
 typedef float3 cl_float3;
+typedef float2 cl_float2;
 typedef float cl_float;
 typedef int3 cl_int3;
 typedef int cl_int;
@@ -55,5 +56,9 @@ typedef unsigned char cl_uchar;
 #define REAL3 double3
 #define REAL4 double4
 #endif /*DOUBLE_PRECISION*/
+
+#ifndef NULL
+#define NULL 0
+#endif
 
 #endif /* MANDELBULBER2_OPENCL_OPENCL_TYPEDEFS_H_ */

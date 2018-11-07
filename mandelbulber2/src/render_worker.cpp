@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -41,7 +41,9 @@
 #include "camera_target.hpp"
 #include "cimage.hpp"
 #include "common_math.h"
+#include "compute_fractal.hpp"
 #include "fractparams.hpp"
+#include "hsv2rgb.h"
 #include "material.h"
 #include "projection_3d.hpp"
 #include "region.hpp"
@@ -49,6 +51,7 @@
 #include "scheduler.hpp"
 #include "stereo.h"
 #include "system.hpp"
+#include "texture.hpp"
 
 cRenderWorker::cRenderWorker(const sParamRender *_params, const cNineFractals *_fractal,
 	sThreadData *_threadData, sRenderData *_data, cImage *_image)
@@ -68,6 +71,7 @@ cRenderWorker::cRenderWorker(const sParamRender *_params, const cNineFractals *_
 	baseZ = CVector3(0.0, 0.0, 1.0);
 	maxRaymarchingSteps = 10000;
 	reflectionsMax = 0;
+	actualHue = 0.0;
 	stopRequest = false;
 }
 
@@ -107,7 +111,7 @@ void cRenderWorker::doWork()
 
 	if (params->perspectiveType == params::perspEquirectangular) aspectRatio = 2.0;
 
-	bool monteCarloDOF = params->DOFMonteCarlo && params->DOFEnabled;
+	bool monteCarlo = params->DOFMonteCarlo;
 	bool antiAliasing = params->antialiasingEnabled;
 	int antiAliasingSize = params->antialiasingSize;
 
@@ -184,7 +188,7 @@ void cRenderWorker::doWork()
 			sRGBFloat normalFloat;
 			double depth = 1e20;
 
-			if (monteCarloDOF) repeats = params->DOFSamples;
+			if (monteCarlo) repeats = params->DOFSamples;
 			if (antiAliasing) repeats *= antiAliasingSize * antiAliasingSize;
 
 			sRGBFloat finalPixelDOF;
@@ -207,22 +211,49 @@ void cRenderWorker::doWork()
 				{
 					int xStep = repeat / antiAliasingSize;
 					int yStep = repeat % antiAliasingSize;
-					double xOffset = double(xStep) / antiAliasingSize / image->GetWidth();
+					double xOffset = double(xStep) / antiAliasingSize / image->GetWidth() * aspectRatio;
 					double yOffset = double(yStep) / antiAliasingSize / image->GetHeight();
 					imagePoint.x = originalImagePoint.x + xOffset;
 					imagePoint.y = originalImagePoint.y + yOffset;
 				}
 
-				if (monteCarloDOF)
+				if (monteCarlo)
 				{
+					if (!antiAliasing)
+					{
+						// MC anti-aliasing
+						imagePoint.x =
+							originalImagePoint.x
+							+ (double(Random(1000)) / 1000.0 - 0.5) / image->GetWidth() * aspectRatio;
+						imagePoint.y =
+							originalImagePoint.y + (double(Random(1000)) / 1000.0 - 0.5) / image->GetHeight();
+					}
+
 					viewVector = CalculateViewVector(imagePoint, params->fov, params->perspectiveType, mRot);
-					MonteCarloDOF(&startRay, &viewVector);
+					startRay = start;
+
+					if (params->DOFEnabled)
+					{
+						MonteCarloDOF(&startRay, &viewVector);
+					}
 				}
 				else
 				{
 					// calculate direction of ray-marching
 					viewVector = CalculateViewVector(imagePoint, params->fov, params->perspectiveType, mRot);
 					startRay = start;
+				}
+
+				sRGBFloat rgbFromHsv;
+				if (params->DOFMonteCarlo && params->DOFMonteCarloChromaticAberration)
+				{
+					actualHue = Random(3600) / 10.0;
+					rgbFromHsv = Hsv2rgb(fmod(360.0f + actualHue - 60.0f, 360.0f), 1.0f, 2.0f);
+					CVector3 randVector(
+						0.0, actualHue / 20000.0 * params->DOFMonteCarloCACameraDispersion, 0.0);
+					CVector3 randVectorRot = mRot.RotateVector(randVector);
+					viewVector -= randVectorRot;
+					viewVector.Normalize();
 				}
 
 				if (data->stereo.isEnabled())
@@ -307,6 +338,13 @@ void cRenderWorker::doWork()
 				finalPixel.G = resultShader.G;
 				finalPixel.B = resultShader.B;
 
+				if (params->DOFMonteCarlo && params->DOFMonteCarloChromaticAberration)
+				{
+					finalPixel.R *= rgbFromHsv.R;
+					finalPixel.G *= rgbFromHsv.G;
+					finalPixel.B *= rgbFromHsv.B;
+				}
+
 				if (data->stereo.isEnabled() && data->stereo.GetMode() == cStereo::stereoRedCyan)
 				{
 					if (stereoEye == cStereo::eyeLeft)
@@ -348,7 +386,7 @@ void cRenderWorker::doWork()
 				finalColourDOF.B += colour.B;
 
 				// noise estimation
-				if (monteCarloDOF)
+				if (monteCarlo)
 				{
 					monteCarloNoise =
 						MonteCarloDOFNoiseEstimation(finalPixel, repeat, finalPixelDOF, monteCarloDOFStdDevSum);
@@ -362,7 +400,7 @@ void cRenderWorker::doWork()
 
 			} // next repeat
 
-			if (monteCarloDOF || antiAliasing)
+			if (monteCarlo || antiAliasing)
 			{
 				if (data->stereo.isEnabled() && data->stereo.GetMode() == cStereo::stereoRedCyan)
 				{
@@ -785,18 +823,25 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 					vn = NormalMapShader(shaderInputData);
 				}
 
+				double hueEffect = 1.0;
+				if (params->DOFMonteCarlo && params->DOFMonteCarloChromaticAberration)
+				{
+					double aberrationStrength = params->DOFMonteCarloCADispersionGain * 0.01;
+					hueEffect = 1.0f - aberrationStrength + aberrationStrength * actualHue / 180.0;
+				}
+
 				// prepare refraction values
 				double n1, n2;
 				if (rayStack[rayIndex].in.calcInside) // if trace is inside the object
 				{
-					n1 =
-						shaderInputData.material->transparencyIndexOfRefraction; // reverse refractive indices
+					n1 = shaderInputData.material->transparencyIndexOfRefraction
+							 / hueEffect; // reverse refractive indices
 					n2 = 1.0;
 				}
 				else
 				{
 					n1 = 1.0;
-					n2 = shaderInputData.material->transparencyIndexOfRefraction;
+					n2 = shaderInputData.material->transparencyIndexOfRefraction / hueEffect;
 				}
 
 				rayStack[rayIndex].out.normal = vn;
@@ -967,8 +1012,10 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 
 			// letting colors from textures (before normal map shader)
 			if (shaderInputData.material->colorTexture.IsLoaded())
+			{
 				shaderInputData.texColor =
 					TextureShader(shaderInputData, texture::texColor, shaderInputData.material);
+			}
 			else
 				shaderInputData.texColor = sRGBFloat(1.0, 1.0, 1.0);
 
@@ -1001,12 +1048,22 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 			sRGBAfloat backgroundShader;
 			sRGBAfloat volumetricShader;
 			sRGBAfloat specular;
+			sRGBFloat iridescence;
 
 			if (rayMarchingOut.found)
 			{
 				// qDebug() << "Found" << rayIndex;
 				// calculate effects for object surface
-				objectShader = ObjectShader(shaderInputData, &objectColour, &specular);
+				objectShader = ObjectShader(shaderInputData, &objectColour, &specular, &iridescence);
+
+				if (params->DOFMonteCarlo && params->DOFMonteCarloGlobalIllumination)
+				{
+					// calculate global illumination
+					sRGBFloat globalIlumination = GlobalIlumination(shaderInputData, objectColour);
+					objectShader.R += globalIlumination.R;
+					objectShader.G += globalIlumination.G;
+					objectShader.B += globalIlumination.B;
+				}
 
 				// calculate reflectance according to Fresnel equations
 
@@ -1058,6 +1115,10 @@ cRenderWorker::sRayRecursionOut cRenderWorker::RayRecursion(
 															+ reflect * diffusionIntensityN;
 					reflectDiffused.B = reflect * shaderInputData.texDiffuse.B * diffusionIntensity
 															+ reflect * diffusionIntensityN;
+
+					reflectDiffused.R *= iridescence.R;
+					reflectDiffused.G *= iridescence.G;
+					reflectDiffused.B *= iridescence.B;
 
 					resultShader.R = transparentShader.R * transparent * reflectanceN
 													 + (1.0 - transparent * reflectanceN) * resultShader.R;
@@ -1202,8 +1263,13 @@ double cRenderWorker::MonteCarloDOFNoiseEstimation(
 	StdDevSum.B += monteCarloDOFSquareDiff.B;
 
 	sRGBFloat monteCarloDOFStdDev;
-	double totalStdDev = sqrt((StdDevSum.R + StdDevSum.G + StdDevSum.B) / (repeat + 1));
+	double totalStdDev = sqrt((StdDevSum.R + StdDevSum.G + StdDevSum.B) / (repeat + 1.0));
+
+	totalStdDev /= sqrt(repeat + 1);
+
+	double sumBrightness = (pixelSum.R + pixelSum.G + pixelSum.B) / (repeat + 1.0);
+	if (sumBrightness > 1.0) totalStdDev /= sumBrightness;
 
 	// noise value
-	return totalStdDev / sqrt(repeat + 1);
+	return totalStdDev;
 }

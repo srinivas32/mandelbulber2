@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -39,7 +39,13 @@
 
 // forward declarations
 struct sRenderData;
+class cNineFractals;
+struct sParamRender;
 
-double DisplacementMap(double oldDistance, CVector3 point, int objectId, sRenderData *data);
+double DisplacementMap(
+	double oldDistance, CVector3 point, int objectId, sRenderData *data, double reduce = 1.0);
+
+CVector3 FractalizeTexture(const CVector3 &point, sRenderData *data, const sParamRender &params,
+	const cNineFractals &fractals, int objectId, double *reduceDisplacement);
 
 #endif /* MANDELBULBER2_SRC_DISPLACEMENT_MAP_HPP_ */

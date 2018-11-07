@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -59,9 +59,19 @@ inline matrix33 toClMatrix33(CRotationMatrix source)
 	m.m3 = {{cl_float(matrix.m31), cl_float(matrix.m32), cl_float(matrix.m33), cl_float(0.0)}};
 	return m;
 }
+inline cl_float2 toClFloat2(CVector2<double> v)
+{
+	cl_float2 retVal = {{cl_float(v.x), cl_float(v.y)}};
+	return retVal;
+}
 inline cl_float3 toClFloat3(CVector3 v)
 {
 	cl_float3 retVal = {{cl_float(v.x), cl_float(v.y), cl_float(v.z), cl_float(0.0)}};
+	return retVal;
+}
+inline cl_int3 toClInt3(int x, int y, int z)
+{
+	cl_int3 retVal = {{cl_int(x), cl_int(y), cl_int(z), cl_int(0)}};
 	return retVal;
 }
 inline cl_int3 toClInt3(sRGB c)
@@ -171,6 +181,15 @@ float4 RotateAroundVectorByAngle4(float4 origin4d, float3 axis, float angle)
 	return (float4){vector.x, vector.y, vector.z, origin4d.w};
 }
 
+inline matrix33 TransposeMatrix(matrix33 m)
+{
+	matrix33 out;
+	out.m1 = (float3){m.m1.x, m.m2.x, m.m3.x};
+	out.m2 = (float3){m.m1.y, m.m2.y, m.m3.y};
+	out.m3 = (float3){m.m1.z, m.m2.z, m.m3.z};
+	return out;
+}
+
 float SmoothConditionAGreaterB(float a, float b, float sharpness)
 {
 	return native_recip(1.0f + native_exp(sharpness * (b - a)));
@@ -219,6 +238,55 @@ inline float3 modRepeat(float3 vector1, float3 repeat)
 {
 	if (length(repeat) == 0.0f) return vector1;
 	return vectorMod((vectorMod((vector1 - repeat * 0.5f), repeat) + repeat), repeat) - repeat * 0.5f;
+}
+
+#ifdef ITERATION_WEIGHT
+float4 SmoothCVector(const float4 v1, const float4 v2, float k)
+{
+	float4 result;
+	float nk = 1.0f - k;
+
+	if (k <= 0.0f)
+	{
+		result = v1;
+	}
+	else if (k >= 1.0f)
+	{
+		result = v2;
+	}
+	else
+	{
+		float length1 = length(v1);
+		float length2 = length(v2);
+		float lenInterp = length1 * nk + length2 * k;
+		float4 vTemp = v1 * nk + v2 * k;
+		float lengthTemp = length(vTemp);
+		if (lengthTemp > 0.0f)
+		{
+			result = (vTemp / lengthTemp) * lenInterp;
+		}
+		else
+		{
+			result = v1;
+		}
+	}
+	return result;
+}
+#endif
+
+inline float LengthPow(float2 vect, float p)
+{
+	return pow(pow(vect.x, p) + pow(vect.y, p), 1.0f / p);
+}
+
+inline float GetAlpha(float3 vect)
+{
+	return atan2(vect.y, vect.x);
+}
+
+inline float GetBeta(float3 vect)
+{
+	return atan2(vect.z, length(vect.xy));
 }
 
 #endif

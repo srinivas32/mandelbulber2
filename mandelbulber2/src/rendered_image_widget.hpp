@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -40,12 +40,14 @@
 
 #include "QVariant"
 #include "algebra.hpp"
+#include "animation_path_data.hpp"
 #include "stereo.h"
 
 // forward declarations
 class cImage;
 class cParameterContainer;
 class cFractalContainer;
+struct sAnimationPathData;
 
 class RenderedImage : public QWidget
 {
@@ -63,7 +65,8 @@ public:
 		clickPlacePrimitive = 6,
 		clickFlightSpeedControl = 7,
 		clickPlaceRandomLightCenter = 8,
-		clickGetPoint = 9
+		clickGetPoint = 9,
+		clickWrapLimitsAroundObject = 10,
 	};
 
 	enum enumGridType
@@ -98,12 +101,15 @@ public:
 	}
 	void setNewZ(double z) { smoothLastZMouse = z; }
 	void setClickMode(QList<QVariant> _clickMode);
+	void SetEnableClickModes(bool enable) { clickModesEnables = enable; }
+	bool GetEnableClickModes() const { return clickModesEnables; }
 	void SetFrontDist(double dist) { frontDist = dist; }
 	void SetCursorVisibility(bool enable) { cursorVisible = enable; }
 	void SetGridType(enumGridType gridType);
 	void SetFlightData(const sFlightData &fData) { flightData = fData; }
 	void SetPlaceBehindObjects(bool behind) { placeLightBehind = behind; }
 	void SetCameraMovementMode(int index) { cameraMovementMode = index; }
+	void SetAnimationPath(const sAnimationPathData &_animationPath);
 	// CVector2<double> GetLastMousePositionScaled();
 
 public slots:
@@ -133,10 +139,11 @@ private:
 	void DisplayCoordinates();
 	void Display3DCursor(CVector2<int> screenPoint, double z);
 	void DisplayCrosshair() const;
-	void DrawHud(CVector3 rotation) const;
+	void Compass(CVector3 rotation, QPointF center, float size);
 	void Draw3DBox(
 		double scale, double fov, CVector2<double> point, double z, cStereo::enumEye eye) const;
-	static CVector3 CalcPointPersp(const CVector3 &point, const CRotationMatrix &rot, double persp);
+	static QPointF CalcPointPersp(const CVector3 &point, const CRotationMatrix &rot, double persp);
+	void DrawAnimationPath();
 
 	bool anaglyphMode;
 	bool cursorVisible;
@@ -144,6 +151,7 @@ private:
 	bool isOnObject;
 	bool placeLightBehind;
 	bool redrawed;
+	bool clickModesEnables;
 	cFractalContainer *fractals;
 	cImage *image;
 	cParameterContainer *params;
@@ -160,13 +168,14 @@ private:
 	QList<QVariant> clickModeData;
 	QTimer *timerRefreshImage;
 	sFlightData flightData;
+	sAnimationPathData animationPathData;
 
 signals:
 	void mouseMoved(int x, int y);
 	void singleClick(int x, int y, Qt::MouseButton button);
 	void keyPress(QKeyEvent *event);
 	void keyRelease(QKeyEvent *event);
-	void mouseWheelRotated(int delta);
+	void mouseWheelRotatedWithCtrl(int x, int y, int delta);
 };
 
 #endif /* MANDELBULBER2_SRC_RENDERED_IMAGE_WIDGET_HPP_ */

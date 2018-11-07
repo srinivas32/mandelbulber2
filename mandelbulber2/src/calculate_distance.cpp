@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -37,6 +37,8 @@
  */
 
 #include "calculate_distance.hpp"
+
+#include <QVector>
 
 #include "compute_fractal.hpp"
 #include "displacement_map.hpp"
@@ -83,14 +85,19 @@ double CalculateDistance(const sParamRender &params, const cNineFractals &fracta
 		sDistanceIn inTemp = in;
 		CVector3 point = inTemp.point;
 
-		point = point.mod(params.formulaRepeat[0]) - params.formulaPosition[0];
+		point = (point - params.formulaPosition[0]).mod(params.formulaRepeat[0]);
 		point = params.mRotFormulaRotation[0].RotateVector(point);
 		point *= params.formulaScale[0];
 		inTemp.point = point;
 
 		distance = CalculateDistanceSimple(params, fractals, inTemp, out, 0) / params.formulaScale[0];
 
-		distance = DisplacementMap(distance, in.point, 0, data);
+		CVector3 pointFractalized = inTemp.point;
+		double reduceDisplacement = 1.0;
+		pointFractalized =
+			FractalizeTexture(inTemp.point, data, params, fractals, 0, &reduceDisplacement);
+
+		distance = DisplacementMap(distance, pointFractalized, 0, data, reduceDisplacement);
 
 		for (int i = 0; i < NUMBER_OF_FRACTALS - 1; i++)
 		{
@@ -98,8 +105,8 @@ double CalculateDistance(const sParamRender &params, const cNineFractals &fracta
 			{
 				sDistanceOut outTemp = *out;
 
-				point = in.point;
-				point = point.mod(params.formulaRepeat[i + 1]) - params.formulaPosition[i + 1];
+				point = in.point - params.formulaPosition[i + 1];
+				point = point.mod(params.formulaRepeat[i + 1]);
 				point = params.mRotFormulaRotation[i + 1].RotateVector(point);
 				point *= params.formulaScale[i + 1];
 				inTemp.point = point;
@@ -107,7 +114,12 @@ double CalculateDistance(const sParamRender &params, const cNineFractals &fracta
 				double distTemp = CalculateDistanceSimple(params, fractals, inTemp, &outTemp, i + 1)
 													/ params.formulaScale[i + 1];
 
-				distTemp = DisplacementMap(distTemp, in.point, i + 1, data);
+				CVector3 pointFractalized = inTemp.point;
+				double reduceDisplacement = 1.0;
+				pointFractalized =
+					FractalizeTexture(inTemp.point, data, params, fractals, i + 1, &reduceDisplacement);
+
+				distTemp = DisplacementMap(distTemp, pointFractalized, i + 1, data);
 
 				const params::enumBooleanOperator boolOperator = params.booleanOperator[i];
 
@@ -171,7 +183,13 @@ double CalculateDistance(const sParamRender &params, const cNineFractals &fracta
 	else
 	{
 		distance = CalculateDistanceSimple(params, fractals, in, out, -1);
-		distance = DisplacementMap(distance, in.point, 0, data);
+
+		CVector3 pointFractalized = in.point;
+		double reduceDisplacement = 1.0;
+
+		pointFractalized = FractalizeTexture(in.point, data, params, fractals, -1, &reduceDisplacement);
+
+		distance = DisplacementMap(distance, pointFractalized, 0, data, reduceDisplacement);
 	}
 
 	distance =
@@ -198,7 +216,6 @@ double CalculateDistance(const sParamRender &params, const cNineFractals &fracta
 	{
 		out->maxiter = false;
 		out->objectId = 0;
-		out->maxiter = false;
 		out->iters = 0;
 	}
 
@@ -214,7 +231,8 @@ double CalculateDistanceSimple(const sParamRender &params, const cNineFractals &
 {
 	double distance = 0;
 
-	const int N = in.normalCalculationMode ? params.N * 5 : params.N;
+	const int N =
+		(in.normalCalculationMode && params.common.iterThreshMode) ? params.N * 5 : params.N;
 
 	sFractalIn fractIn(in.point, params.minN, N, params.common, forcedFormulaIndex);
 	sFractalOut fractOut;
@@ -379,7 +397,7 @@ double CalculateDistanceMinPlane(const sParamRender &params, const cNineFractals
 		double newDistStepMin = 0;
 		for (int i = 0; i <= transVectorAngles; i++)
 		{
-			const double angle = (1.0 * i / transVectorAngles) * 2.0 * M_PI;
+			const double angle = (double(i) / transVectorAngles) * 2.0 * M_PI;
 			CVector3 transversalVect = orthDirection;
 			transversalVect = transversalVect.RotateAroundVectorByAngle(rotationAxis, angle);
 			transversalVect.Normalize();

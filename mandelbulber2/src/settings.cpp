@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -77,10 +77,10 @@ size_t cSettings::CreateText(const cParameterContainer *par, const cFractalConta
 
 	// standard parameters
 	QList<QString> parameterList = par->GetListOfParameters();
-	for (int i = 0; i < parameterList.size(); i++)
+	for (auto &parameterNameFromList : parameterList)
 	{
-		if (parameterList[i] == "description") continue;
-		settingsText += CreateOneLine(par, parameterList[i]);
+		if (parameterNameFromList == "description") continue;
+		settingsText += CreateOneLine(par, parameterNameFromList);
 	}
 
 	if (format != formatAppSettings)
@@ -91,9 +91,9 @@ size_t cSettings::CreateText(const cParameterContainer *par, const cFractalConta
 			{
 				QList<QString> parameterListFractal = fractPar->at(f).GetListOfParameters();
 				QString fractalSettingsText = "";
-				for (int i = 0; i < parameterListFractal.size(); i++)
+				for (const auto &parameterNameFromFractal : parameterListFractal)
 				{
-					fractalSettingsText += CreateOneLine(&fractPar->at(f), parameterListFractal[i]);
+					fractalSettingsText += CreateOneLine(&fractPar->at(f), parameterNameFromFractal);
 				}
 				if (fractalSettingsText.length() > 0)
 				{
@@ -261,7 +261,8 @@ QString cSettings::CreateOneLine(const cParameterContainer *par, QString name) c
 	{
 		QString value;
 		enumVarType type = par->GetVarType(name);
-		if (!par->isDefaultValue(name) || format == formatFullText || format == formatNetRender)
+		if (!par->isDefaultValue(name) || format == formatFullText || format == formatNetRender
+				|| format == formatAppSettings)
 		{
 			if (type == typeBool)
 			{
@@ -420,7 +421,10 @@ void cSettings::DecodeHeader(QStringList &separatedText)
 		}
 		catch (QString &error)
 		{
-			cErrorMessage::showMessage(error, cErrorMessage::errorMessage);
+			if (!quiet)
+			{
+				cErrorMessage::showMessage(error, cErrorMessage::errorMessage);
+			}
 			textPrepared = false;
 			return;
 		}
@@ -502,7 +506,7 @@ bool cSettings::Decode(cParameterContainer *par, cFractalContainer *fractPar,
 				}
 				else if (section.contains("fractal"))
 				{
-					int i = section.right(1).toInt() - 1;
+					int i = section.rightRef(1).toInt() - 1;
 					if (fractPar) result = DecodeOneLine(&fractPar->at(i), line);
 				}
 				else if (section == QString("frames"))
@@ -556,14 +560,20 @@ bool cSettings::Decode(cParameterContainer *par, cFractalContainer *fractPar,
 
 				if (!result)
 				{
-					QString errorMessage =
-						QObject::tr("Error in settings file. Line: ") + QString::number(l) + " (" + line + ")";
-					cErrorMessage::showMessage(errorMessage, cErrorMessage::errorMessage);
+					if (!quiet)
+					{
+						QString errorMessage = QObject::tr("Error in settings file. Line: ")
+																	 + QString::number(l) + " (" + line + ")";
+						cErrorMessage::showMessage(errorMessage, cErrorMessage::errorMessage);
+					}
 					errorCount++;
 					if (errorCount > 3)
 					{
-						cErrorMessage::showMessage(
-							QObject::tr("Too many errors in settings file"), cErrorMessage::errorMessage);
+						if (!quiet)
+						{
+							cErrorMessage::showMessage(
+								QObject::tr("Too many errors in settings file"), cErrorMessage::errorMessage);
+						}
 						return false;
 					}
 				}
@@ -592,21 +602,27 @@ bool cSettings::Decode(cParameterContainer *par, cFractalContainer *fractPar,
 		if (keyframes && linesWithSoundParameters.length() > 0)
 		{
 			foundAnimSoundParameters = true;
-			for (int i = 0; i < linesWithSoundParameters.length(); i++)
+			for (const auto &linesWithSoundParameter : linesWithSoundParameters)
 			{
 				bool result;
-				result = DecodeOneLine(par, linesWithSoundParameters[i]);
+				result = DecodeOneLine(par, linesWithSoundParameter);
 
 				if (!result)
 				{
-					QString errorMessage =
-						QObject::tr("Error in settings file. Line: ") + linesWithSoundParameters[i];
-					cErrorMessage::showMessage(errorMessage, cErrorMessage::errorMessage);
+					if (!quiet)
+					{
+						QString errorMessage =
+							QObject::tr("Error in settings file. Line: ") + linesWithSoundParameter;
+						cErrorMessage::showMessage(errorMessage, cErrorMessage::errorMessage);
+					}
 					errorCount++;
 					if (errorCount > 3)
 					{
-						cErrorMessage::showMessage(
-							QObject::tr("Too many errors in settings file"), cErrorMessage::errorMessage);
+						if (!quiet)
+						{
+							cErrorMessage::showMessage(
+								QObject::tr("Too many errors in settings file"), cErrorMessage::errorMessage);
+						}
 						return false;
 					}
 				}
@@ -630,9 +646,8 @@ bool cSettings::CheckIfMaterialsAreDefined(cParameterContainer *par)
 {
 	bool matParameterFound = false;
 	QList<QString> list = par->GetListOfParameters();
-	for (int i = 0; i < list.size(); i++)
+	for (auto parameterName : list)
 	{
-		QString parameterName = list.at(i);
 		if (parameterName.left(3) == "mat")
 		{
 			matParameterFound = true;
@@ -688,12 +703,16 @@ bool cSettings::DecodeOneLine(cParameterContainer *par, QString line)
 			if (cMaterial::paramsList.indexOf(shortName) >= 0)
 			{
 				InitMaterialParams(matIndex, par);
+				PreCompatibilityMaterials(matIndex, par);
 				par->Set(QString("mat%1_is_defined").arg(matIndex), true);
 			}
 			else
 			{
-				cErrorMessage::showMessage(
-					QObject::tr("Unknown parameter: ") + parameterName, cErrorMessage::errorMessage);
+				if (!quiet)
+				{
+					cErrorMessage::showMessage(
+						QObject::tr("Unknown parameter: ") + parameterName, cErrorMessage::errorMessage);
+				}
 				return false;
 			}
 		}
@@ -713,8 +732,11 @@ bool cSettings::DecodeOneLine(cParameterContainer *par, QString line)
 
 	if (varType == typeNull)
 	{
-		cErrorMessage::showMessage(
-			QObject::tr("Unknown parameter: ") + parameterName, cErrorMessage::errorMessage);
+		if (!quiet)
+		{
+			cErrorMessage::showMessage(
+				QObject::tr("Unknown parameter: ") + parameterName, cErrorMessage::errorMessage);
+		}
 		return false;
 	}
 	else
@@ -723,8 +745,12 @@ bool cSettings::DecodeOneLine(cParameterContainer *par, QString line)
 		{
 			if (value.size() == 0)
 			{
-				cErrorMessage::showMessage(QObject::tr("Missing value for parameter %1").arg(parameterName),
-					cErrorMessage::errorMessage);
+				if (!quiet)
+				{
+					cErrorMessage::showMessage(
+						QObject::tr("Missing value for parameter %1").arg(parameterName),
+						cErrorMessage::errorMessage);
+				}
 				return false;
 			}
 		}
@@ -751,7 +777,7 @@ bool cSettings::DecodeOneLine(cParameterContainer *par, QString line)
 
 bool cSettings::CheckSection(QString text, QString &section)
 {
-	if (text.left(1) == "[" && text.right(1) == "]")
+	if (text.left(1) == "[" && text.rightRef(1) == "]")
 	{
 		section = text.mid(1, text.length() - 2);
 		return true;
@@ -871,6 +897,14 @@ void cSettings::Compatibility(QString &name, QString &value) const
 	{
 		name.replace("gpu_", "opencl_");
 	}
+
+	if (fileVersion < 2.13)
+	{
+		if (name.contains("primitive_water"))
+		{
+			name.replace("amplitude", "relative_amplitude");
+		}
+	}
 }
 
 void cSettings::Compatibility2(cParameterContainer *par, cFractalContainer *fract)
@@ -918,6 +952,24 @@ void cSettings::Compatibility2(cParameterContainer *par, cFractalContainer *frac
 			par->Set(listOfLoadedPrimitives[i] + "_material_id", materialId);
 		}
 	}
+
+	if (fileVersion <= 2.12)
+	{
+		if (par->Get<bool>("iteration_fog_enable"))
+		{
+			par->Set("iteration_fog_brightness_boost", 100.0);
+		}
+		for (int i = 0; i < listOfLoadedPrimitives.size(); i++)
+		{
+			if (listOfLoadedPrimitives[i].contains("primitive_water"))
+			{
+				double relativeAmplitude =
+					par->Get<double>(listOfLoadedPrimitives[i] + "_relative_amplitude")
+					/ par->Get<double>(listOfLoadedPrimitives[i] + "_length");
+				par->Set(listOfLoadedPrimitives[i] + "_relative_amplitude", relativeAmplitude);
+			}
+		}
+	}
 }
 
 bool cSettings::DecodeFramesHeader(
@@ -938,15 +990,47 @@ bool cSettings::DecodeFramesHeader(
 				if (fullParameterName.length() > 2)
 				{
 					QString lastTwo = fullParameterName.right(2);
-					if (lastTwo == "_x" || lastTwo == "_y" || lastTwo == "_z")
+					if (lastTwo == "_x") // check if it's CVector4
 					{
-						fullParameterName = fullParameterName.left(fullParameterName.length() - 2);
-						i += 2;
+						// check if there are at least 2 parameters left and they are *_y and *_z
+						bool isCVector4 = false;
+						if (i + 3 < lineSplit.size())
+						{
+							QString lastTwoY = lineSplit[i + 1].right(2);
+							QString lastTwoZ = lineSplit[i + 2].right(2);
+							QString lastTwoW = lineSplit[i + 3].right(2);
+							if (lastTwoY == "_y" && lastTwoZ == "_z" && lastTwoW == "_w")
+							{
+								fullParameterName = fullParameterName.left(fullParameterName.length() - 2);
+								i += 3;
+								isCVector4 = true;
+							}
+						}
+
+						if (!isCVector4 && i + 2 < lineSplit.size()) // check if it's CVector3
+						{
+							QString lastTwoY = lineSplit[i + 1].right(2);
+							QString lastTwoZ = lineSplit[i + 2].right(2);
+							if (lastTwoY == "_y" && lastTwoZ == "_z")
+							{
+								fullParameterName = fullParameterName.left(fullParameterName.length() - 2);
+								i += 2;
+							}
+						}
 					}
-					else if (lastTwo == "_R" || lastTwo == "_G" || lastTwo == "_B")
+					else if (lastTwo == "_R") // check if it's RGB
 					{
-						fullParameterName = fullParameterName.left(fullParameterName.length() - 2);
-						i += 2;
+						// check if there are at least 2 parameters left and they are *_G and *_B
+						if (i + 2 < lineSplit.size())
+						{
+							QString lastTwoG = lineSplit[i + 1].right(2);
+							QString lastTwoB = lineSplit[i + 2].right(2);
+							if (lastTwoG == "_G" && lastTwoB == "_B")
+							{
+								fullParameterName = fullParameterName.left(fullParameterName.length() - 2);
+								i += 2;
+							}
+						}
 					}
 				}
 
@@ -1025,12 +1109,12 @@ bool cSettings::DecodeFramesLine(
 			if (frameCount == frames->GetNumberOfFrames())
 			{
 				column++;
-				for (int i = 0; i < parameterList.size(); ++i)
+				for (auto &parameterDescription : parameterList)
 				{
 					using namespace parameterContainer;
-					enumVarType type = parameterList[i].varType;
-					QString containerName = parameterList[i].containerName;
-					QString parameterName = parameterList[i].parameterName;
+					enumVarType type = parameterDescription.varType;
+					QString containerName = parameterDescription.containerName;
+					QString parameterName = parameterDescription.parameterName;
 					cParameterContainer *container = frames->ContainerSelector(containerName, par, fractPar);
 
 					if (type == typeVector3)
@@ -1117,4 +1201,14 @@ QString cSettings::everyLocaleDouble(QString txt)
 	if (systemData.decimalPoint == ',') txtOut = txt.replace('.', ',');
 	if (systemData.decimalPoint == '.') txtOut = txt.replace(',', '.');
 	return txtOut;
+}
+
+void cSettings::PreCompatibilityMaterials(int matIndex, cParameterContainer *par)
+{
+	if (fileVersion < 2.15)
+	{
+		par->Set(cMaterial::Name("metallic", matIndex), false);
+		par->Set(cMaterial::Name("specular", matIndex), 1.0);
+		par->Set(cMaterial::Name("specular_width", matIndex), 1.0);
+	}
 }

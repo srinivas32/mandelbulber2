@@ -1,6 +1,6 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
@@ -18,7 +18,10 @@
 REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *aux)
 {
 	REAL4 c = aux->const_c;
-
+	REAL4 oldZ = z;
+	REAL4 zCol = z;
+	REAL rrCol = 0.0f;
+	REAL colorAdd = 0.0f;
 	// spherical fold
 	if (fractal->transformCommon.functionEnabledSFalse
 			&& aux->i >= fractal->transformCommon.startIterationsS
@@ -90,7 +93,7 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 
 		// spherical fold
 		REAL rr = dot(z, z);
-
+		rrCol = rr;
 		z += fractal->mandelbox.offset;
 
 		// if (rr < 1e-21f) rr = 1e-21f;
@@ -99,14 +102,12 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 			REAL tglad_factor1 = native_divide(fractal->transformCommon.maxR2d1, para);
 			z *= tglad_factor1;
 			aux->DE *= tglad_factor1;
-			// aux->color += fractal->mandelbox.color.factorSp1;
 		}
 		else if (rr < fractal->transformCommon.maxR2d1) // fractal->mandelbox.fR2
 		{
 			REAL tglad_factor2 = native_divide(fractal->transformCommon.maxR2d1, rr);
 			z *= tglad_factor2;
 			aux->DE *= tglad_factor2;
-			// aux->color += fractal->mandelbox.color.factorSp2;
 		}
 		z -= fractal->mandelbox.offset;
 		z *= fractal->transformCommon.scale1;
@@ -164,7 +165,6 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 		z = fabs(z) * fractal->transformCommon.scale3D222;
 		// if (tempL < 1e-21f) tempL = 1e-21f;
 		REAL avgScale = native_divide(length(z), tempL);
-		aux->r_dz *= avgScale;
 		aux->DE = mad(aux->DE, avgScale, 1.0f);
 
 		tempXZ = (z.y + z.x) * SQRT_1_2;
@@ -187,12 +187,18 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 		z = fabs(z) * fractal->transformCommon.scale3D333;
 		// if (tempL < 1e-21f) tempL = 1e-21f;
 		REAL avgScale = native_divide(length(z), tempL);
-		aux->r_dz *= avgScale;
 		aux->DE = mad(aux->DE, avgScale, 1.0f);
 
+		oldZ = z;
 		z = (fabs(z + fractal->transformCommon.additionConstant111)
 				 - fabs(z - fractal->transformCommon.additionConstant111) - z);
-
+		zCol = z;
+		/*if (fractal->foldColor.auxColorEnabledFalse)
+		{
+			if (z.x != oldZ.x) colorAdd += fractal->mandelbox.color.factor.x;
+			if (z.y != oldZ.y) colorAdd += fractal->mandelbox.color.factor.y;
+			if (z.z != oldZ.z) colorAdd += fractal->mandelbox.color.factor.z;
+		}*/
 		tempXZ = (z.y + z.x) * SQRT_1_2;
 
 		z = (REAL4){z.z * SQRT_1_3 + tempXZ * SQRT_2_3, (z.y - z.x) * SQRT_1_2,
@@ -244,8 +250,10 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 			&& aux->i >= fractal->transformCommon.startIterationsF
 			&& aux->i < fractal->transformCommon.stopIterationsF)
 	{
+		oldZ = z;
 		z = fabs(z + fractal->transformCommon.offsetA000)
 				- fabs(z - fractal->transformCommon.offsetA000) - z;
+		zCol = z;
 
 		if (fractal->transformCommon.functionEnabledFalse
 				&& aux->i >= fractal->transformCommon.startIterationsA
@@ -255,6 +263,7 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 			REAL4 length = 2.0f * limit;
 			REAL4 tgladS = native_recip(length);
 			REAL4 Add;
+			Add.w = 0.0f;
 			if (fabs(z.x) < limit.x) Add.x = z.x * z.x * tgladS.x;
 			if (fabs(z.y) < limit.y) Add.y = z.y * z.y * tgladS.y;
 			if (fabs(z.z) < limit.z) Add.z = z.z * z.z * tgladS.z;
@@ -284,5 +293,46 @@ REAL4 PseudoKleinianMod2Iteration(REAL4 z, __constant sFractalCl *fractal, sExte
 	}
 	aux->pseudoKleinianDE = fractal->analyticDE.scale1; // pK DE
 	// aux->pseudoKleinianZZ = fractal->transformCommon.scale0; // pK z.z * z.z * scale0
+
+	// color updated v2.13 & mode2 v2.14
+	if (fractal->foldColor.auxColorEnabledFalse)
+	{
+		if (fractal->transformCommon.functionEnabledCxFalse)
+		{
+			if (zCol.x != oldZ.x)
+				colorAdd += fractal->mandelbox.color.factor.x
+										* (fabs(zCol.x) - fractal->transformCommon.additionConstant111.x);
+			if (zCol.y != oldZ.y)
+				colorAdd += fractal->mandelbox.color.factor.y
+										* (fabs(zCol.y) - fractal->transformCommon.additionConstant111.y);
+			if (zCol.z != oldZ.z)
+				colorAdd += fractal->mandelbox.color.factor.z
+										* (fabs(zCol.z) - fractal->transformCommon.additionConstant111.z);
+
+			if (rrCol < fractal->transformCommon.maxR2d1)
+			{
+				if (rrCol < fractal->transformCommon.minR2p25)
+					colorAdd +=
+						mad(fractal->mandelbox.color.factorSp1, (fractal->transformCommon.minR2p25 - rrCol),
+							fractal->mandelbox.color.factorSp2
+								* (fractal->transformCommon.maxR2d1 - fractal->transformCommon.minR2p25));
+				else
+					colorAdd +=
+						fractal->mandelbox.color.factorSp2 * (fractal->transformCommon.maxR2d1 - rrCol);
+			}
+		}
+		else
+		{
+			if (zCol.x != oldZ.x) colorAdd += fractal->mandelbox.color.factor.x;
+			if (zCol.y != oldZ.y) colorAdd += fractal->mandelbox.color.factor.y;
+			if (zCol.z != oldZ.z) colorAdd += fractal->mandelbox.color.factor.z;
+
+			if (rrCol < fractal->transformCommon.minR2p25)
+				colorAdd += fractal->mandelbox.color.factorSp1;
+			else if (rrCol < fractal->transformCommon.maxR2d1)
+				colorAdd += fractal->mandelbox.color.factorSp2;
+		}
+		aux->color += colorAdd;
+	}
 	return z;
 }

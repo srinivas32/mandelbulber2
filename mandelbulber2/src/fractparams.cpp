@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -56,8 +56,11 @@ sParamRender::sParamRender(const cParameterContainer *container, QVector<cObject
 		container->Get<double>("random_lights_max_distance_from_fractal");
 	auxLightRandomIntensity = container->Get<double>("random_lights_intensity");
 	auxLightRandomEnabled = container->Get<bool>("random_lights_group");
+	auxLightRandomInOneColor = container->Get<bool>("random_lights_one_color_enable");
+	auxLightRandomColor = container->Get<sRGB>("random_lights_color");
 	auxLightVisibility = container->Get<double>("aux_light_visibility");
 	auxLightVisibilitySize = container->Get<double>("aux_light_visibility_size");
+	background3ColorsEnable = container->Get<bool>("background_3_colors_enable");
 	background_color1 = container->Get<sRGB>("background_color", 1);
 	background_color2 = container->Get<sRGB>("background_color", 2);
 	background_color3 = container->Get<sRGB>("background_color", 3);
@@ -84,11 +87,15 @@ sParamRender::sParamRender(const cParameterContainer *container, QVector<cObject
 	DOFMaxRadius = container->Get<double>("DOF_max_radius");
 	DOFHDRMode = container->Get<bool>("DOF_HDR");
 	DOFMonteCarlo = container->Get<bool>("DOF_monte_carlo");
+	DOFMonteCarloGlobalIllumination = container->Get<bool>("DOF_MC_global_illumination");
 	DOFNumberOfPasses = container->Get<int>("DOF_number_of_passes");
 	DOFSamples = container->Get<int>("DOF_samples");
 	DOFMinSamples = container->Get<int>("DOF_min_samples");
 	DOFBlurOpacity = container->Get<double>("DOF_blur_opacity");
 	DOFMaxNoise = container->Get<double>("DOF_max_noise");
+	DOFMonteCarloChromaticAberration = container->Get<bool>("DOF_MC_CA_enable");
+	DOFMonteCarloCADispersionGain = container->Get<double>("DOF_MC_CA_dispersion_gain");
+	DOFMonteCarloCACameraDispersion = container->Get<double>("DOF_MC_CA_camera_dispersion");
 	envMappingEnable = container->Get<bool>("env_mapping_enable");
 	fakeLightsColor = container->Get<sRGB>("fake_lights_color");
 	fakeLightsEnabled = container->Get<bool>("fake_lights_enabled");
@@ -112,9 +119,11 @@ sParamRender::sParamRender(const cParameterContainer *container, QVector<cObject
 	imageAdjustments.contrast = container->Get<double>("contrast");
 	imageAdjustments.hdrEnabled = container->Get<bool>("hdr");
 	imageAdjustments.imageGamma = container->Get<double>("gamma");
+	imageAdjustments.saturation = container->Get<double>("saturation");
 	imageHeight = container->Get<int>("image_height");
 	imageWidth = container->Get<int>("image_width");
 	interiorMode = container->Get<bool>("interior_mode");
+	iterFogBrightnessBoost = container->Get<double>("iteration_fog_brightness_boost");
 	iterFogColor1Maxiter = container->Get<double>("iteration_fog_color_1_maxiter");
 	iterFogColor2Maxiter = container->Get<double>("iteration_fog_color_2_maxiter");
 	iterFogColour1 = container->Get<sRGB>("iteration_fog_color", 1);
@@ -123,6 +132,8 @@ sParamRender::sParamRender(const cParameterContainer *container, QVector<cObject
 	iterFogEnabled = container->Get<bool>("iteration_fog_enable");
 	iterFogOpacity = container->Get<double>("iteration_fog_opacity");
 	iterFogOpacityTrim = container->Get<double>("iteration_fog_opacity_trim");
+	iterFogOpacityTrimHigh = container->Get<double>("iteration_fog_opacity_trim_high");
+	iterFogShadows = container->Get<bool>("iteration_fog_shadows");
 	legacyCoordinateSystem = container->Get<bool>("legacy_coordinate_system");
 	limitMax = container->Get<CVector3>("limit_max");
 	limitMin = container->Get<CVector3>("limit_min");
@@ -136,6 +147,7 @@ sParamRender::sParamRender(const cParameterContainer *container, QVector<cObject
 	mainLightVisibility = container->Get<double>("main_light_visibility");
 	mainLightVisibilitySize = container->Get<double>("main_light_visibility_size");
 	minN = container->Get<int>("minN");
+	monteCarloSoftShadows = container->Get<bool>("MC_soft_shadows_enable");
 	N = container->Get<int>("N");
 	penetratingLights = container->Get<bool>("penetrating_lights");
 	perspectiveType = params::enumPerspectiveType(container->Get<int>("perspective_type"));
@@ -169,6 +181,7 @@ sParamRender::sParamRender(const cParameterContainer *container, QVector<cObject
 	volFogColour3 = container->Get<sRGB>("fog_color", 3);
 	volFogDensity = container->Get<double>("volumetric_fog_density");
 	volFogDistanceFactor = container->Get<double>("volumetric_fog_distance_factor");
+	volFogDistanceFromSurface = container->Get<double>("volumetric_fog_distance_from_surface");
 	volFogEnabled = container->Get<bool>("volumetric_fog_enabled");
 	volumetricLightEnabled[0] = container->Get<bool>("main_light_volumetric_enabled");
 	volumetricLightIntensity[0] = container->Get<double>("main_light_volumetric_intensity");

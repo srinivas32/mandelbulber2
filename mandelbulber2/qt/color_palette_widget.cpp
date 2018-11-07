@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,13 +34,15 @@
 
 #include "color_palette_widget.h"
 
+#include <QColorDialog>
+
 #include "src/animation_flight.hpp"
 #include "src/animation_keyframes.hpp"
 
 ColorPaletteWidget::ColorPaletteWidget(QWidget *parent)
 		: QWidget(parent), CommonMyWidgetWrapper(this)
 {
-	this->setFixedHeight(50);
+	setFixedHeight(50);
 	paletteOffset = 0.0;
 }
 
@@ -64,10 +66,10 @@ void ColorPaletteWidget::paintEvent(QPaintEvent *event)
 	{
 		QPainter painter(this);
 
-		for (int x = 0; x < this->width(); x++)
+		for (int x = 0; x < width(); x++)
 		{
 			sRGB color = palette.IndexToColour(x * 16 + paletteOffset * 256);
-			int offset = paletteOffset * 16;
+			const int offset = paletteOffset * 16;
 			if ((x + offset) % 16 == 8)
 			{
 				color.R += 32;
@@ -95,7 +97,7 @@ void ColorPaletteWidget::paintEvent(QPaintEvent *event)
 			}
 
 			painter.setPen(QColor(color.R, color.G, color.B));
-			painter.drawLine(x, 0, x, this->height());
+			painter.drawLine(x, 0, x, height());
 		}
 	}
 }
@@ -104,12 +106,12 @@ void ColorPaletteWidget::mousePressEvent(QMouseEvent *event)
 {
 	QWidget::mousePressEvent(event);
 
-	QPoint point = event->pos();
-	Qt::MouseButton button = event->button();
+	const QPoint point = event->pos();
+	const Qt::MouseButton button = event->button();
 
 	if (button == Qt::LeftButton)
 	{
-		int x = point.x() + 8 + paletteOffset * 16;
+		const int x = point.x() + 8 + paletteOffset * 16;
 		int index = (x / 16) % palette.GetSize();
 		QColorDialog colorDialog(this);
 		colorDialog.setOption(QColorDialog::DontUseNativeDialog);

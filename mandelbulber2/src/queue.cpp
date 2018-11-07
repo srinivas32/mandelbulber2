@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -349,9 +349,9 @@ void cQueue::RemoveQueueItem(const structQueueItem queueItem)
 	RemoveFromList(queueItem);
 	// check if fract file is still on the list (one file with different renderTypes)
 	mutex.lock();
-	for (int i = 0; i < queueListFromFile.size(); i++)
+	for (const auto &i : queueListFromFile)
 	{
-		if (queueListFromFile.at(i).filename == queueItem.filename)
+		if (i.filename == queueItem.filename)
 		{
 			mutex.unlock();
 			return;
@@ -398,10 +398,9 @@ void cQueue::StoreList()
 	{
 		QTextStream stream(&file);
 		stream << "#\n# Mandelbulber queue file\n#\n";
-		for (int i = 0; i < queueListFromFile.size(); i++)
+		for (const auto &i : queueListFromFile)
 		{
-			stream << queueListFromFile.at(i).filename << " "
-						 << GetTypeText(queueListFromFile.at(i).renderType) << endl;
+			stream << i.filename << " " << GetTypeText(i.renderType) << endl;
 		}
 	}
 	file.close();
@@ -529,24 +528,25 @@ void cQueue::RenderQueue() const
 	cRenderQueue *renderQueue = new cRenderQueue(image, renderedImageWidget);
 	renderQueue->moveToThread(thread);
 	renderQueue->setObjectName("Queue");
-	QObject::connect(thread, SIGNAL(started()), renderQueue, SLOT(slotRenderQueue()));
-	QObject::connect(renderQueue, SIGNAL(finished()), renderQueue, SLOT(deleteLater()));
+	connect(thread, SIGNAL(started()), renderQueue, SLOT(slotRenderQueue()));
+	connect(renderQueue, SIGNAL(finished()), renderQueue, SLOT(deleteLater()));
 	if (gMainInterface->mainWindow)
 	{
-		QObject::connect(renderQueue,
+		connect(renderQueue,
 			SIGNAL(updateProgressAndStatus(QString, QString, double, cProgressText::enumProgressType)),
 			gMainInterface->mainWindow,
 			SLOT(slotUpdateProgressAndStatus(QString, QString, double, cProgressText::enumProgressType)));
-		QObject::connect(renderQueue, SIGNAL(updateProgressHide(cProgressText::enumProgressType)),
+		connect(renderQueue, SIGNAL(updateProgressHide(cProgressText::enumProgressType)),
 			gMainInterface->mainWindow, SLOT(slotUpdateProgressHide(cProgressText::enumProgressType)));
+		connect(renderQueue, SIGNAL(updateImage()), renderedImageWidget, SLOT(update()));
 	}
 	if (gMainInterface->headless)
 	{
-		QObject::connect(renderQueue,
+		connect(renderQueue,
 			SIGNAL(updateProgressAndStatus(QString, QString, double, cProgressText::enumProgressType)),
 			gMainInterface->headless,
 			SLOT(slotUpdateProgressAndStatus(QString, QString, double, cProgressText::enumProgressType)));
-		QObject::connect(renderQueue, SIGNAL(updateStatistics(cStatistics)), gMainInterface->headless,
+		connect(renderQueue, SIGNAL(updateStatistics(cStatistics)), gMainInterface->headless,
 			SLOT(slotUpdateStatistics(cStatistics)));
 	}
 	QObject::connect(renderQueue, SIGNAL(finished()), thread, SLOT(quit()));
@@ -577,7 +577,7 @@ void cQueue::slotQueueRender() const
 	else
 	{
 		cErrorMessage::showMessage(
-			QObject::tr("No queue items to render"), cErrorMessage::errorMessage, nullptr);
+			QObject::tr("No queue items to render"), cErrorMessage::warningMessage, nullptr);
 	}
 }
 
@@ -619,25 +619,25 @@ void cQueue::slotQueueRemoveOrphaned()
 
 void cQueue::slotQueueRemoveItem()
 {
-	QString buttonName = this->sender()->objectName();
+	QString buttonName = sender()->objectName();
 	RemoveQueueItem(buttonName.toInt());
 }
 
 void cQueue::slotQueueMoveItemUp()
 {
-	QString buttonName = this->sender()->objectName();
+	QString buttonName = sender()->objectName();
 	SwapQueueItem(buttonName.toInt(), buttonName.toInt() - 1);
 }
 
 void cQueue::slotQueueMoveItemDown()
 {
-	QString buttonName = this->sender()->objectName();
+	QString buttonName = sender()->objectName();
 	SwapQueueItem(buttonName.toInt(), buttonName.toInt() + 1);
 }
 
 void cQueue::slotQueueTypeChanged(int index)
 {
-	QString buttonName = this->sender()->objectName();
+	QString buttonName = sender()->objectName();
 	UpdateQueueItemType(buttonName.toInt(), cQueue::enumRenderType(index));
 }
 

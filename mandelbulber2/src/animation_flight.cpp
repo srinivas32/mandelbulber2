@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -39,6 +39,8 @@
  */
 
 #include "animation_flight.hpp"
+
+#include <QWidget>
 
 #include "ui_dock_animation.h"
 
@@ -142,7 +144,7 @@ cFlightAnimation::cFlightAnimation(cInterface *_interface, cAnimationFrames *_fr
 		gErrorMessage, SLOT(slotShowMessage(QString, cErrorMessage::enumMessageType, QWidget *)));
 
 	image = _image;
-	imageWidget = _imageWidget;
+	imageWidget = dynamic_cast<RenderedImage *>(_imageWidget);
 	params = _params;
 	fractalParams = _fractal;
 	linearSpeedSp = 0.0;
@@ -302,12 +304,14 @@ void cFlightAnimation::RecordFlight(bool continueRecording)
 	mainInterface->renderedImage->setClickMode(clickMode);
 
 	// setup of rendering engine
-	cRenderJob *renderJob = new cRenderJob(params, fractalParams, mainInterface->mainImage,
-		&mainInterface->stopRequest, mainInterface->renderedImage);
-	connect(renderJob, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
-		this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
-	connect(
-		renderJob, SIGNAL(updateStatistics(cStatistics)), this, SIGNAL(updateStatistics(cStatistics)));
+	QScopedPointer<cRenderJob> renderJob(new cRenderJob(params, fractalParams,
+		mainInterface->mainImage, &mainInterface->stopRequest, mainInterface->renderedImage));
+	connect(renderJob.data(),
+		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
+		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+	connect(renderJob.data(), SIGNAL(updateStatistics(cStatistics)), this,
+		SIGNAL(updateStatistics(cStatistics)));
+	connect(renderJob.data(), SIGNAL(updateImage()), mainInterface->renderedImage, SLOT(update()));
 
 	cRenderingConfiguration config;
 	config.DisableRefresh();
@@ -315,6 +319,8 @@ void cFlightAnimation::RecordFlight(bool continueRecording)
 
 	renderJob->Init(cRenderJob::flightAnimRecord, config);
 	mainInterface->stopRequest = false;
+
+	image->SetFastPreview(true);
 
 	// vector for speed and rotation control
 	CVector3 cameraSpeed;
@@ -346,6 +352,7 @@ void cFlightAnimation::RecordFlight(bool continueRecording)
 	recordPause = false;
 
 	mainInterface->mainWindow->GetWidgetDockNavigation()->LockAllFunctions();
+	imageWidget->SetEnableClickModes(false);
 
 	mainInterface->progressBarAnimation->show();
 
@@ -494,7 +501,10 @@ void cFlightAnimation::RecordFlight(bool continueRecording)
 	}
 
 	if (!systemData.noGui && image->IsMainImage())
+	{
 		mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+		imageWidget->SetEnableClickModes(true);
+	}
 
 	// retrieve original click mode
 	const QList<QVariant> item =
@@ -503,10 +513,10 @@ void cFlightAnimation::RecordFlight(bool continueRecording)
 			.toList();
 	gMainInterface->renderedImage->setClickMode(item);
 
+	image->SetFastPreview(false);
+
 	UpdateLimitsForFrameRange();
 	ui->spinboxInt_flight_last_to_render->setValue(frames->GetNumberOfFrames());
-
-	delete renderJob;
 }
 
 void cFlightAnimation::UpdateThumbnailFromImage(int index) const
@@ -722,12 +732,15 @@ bool cFlightAnimation::RenderFlight(bool *stopRequest)
 		gUndo.Store(params, fractalParams, frames, nullptr);
 	}
 
-	cRenderJob *renderJob = new cRenderJob(params, fractalParams, image, stopRequest, imageWidget);
+	QScopedPointer<cRenderJob> renderJob(
+		new cRenderJob(params, fractalParams, image, stopRequest, imageWidget));
 
-	connect(renderJob, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
-		this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
-	connect(
-		renderJob, SIGNAL(updateStatistics(cStatistics)), this, SIGNAL(updateStatistics(cStatistics)));
+	connect(renderJob.data(),
+		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
+		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+	connect(renderJob.data(), SIGNAL(updateStatistics(cStatistics)), this,
+		SIGNAL(updateStatistics(cStatistics)));
+	connect(renderJob.data(), SIGNAL(updateImage()), mainInterface->renderedImage, SLOT(update()));
 
 	cRenderingConfiguration config;
 	config.EnableNetRender();
@@ -746,7 +759,10 @@ bool cFlightAnimation::RenderFlight(bool *stopRequest)
 	progressText.ResetTimer();
 
 	if (!systemData.noGui && image->IsMainImage())
+	{
 		mainInterface->mainWindow->GetWidgetDockNavigation()->LockAllFunctions();
+		imageWidget->SetEnableClickModes(false);
+	}
 
 	try
 	{
@@ -802,7 +818,10 @@ bool cFlightAnimation::RenderFlight(bool *stopRequest)
 			{
 				cAnimationFrames::WipeFramesFromFolder(params->Get<QString>("anim_flight_dir"));
 				if (!systemData.noGui && image->IsMainImage())
+				{
 					mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+					imageWidget->SetEnableClickModes(true);
+				}
 
 				return RenderFlight(stopRequest);
 			}
@@ -871,6 +890,8 @@ bool cFlightAnimation::RenderFlight(bool *stopRequest)
 			const ImageFileSave::enumImageFileType fileType =
 				ImageFileSave::enumImageFileType(params->Get<int>("flight_animation_image_type"));
 			SaveImage(filename, fileType, image, gMainInterface->mainWindow);
+
+			gApplication->processEvents();
 		}
 
 		emit updateProgressAndStatus(QObject::tr("Animation finished"), progressText.getText(1.0), 1.0,
@@ -886,18 +907,22 @@ bool cFlightAnimation::RenderFlight(bool *stopRequest)
 		emit updateProgressAndStatus(
 			resultStatus, progressText.getText(1.0), cProgressText::progress_ANIMATION);
 		emit updateProgressHide();
-		delete renderJob;
 
 		if (!systemData.noGui && image->IsMainImage())
+		{
 			mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+			imageWidget->SetEnableClickModes(true);
+		}
 
 		return false;
 	}
 
 	if (!systemData.noGui && image->IsMainImage())
+	{
 		mainInterface->mainWindow->GetWidgetDockNavigation()->UnlockAllFunctions();
+		imageWidget->SetEnableClickModes(true);
+	}
 
-	delete renderJob;
 	return true;
 }
 
@@ -1030,17 +1055,17 @@ void cFlightAnimation::slotOrthogonalStrafe(bool _orthogonalStrafe)
 
 void cFlightAnimation::slotSelectAnimFlightImageDir() const
 {
-	QFileDialog *dialog = new QFileDialog();
-	dialog->setFileMode(QFileDialog::DirectoryOnly);
-	dialog->setNameFilter(QObject::tr("Animation Image Folder"));
-	dialog->setDirectory(QDir::toNativeSeparators(params->Get<QString>("anim_flight_dir")));
-	dialog->setAcceptMode(QFileDialog::AcceptOpen);
-	dialog->setWindowTitle(QObject::tr("Choose Animation Image Folder"));
-	dialog->setOption(QFileDialog::ShowDirsOnly);
+	QFileDialog dialog;
+	dialog.setFileMode(QFileDialog::DirectoryOnly);
+	dialog.setNameFilter(QObject::tr("Animation Image Folder"));
+	dialog.setDirectory(QDir::toNativeSeparators(params->Get<QString>("anim_flight_dir")));
+	dialog.setAcceptMode(QFileDialog::AcceptOpen);
+	dialog.setWindowTitle(QObject::tr("Choose Animation Image Folder"));
+	dialog.setOption(QFileDialog::ShowDirsOnly);
 
-	if (dialog->exec())
+	if (dialog.exec())
 	{
-		QStringList fileNames = dialog->selectedFiles();
+		QStringList fileNames = dialog.selectedFiles();
 		const QString filename = QDir::toNativeSeparators(fileNames.first() + QDir::separator());
 		ui->text_anim_flight_dir->setText(filename);
 		params->Set("anim_flight_dir", filename);
@@ -1307,10 +1332,8 @@ void cFlightAnimation::UpdateLimitsForFrameRange() const
 	const int noOfFrames = frames->GetNumberOfFrames();
 
 	ui->spinboxInt_flight_first_to_render->setMaximum(noOfFrames);
-	ui->sliderInt_flight_first_to_render->setMaximum(noOfFrames);
 
 	ui->spinboxInt_flight_last_to_render->setMaximum(noOfFrames);
-	ui->sliderInt_flight_last_to_render->setMaximum(noOfFrames);
 
 	SynchronizeInterfaceWindow(ui->tab_flight_animation, gPar, qInterface::write);
 }

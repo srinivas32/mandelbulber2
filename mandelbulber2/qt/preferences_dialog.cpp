@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -27,7 +27,7 @@
  *
  * ###########################################################################
  *
- * Authors: Sebastian Jennen (jenzebas@gmail.com)
+ * Authors: Sebastian Jennen (jenzebas@gmail.com), Robert Pancoast (RobertPancoast77@gmail.com)
  *
  * cPreferencesDialog - dialog to configure and maintain application Preferences
  */
@@ -67,7 +67,6 @@ cPreferencesDialog::cPreferencesDialog(QWidget *parent)
 	ui->setupUi(this);
 
 	int maximumCores = get_cpu_count();
-	ui->sliderInt_limit_CPU_cores->setMaximum(maximumCores);
 	ui->spinboxInt_limit_CPU_cores->setMaximum(maximumCores);
 
 #ifndef WIN32
@@ -98,9 +97,13 @@ cPreferencesDialog::cPreferencesDialog(QWidget *parent)
 
 #ifdef USE_OPENCL
 	UpdateOpenCLListBoxes();
+	UpdateOpenCLMemoryLimits();
 #else	// USE_OPENCL
 	ui->tabWidget->removeTab(2); // hide GPU tab for now
 #endif // USE_OPENCL
+
+	if (gPar->Get<bool>("ui_colorize"))
+		cInterface::ColorizeGroupBoxes(this, gPar->Get<int>("ui_colorize_random_seed"));
 
 	initFinished = true;
 }
@@ -122,12 +125,10 @@ void cPreferencesDialog::on_buttonBox_accepted()
 	QString key = systemData.supportedLanguages.key(value);
 	gPar->Set<QString>("language", key);
 
-	gPar->Set<int>("toolbar_icon_size", gPar->Get<int>("toolbar_icon_size"));
-	gMainInterface->mainWindow->slotPopulateToolbar(true);
-
 	systemData.loggingVerbosity = gPar->Get<int>("logging_verbosity");
 
 #ifdef USE_OPENCL
+	// OpenCL preference dialogue supports (1) platform
 	int selectedPlatform = ui->listWidget_opencl_platform_list->currentIndex().row();
 	gPar->Set("opencl_platform", selectedPlatform);
 
@@ -135,13 +136,18 @@ void cPreferencesDialog::on_buttonBox_accepted()
 		ui->listWidget_opencl_device_list->selectedItems();
 	QList<QPair<QString, QString>> devices = GetOpenCLDevices();
 	QStringList activeDevices;
-	for (int i = 0; i < selectedDevicesItems.size(); i++)
+	for (auto selectedDevicesItem : selectedDevicesItems)
 	{
-		activeDevices.append(selectedDevicesItems.at(i)->data(1).toString());
+		activeDevices.append(selectedDevicesItem->data(1).toString());
 	}
 	QString listString = activeDevices.join("|");
+
+	// OpenCL preference dialogue supports multiple devices
 	gPar->Set("opencl_device_list", listString);
 	gOpenCl->openClHardware->EnableDevicesByHashList(listString);
+
+	gPar->Set<int>("toolbar_icon_size", gPar->Get<int>("toolbar_icon_size"));
+	gMainInterface->mainWindow->slotPopulateToolbar(true);
 #endif
 }
 
@@ -235,7 +241,7 @@ void cPreferencesDialog::on_pushButton_generate_thumbnail_cache_clicked()
 	QString infoGenerateCacheFiles =
 		"This is a development feature. If you want to obtain all example cache files, click load!\n\n";
 	infoGenerateCacheFiles +=
-		"This will render all example files which are yet missing in your thumbnail cache.\n";
+		"This will render all settings files which are yet missing in your thumbnail cache.\n";
 	infoGenerateCacheFiles +=
 		"This process will take a lot of time and cannot be cancelled.\nProceed?";
 
@@ -245,14 +251,26 @@ void cPreferencesDialog::on_pushButton_generate_thumbnail_cache_clicked()
 
 	if (reply == QMessageBox::Yes)
 	{
-		// this renders all example files as a thumbnail and saves them to the thumbnail cache
-		QString examplePath =
-			QDir::toNativeSeparators(systemData.sharedDir + QDir::separator() + "examples");
-		QDirIterator it(
-			examplePath, QStringList() << "*.fract", QDir::Files, QDirIterator::Subdirectories);
-		QStringList exampleFiles;
-		while (it.hasNext())
-			exampleFiles << it.next();
+		// this renders all example files and from settings folder as a thumbnail and saves them to the
+		// thumbnail cache
+
+		QStringList listOfFiles;
+
+		{
+			QString examplePath = QDir::toNativeSeparators(systemData.sharedDir + "examples");
+			QDirIterator it(
+				examplePath, QStringList() << "*.fract", QDir::Files, QDirIterator::Subdirectories);
+			QStringList exampleFiles;
+			while (it.hasNext())
+				listOfFiles << it.next();
+		}
+		{
+			QDirIterator it(systemData.GetSettingsFolder(), QStringList() << "*.fract", QDir::Files,
+				QDirIterator::Subdirectories);
+			QStringList settingsFiles;
+			while (it.hasNext())
+				listOfFiles << it.next();
+		}
 
 		cParameterContainer *examplePar = new cParameterContainer;
 		cFractalContainer *exampleParFractal = new cFractalContainer;
@@ -274,13 +292,13 @@ void cPreferencesDialog::on_pushButton_generate_thumbnail_cache_clicked()
 			exampleParFractal->at(i).SetContainerName(QString("fractal") + QString::number(i));
 			InitFractalParams(&exampleParFractal->at(i));
 		}
-		for (int i = 0; i < exampleFiles.size(); i++)
+		for (int i = 0; i < listOfFiles.size(); i++)
 		{
-			QString filename = exampleFiles.at(i);
+			QString filename = listOfFiles.at(i);
 			gMainInterface->mainWindow->slotUpdateProgressAndStatus(QString("Rendering examples"),
 				tr("rendering %1, %2 of %3")
-					.arg(filename, QString::number(i + 1), QString::number(exampleFiles.size())),
-				1.0 * (i + 1) / exampleFiles.size(), cProgressText::progress_ANIMATION);
+					.arg(filename, QString::number(i + 1), QString::number(listOfFiles.size())),
+				1.0 * (i + 1) / listOfFiles.size(), cProgressText::progress_ANIMATION);
 
 			cSettings parSettings(cSettings::formatFullText);
 			parSettings.BeQuiet(true);
@@ -288,6 +306,7 @@ void cPreferencesDialog::on_pushButton_generate_thumbnail_cache_clicked()
 
 			if (parSettings.Decode(examplePar, exampleParFractal))
 			{
+				thumbWidget->DisableTimer();
 				thumbWidget->AssignParameters(*examplePar, *exampleParFractal);
 				if (!thumbWidget->IsRendered())
 				{
@@ -365,14 +384,12 @@ void cPreferencesDialog::on_pushButton_retrieve_materials_clicked() const
 
 QList<QPair<QString, QString>> cPreferencesDialog::GetOpenCLDevices()
 {
-	// TODO get from opencl
 	QList<QPair<QString, QString>> devices;
 #ifdef USE_OPENCL
 	QList<cOpenClDevice::sDeviceInformation> openclDevs =
 		gOpenCl->openClHardware->getDevicesInformation();
-	for (int i = 0; i < openclDevs.size(); i++)
+	for (auto openclDev : openclDevs)
 	{
-		const cOpenClDevice::sDeviceInformation openclDev = openclDevs.at(i);
 		QByteArray hash = openclDev.hash;
 		devices << QPair<QString, QString>(hash.toHex(), openclDev.deviceName);
 	}
@@ -393,9 +410,8 @@ void cPreferencesDialog::on_listWidget_opencl_platform_list_currentRowChanged(in
 
 		QList<QPair<QString, QString>> devices = GetOpenCLDevices();
 		QStringList selectedDevices = gPar->Get<QString>("opencl_device_list").split("|");
-		for (int i = 0; i < devices.size(); i++)
+		for (auto device : devices)
 		{
-			QPair<QString, QString> device = devices.at(i);
 			QListWidgetItem *item = new QListWidgetItem(device.second);
 			item->setData(1, device.first);
 			bool selected = selectedDevices.contains(device.first);
@@ -431,11 +447,11 @@ void cPreferencesDialog::UpdateOpenCLListBoxes()
 		gOpenCl->openClHardware->getPlatformsInformation();
 
 	ui->listWidget_opencl_platform_list->clear();
-	for (int i = 0; i < platformsInformation.size(); i++)
+	for (auto &platformInformation : platformsInformation)
 	{
 		QListWidgetItem *item =
-			new QListWidgetItem(platformsInformation[i].name + ", " + platformsInformation[i].vendor
-													+ ", " + platformsInformation[i].version);
+			new QListWidgetItem(platformInformation.name + ", " + platformInformation.vendor + ", "
+													+ platformInformation.version);
 		ui->listWidget_opencl_platform_list->addItem(item);
 	}
 
@@ -449,9 +465,8 @@ void cPreferencesDialog::UpdateOpenCLListBoxes()
 	ui->listWidget_opencl_device_list->clear();
 	QList<QPair<QString, QString>> devices = GetOpenCLDevices();
 	QStringList selectedDevices = gPar->Get<QString>("opencl_device_list").split("|");
-	for (int i = 0; i < devices.size(); i++)
+	for (auto device : devices)
 	{
-		QPair<QString, QString> device = devices.at(i);
 		QListWidgetItem *item = new QListWidgetItem(device.second);
 		item->setData(1, device.first);
 		bool selected = selectedDevices.contains(device.first);
@@ -465,5 +480,32 @@ void cPreferencesDialog::on_comboBox_opencl_device_type_currentIndexChanged(int 
 	Q_UNUSED(index);
 	on_listWidget_opencl_platform_list_currentRowChanged(
 		ui->listWidget_opencl_platform_list->currentRow());
+}
+
+void cPreferencesDialog::UpdateOpenCLMemoryLimits()
+{
+	// TODO: support multi-GPU
+	if (gOpenCl->openClHardware->getDevicesInformation().size() > 0
+			and gOpenCl->openClHardware->getSelectedDevicesInformation().size() > 0)
+	{
+		cOpenClDevice::sDeviceInformation deviceInformation =
+			gOpenCl->openClHardware->getSelectedDevicesInformation().at(0);
+
+		// TODO: Review here:
+		for (auto i : gOpenCl->openClHardware->getSelectedDevicesInformation())
+		{
+			// Select device with lowest memory for symmetrical allocation limit
+			if (i.globalMemSize < deviceInformation.globalMemSize) deviceInformation = i;
+		}
+
+		cl_ulong globalMemSize = deviceInformation.globalMemSize / 1024 / 1024;
+		cl_ulong maxMemAllocSize = deviceInformation.maxMemAllocSize / 1024 / 1024;
+
+		ui->spinboxInt_opencl_memory_limit->setMaximum(globalMemSize);
+		ui->sliderInt_opencl_memory_limit->setMaximum(globalMemSize);
+		ui->label_opencl_suggested_memory_limit->setText(
+			tr("Suggested memory limit (based on CL_DEVICE_MAX_MEM_ALLOC_SIZE): %1 MB")
+				.arg(maxMemAllocSize - 1));
+	}
 }
 #endif

@@ -1,5 +1,258 @@
 Version history
 
+v2.15
+- Added new fractal formulas
+   aboxModKaliV3
+   scatorPower2Real
+   scatorPower2
+   scatorPower2StdR
+   transfSinOrCos
+   transfSinAndCos
+   transfSinAndCosMax
+   transfBlockify BETA
+   transfAddCpixelScator
+   transfAddCpixelSinOrCos
+
+- Color: improved color compatibility between c++ and openCL
+- Distance Estimation: restructured analytic functions to provide flexibility in Hybrid Mode.
+
+
+
+v2.14
+- Added new fractal formulas:
+   mandelboxVariable
+   boxFold4dBulbPow2
+   aboxModKaliV2
+   transfPolyFoldSym
+   transfPolyFoldSymMulti
+- Fractals:
+   transfOctoFold & transfMengerFold, now work with analytic logarithmic DE
+   imaginaryScatorPower2 fixed r calc
+   benesiT1PineTree & benesiPwr2Mandelbulb. Added 2nd rotation (for animation)
+   amazingSurfMod2 fixed comboBox
+
+- OpenCL: implemented primitive objects
+- OpenCL: implemented Boolean operators for fractal formulas
+- OpenCL: implemented multiple materials
+- OpenCL: implemented background texture mapping
+- OpenCL: improved quality of DeltaDE algorithm in OpenCL kernel
+- OpenCL: added option for fast_relaxed_math (speed up rendering by 20-50%)
+- OpenCL: optimized image refreshing (improved GPU utilization)
+- OpenCL: "limited" engine renamed to "medium"
+- OpenCL: "medium" engine don't render volumetric effects (to be much faster than "full")
+- OpenCL: Changed max estimated distance to 5.0 (was 1.0). It caused wrong rendering of background
+- Shaders: Corrected SSAO random mode. It couldn't work properly with precomputed sin/cos
+- Shaders: Now there is possible to use soft shadows when limits are enabled
+- UI: enhanced controls for limits (bounding box) definition
+- UI: corrected number of decimal places in fractal UIs
+- UI: key presses regarding navigation will fire every 300ms while pressed to enable continuous movement
+- UI: multiple keys can be pressed at the same time
+- UI: increased max value of audio_trak_collection parameter additionFactor to 65535
+- UI: optimized refreshing of image preview (used simple scaling during rendering)
+- UI: New navigation mode which uses ctrl + mouse wheel
+- UI: changed keyboard layout to more comfortable (more like in 3D games)
+- UI: added HotKeys Cheatsheet
+- UI: Added hotkeys for keyframe handling
+- UI: fixed bug: slider popup window appeared in wrong place when dock was detached
+- UI: renamed "Preferred" to "Automatic" in selection for distance estimation method
+- UI: fixed bug: it was not possible to load toolbar presets when they were being refreshed at application startup
+- UI: Added autoResize to NetRender table. It was much to wide.
+- UI: Mouse wheel now only zooms, when ctrl is pressed otherwise the mouse wheel event only scrolls the render window
+- UI: Fixed problem with missing qGamePad slot
+- UI: Eliminated annoying flickering of UI when settings without animation was loaded
+- Animation: implemented animated textures
+- Animation: Fixed bug: use of mouse click or mouse click caused crashes when animation was rendered or recorded flight path
+- Examples: updated standard preset settings
+- CLI: queue now shows a waiting spinner, while waiting for something to do
+- CLI: linux and MacOS now detect if output is a terminal or a file. When it is a file, the output is plane text without ANSI escape codes
+- Compilation: configured CircleCL to create MacOS builds
+
+v2.13-2 (April 2018)
+- UI: fixed bug: using mouse wheel on spinbox with dial could cause program crash
+
+v2.13-1 (April 2018)
+- Mesh Export: Fixed bug: Mesh Export didn't provide cMaterial data. It caused crash when fractal color was calculated
+- OpenCL: SSAO used double precision constants and variables
+
+v2.13 (March 2018)
+- Fractals: renamed all fabs() to abs() in all formula UI
+- Fractals: cleaned up all fractal formula UIs
+- Added new fractal formulas:
+  * Amazing Surf - Mod2
+  * Transf Add Constant Mod1
+  * Transf Add Cpixel Rotated
+- UI: Added pop-up sliders for all edit fields
+- UI: Added buttons (x2, /2, round, R, 0) attached to pup-up sliders
+- UI: Removed existing sliders from UI
+- UI: Cleaned up all UIs to reduce width of widgets and frames
+- UI: GroupBoxes are colored
+- UI: Added 3D compass in image window
+- UI: Corrected calculation of 'max' in statistics window
+- UI: Added editable presets for image resolution
+- UI: Optimize DE multiplier now doesn't use OpenCL, so works properly when OpenCL is enabled.
+- UI: Added button to calculate constant distance threshold
+- Image: Added saturation control for rendered image
+- Shaders: Value of background brightness controls also gradient of background
+- Shaders: Added option for 1-color background
+- Shaders: Fixed bug in IterFog shader for auxLights. Intensity of effect was wrongly multiplied by 100
+- Shaders: Added parameter iterFogBrightnessBoost to keep compatibility with version <= 2.12
+- Shaders: Corrected algorithm for calculation of shadows opacity in IterFog mode. Now the algorithm is the same as opacity calculation in volumetric shader.
+- Shaders: Added option for metallic surface in material definition. It makes specular highlight in the same color as surface color.
+- Shaders: Added iridescence effect
+- Shaders: Fixed problem with different brightness of left and right image in stereoscopic mode. There was wrong calculation of perspective in SSAO algorithm
+- Shaders: Implemented texture mapping based on orbit traps ('Fractalize texture' option). Not implemented in OpenCL yet.
+- Shaders: Added 4D orbit trap color (BETA)
+- Shaders: Added Color By Numbers (BETA)
+- Primitives: Added option for water shape depending on another objects
+- Primitives: Added button to align primitive object rotation angle to actual camera rotation angle.
+- Animation: Added displaying of camera, target and lights paths in image window
+- Animation: Added information about actual camera distance to selected keyframe. It is displayed in Animation dock.
+- Settings: Fixed problem with loading animation where is used parameter fractal0_mandelbox_color_R
+- Settings: Added reverse compatibility for mandelbulber.ini. Now older version can be run without damaging application settings.
+- Files: fixed double dot in output filename. Filenames with no file extension were expanded to have two dots before the suffix
+- Files: Corrected image file extensions generated by render queue
+- OpenCL: fixed problem with rendering fractals with more than 250 iterations
+- OpenCL: Added option to disable OpenCL compile cache (used by NVidia driver)
+- OpenCL: SSAO uses precomputed (co)sine buffer - faster rendering
+- OpenCL: Implemented option for random SSAO
+- OpenCL: Fixed bug in IterFog shader. It didn't work properly with increased detail level or decreased DE factor
+- Performance: Disabled OpenMP for updating image preview. It sometimes caused long lags at program startup or during rescaling of main window. It happened mostly when system was already loaded by another computing application.
+- Performance: Fixed bug causing casual freezes of image refresh and progress bar. There was direct call of cRenderedImage->update() method which is not thread safe.
+- Performance: Added bad_alloc handling to mesh export
+- Performance: Fixed many issues showed by Coverity Scan
+- Examples: Standardize image resolution for all examples (fullHD or 1600x1200)
+- Examples: Added several example settings
+- Compilation: Generalized code for OpenCL engines
+- Compilation: win64 version updated to use Qt 5.9.4
+
+v2.12-1 (December 2017)
+- OpenCL: fixed bug in shader for auxiliary light sources. There was wrong color of specular reflections
+- Documentation: Added missing chapter about OpenCL
+
+v2.12 (November 2017)
+- OpenCL: Added listing of available OpenCL platforms and devices
+- OpenCL: Added querying of OpenCL platforms and devices properties
+- OpenCL: Added selection of OpenCL platform and device in Preferences dialog
+- OpenCL: Added populateOpenCL.php to autogenerate some opencl header files
+- OpenCL: populateUiInformation.php autogenerate OpenCL fractal formula code based on C++ code
+- OpenCL: Converted all fractal formulas to OpenCL code. Formulas are stored in formula/opencl folder
+- OpenCL: Fractal formulas chosen are loaded as separate files
+- OpenCL: Applied hybrid sequence to ComputeFractal()
+- OpenCL: Added distance estimation functions (logarithmic, linear, pseudoKleinian)
+- OpenCL: Added deltaDE distance estimation algorithm
+- OpenCL: Added macros to call all fractal formulas in iteration loop according to hybrid sequence
+- OpenCL: Added Julia mode
+- OpenCL: Implemented detailLevel, iterThreshMode, interiorMode, smoothness
+- OpenCL: Added rendering engines:
+  * fast - very simple and fast shader. No effects.
+  * limited - most of effects, except reflections and refractions
+  * full - with branched ray marching - all effects
+- OpenCL: Implemented usage of material #1
+- OpenCL: Added shader for angle of incidence of lights 
+- OpenCL: Added soft shadows for main light source
+- OpenCL: Added specular reflections
+- OpenCL: Added all coloring functions
+- OpenCL: Added background shader (excluding textured background)
+- OpenCL: Added "Fast Ambient Occlusion" shader
+- OpenCL: Added ambient occlusion with "multiple rays with light map"
+- OpenCL: Added "slow" calculation of normal vectors
+- OpenCL: Added Screen Space Ambient Occulsion (SSAO)
+- OpenCL: Added shaders for auxiliary light sources and random lights
+- OpenCL: Added "glow" effect
+- OpenCL: Added "visible lights" effect
+- OpenCL: Added "volumetric lights" effect
+- OpenCL: Added "iteration fog" effect
+- OpenCL: Added all perspective types to opencl code (three point, equirectangular, fish-eye, fulldome)
+- OpenCL: Added Monte Carlo DOF effect with statistical noise control
+- OpenCL: Added custom DE step multiplier for volumetric effects
+- OpenCL: Added DOF post effect based on Z-Buffer
+- OpenCL: Added sweet spot rotation (e.g. needed for full dome)
+- OpenCL: Added processing of alpha channel
+- OpenCL: Added Box and Spherical folding to OpenCL code (compatibility with Mandelbulber 1.21)
+- OpenCL: Rendered tile selection based on center distance ascending. This makes the rendering reveal the image from the center outwards as smoothly as possible
+- OpenCL: Kernels are recompiled only when dynamic code is changed
+- OpenCL: Added handling of most of OpenCL errors
+- OpenCL: Added low limit for distance threshold (1.0e-6) to avoid significant numeric errors
+- OpenCL: Added mutex mechanism to protect against concurent rendering using OpenCL by many rendering threads (image, previews, thumbnails)
+- OpenCL: Added marker for current pending tile
+- OpenCL: CLI mode prepared for rendering with OpenCL
+- OpenCL: designed a way to load OpenCL header files on different OpenCL platforms (nVidia, AMD, Intel...)
+- OpenCL: Added checking of GPU memory resources and compare with mem limit setting in preferences dialog. If there is not enough memory, effects are rendered using CPU.
+- OpenCL: Added BAT script to disable TDR in graphics driver (timeout protection)
+- OpenCL: CL_DEVICE_TYPE_ACCELERATOR supported for k1om (x100 Xeon PHI Co-processor)
+
+- Added new fractal formulas:
+  * Jos-Kleinian
+  * mandelbulbQuat
+  * mandelbulbJuliabulb
+  * aboxMod12
+  * quaternionCubic4d
+  * boxFoldBulbPow2V2
+  * boxFoldBulbPow2V3
+  * aboxMod13
+  * boxFoldQuat
+  * transfScaleVaryMulti
+  * transfBoxFold4dTglad
+  * transfSphericalFoldCuboid
+  * transfSphericalFoldXYZBias
+
+- Updated fractal formulas
+    a record of updates and changes to formulas can be seen in fractal_list.hpp
+    a brief summary:
+  * with some formulas the vary_scale function has been added, modified or changed,
+  * aboxMod2 had major corrections,
+  * aux.color has been implemented in more transforms
+
+- Fractals: All fractal formulas converted to 4 dimensional vectors. Backward compatibility has been maintained
+- Fractals: Standardized interface for all fractal formula functions
+- Fractals: Used function pointers to call functions for fractal formulas. This reduced the complexity of ComputeFractal(). Assignment of fractal functions are made in fractal_list.cpp
+- Shaders: Corrected calculation of shaders when "minimum view distance" is reached.
+- Shaders: Added soft shadows for auxiliary lights
+- Shaders: Added parameter to define color of "fake light sources" (lights based on orbit traps)
+- Shaders: Corrected algorithm for orbit trap lights (surface shader)
+- Shaders: RayRecursion algorithm partially converted from recursive to iterative - compatible with OpenCL
+- Shaders: Optimized multi-ray ambient occlusion in Monte Carlo mode.
+- Shaders: Added "DOF_max_radius" parameter to limit maximum blur radius.
+- Animation: updated code to use OpenCL rendering
+- Animation: increased animation frame range. The old limit was 99999, which is less than an hour of 30 fps frames. The new limit is 9999999, which is just more than 24 hours of an 100 fps video.
+- Animation: fixed images deletion of keyframes / flight
+- AnimBySound: sound files can be loaded directly from Internet (if specified path starts from http://)
+- UI: Added auto-refresh period parameter in preferences dialog
+- UI: png, tiff and exr save with progress bar on each channel
+- UI: fix png16 and png16alpha save with double .png extension
+- UI: formula ui changed most of iteration max from 250 to 999
+- UI: standardized color picker for all OS
+- UI: Fixed bug: pasting Julia values crashed mandelbulber
+- UI: Changed sequence of startup. Now toolbar icons are refreshed after all other initializations of the program.
+- UI: Added new color themes for main window
+- Queue: Fixed problem with ignored settings of maximum number of threads and thread priority when queue was rendered
+- Gamepad: corrected gamepad selection when many devices are connected
+- NetRender: display server name in client on connection
+- Voxel export: corrected limits (bounding box) for Mesh Export (there was swapped x and y)
+- Voxel export: Corrected Mesh Export. Voxel size in each axis has to be unified to calculate correct faces and normal vectors. Now there is only "resolution" parameter which specifies resolution in the longest axis (depends on limits)
+- CLI: Added example output path to benchmark. Now the benchmark can optionally put the renders of the example renders into a folder, when this folder has been specified with the -o/--output cli option.
+- CLI: Added options for OpenCL configuration
+- CLI: Benchmark renders all 300+ examples
+- CLI: Benchmark enabled with for OpenCL with 24 hour test timeout.
+- CLI: Benchmark generates detailed log output for each rendered example.
+- Settings: enumerative fields are saved as names
+- Compilation: UI files for fractal formulas moved to formula folder
+- Compilation: *.pro files moved to qmake folder
+- Compilation: Added mandelbulber-opencl.pro file
+- Compilation: MSVC solution updated for OpenCL
+- Compilation: MSVC solution includes OpenCL ICD Loader binaries for system compatibility
+- Compilation: MSVC solution is fully functional and compatible with Visual Studio 2017
+- Compilation: MSVC build is now default for Windows version
+- Compilation: Included MSVC redistributable in Build Package
+- Compilation: new windows installer (Install Jammer was no longer supported)
+- Compilation: Implemented CLEW for mingw builds
+- Compilation: added SHARED_DIR_IS_APP_DIR for AppImage. Allows shared data at the same location as the application, when defined at compile time, this can be used for AppImage packaging
+- Compilation: updated prepare_for_*.sh scripts
+- Compilation: documentation files moved to /usr/share/doc/mandelbulber
+- Compilation: CMAKE build refactored and updated.
+- Performance: fixed many issues showed by CoverityScan
+- Documentation: Added chapter about OpenCL
+
 v2.11-1 (May 2017)
 - Queue: fixed bug: program crashed when mouse cursor was over preview widget in queue dock
 

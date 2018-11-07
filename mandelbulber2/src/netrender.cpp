@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -152,7 +152,7 @@ void CNetRender::DeleteClient()
 		clientSocket = nullptr;
 	}
 	status = netRender_DISABLED;
-	emit NotifyStatus();
+	NotifyStatus();
 }
 
 int CNetRender::getTotalWorkerCount()
@@ -257,7 +257,7 @@ void CNetRender::SetClient(QString address, int portNo)
 	WriteLog(
 		"NetRender - Client Setup, link to server: " + address + ", port: " + QString::number(portNo),
 		2);
-	emit NotifyStatus();
+	NotifyStatus();
 
 	if (systemData.noGui)
 	{
@@ -271,7 +271,7 @@ void CNetRender::ServerDisconnected()
 {
 	if (deviceType != netRender_CLIENT) return;
 	status = netRender_ERROR;
-	emit NotifyStatus();
+	NotifyStatus();
 
 	gMainInterface->stopRequest = true;
 
@@ -308,7 +308,7 @@ void CNetRender::TryServerConnect()
 		else
 		{
 			status = netRender_CONNECTING;
-			emit NotifyStatus();
+			NotifyStatus();
 			clientSocket->close();
 			clientSocket->connectToHost(address, portNo);
 		}
@@ -509,14 +509,14 @@ void CNetRender::ProcessData(QTcpSocket *socket, sMessage *inMsg)
 			{
 				// status = netRender_READY;
 				gMainInterface->stopRequest = true;
-				// emit NotifyStatus();
+				// NotifyStatus();
 				WriteLog("NetRender - ProcessData(), command STOP", 2);
 				break;
 			}
 			case netRender_STATUS:
 			{
 				WriteLog("NetRender - ProcessData(), command STATUS", 3);
-				emit NotifyStatus();
+				NotifyStatus();
 				break;
 			}
 			case netRender_JOB:
@@ -528,7 +528,7 @@ void CNetRender::ProcessData(QTcpSocket *socket, sMessage *inMsg)
 					QByteArray buffer;
 					qint32 size;
 					status = netRender_WORKING;
-					emit NotifyStatus();
+					NotifyStatus();
 
 					// read settings
 					stream >> size;
@@ -539,6 +539,9 @@ void CNetRender::ProcessData(QTcpSocket *socket, sMessage *inMsg)
 						QString("NetRender - ProcessData(), command JOB, settings size: %1").arg(size), 2);
 					WriteLog(
 						QString("NetRender - ProcessData(), command JOB, settings: %1").arg(settingsText), 3);
+
+					// getting textures from server
+					textures.clear();
 
 					qint32 numberOfTextures;
 					stream >> numberOfTextures;
@@ -673,6 +676,13 @@ void CNetRender::ProcessData(QTcpSocket *socket, sMessage *inMsg)
 				{
 					emit AckReceived();
 				}
+				break;
+			}
+
+			case netRender_KICK_AND_KILL:
+			{
+				WriteLog("NetRender - ProcessData(), command KICK AND KILL", 2);
+				gApplication->quit();
 				break;
 			}
 
@@ -817,9 +827,9 @@ void CNetRender::Stop()
 {
 	sMessage msg;
 	msg.command = netRender_STOP;
-	for (int i = 0; i < clients.size(); i++)
+	for (auto &client : clients)
 	{
-		SendData(clients[i].socket, msg);
+		SendData(client.socket, msg);
 	}
 }
 
@@ -861,14 +871,18 @@ void CNetRender::SetCurrentJob(
 				stream.writeRawData(buffer.data(), buffer.size());
 				continue;
 			}
+			else
+			{
+				qCritical() << "Cannot send texture using NetRender. File:" << listOfTextures[i];
+			}
 
 			stream << qint32(0); // empty entry
 		}
 
-		for (int i = 0; i < clients.size(); i++)
+		for (auto &client : clients)
 		{
-			SendData(clients[i].socket, msgCurrentJob);
-			clients[i].linesRendered = 0;
+			SendData(client.socket, msgCurrentJob);
+			client.linesRendered = 0;
 		}
 	}
 }
@@ -893,9 +907,9 @@ void CNetRender::SendToDoList(int clientIndex, QList<int> done)
 		msg.command = netRender_RENDER;
 		QDataStream stream(&msg.payload, QIODevice::WriteOnly);
 		stream << qint32(done.size());
-		for (int i = 0; i < done.size(); i++)
+		for (int doneFlag : done)
 		{
-			stream << qint32(done.at(i));
+			stream << qint32(doneFlag);
 		}
 		SendData(clients[clientIndex].socket, msg);
 	}
@@ -922,9 +936,9 @@ void CNetRender::SendSetup(int clientIndex, int id, QList<int> startingPositions
 		QDataStream stream(&msg.payload, QIODevice::WriteOnly);
 		stream << qint32(id);
 		stream << qint32(startingPositions.size());
-		for (int i = 0; i < startingPositions.size(); i++)
+		for (int startingPosition : startingPositions)
 		{
-			stream << qint32(startingPositions.at(i));
+			stream << qint32(startingPosition);
 		}
 		SendData(clients[clientIndex].socket, msg);
 		actualId = id;
@@ -932,6 +946,23 @@ void CNetRender::SendSetup(int clientIndex, int id, QList<int> startingPositions
 	else
 	{
 		qCritical() << "CNetRender::SendSetup(int clientIndex, int id, QList<int> startingPositions): "
+									 "Client index out of range:"
+								<< clientIndex;
+	}
+}
+
+void CNetRender::KickAndKillClient(int clientIndex)
+{
+	WriteLog("NetRender - kick and kill client", 2);
+	if (clientIndex < clients.size())
+	{
+		sMessage msg;
+		msg.command = netRender_KICK_AND_KILL;
+		SendData(clients[clientIndex].socket, msg);
+	}
+	else
+	{
+		qCritical() << "CNetRender::KickAndKillClient(int clientIndex): "
 									 "Client index out of range:"
 								<< clientIndex;
 	}
@@ -1042,7 +1073,9 @@ bool CNetRender::CompareMajorVersion(qint32 version1, qint32 version2)
 	return majorVersion1 == majorVersion2;
 }
 
-QByteArray *CNetRender::GetTexture(QString textureName)
+QByteArray *CNetRender::GetTexture(QString textureName, int frameNo)
 {
-	return &textures[textureName];
+	const QList<QString> keys = textures.keys();
+	QString animatedTextureName = AnimatedFileName(textureName, frameNo, &keys);
+	return &textures[animatedTextureName];
 }

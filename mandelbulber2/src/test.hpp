@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -54,6 +54,7 @@ public:
 		exampleOutputPath = _exampleOutputPath;
 	}
 	bool IsBenchmarking() const { return testMode == enumTestMode::benchmarkTestMode; }
+
 private:
 	static QString testFolder();
 	enumTestMode testMode;
@@ -63,19 +64,21 @@ private:
 
 	QString exampleOutputPath;
 
-	void renderExamples();
-	void testFlight();
-	void testKeyframe();
-	void renderSimple();
+	void renderExamples() const;
+	void testFlight() const;
+	void testKeyframe() const;
+	void renderSimple() const;
+	void renderImageSave() const;
 
 private slots:
 	static void init();
 	static void cleanup();
-	void renderExamplesWrapper();
-	void netrender();
-	void testFlightWrapper();
-	void testKeyframeWrapper();
-	void renderSimpleWrapper();
+	void renderExamplesWrapper() const;
+	void netrender() const;
+	void testFlightWrapper() const;
+	void testKeyframeWrapper() const;
+	void renderSimpleWrapper() const;
+	void testImageSaveWrapper() const;
 };
 
 #endif /* MANDELBULBER2_SRC_TEST_HPP_ */

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -39,6 +39,8 @@
 
 // forward declarations
 class cAutomatedWidgets;
+class cParameterContainer;
+class QToolButton;
 
 namespace Ui
 {
@@ -50,7 +52,7 @@ class cDockImageAdjustments : public QWidget
 	Q_OBJECT
 public:
 	explicit cDockImageAdjustments(QWidget *parent = nullptr);
-	~cDockImageAdjustments();
+	~cDockImageAdjustments() override;
 
 	enum enumImageProportion
 	{
@@ -62,6 +64,9 @@ public:
 		proportion16_10 = 5,
 		proportion2_1 = 6
 	};
+
+private:
+	const int numberOfProportions = 7;
 
 public:
 	void ApplyImageChangesSetEnabled(bool enable) const;
@@ -79,6 +84,7 @@ private slots:
 	void slotPressedImageSizeIncrease() const;
 	void slotPressedImageSizeDecrease() const;
 	void slotImageHeightChanged(int value) const;
+	void slotChangeResolutionPreset();
 
 	// Quality presets
 	static void slotQualityPresetVeryLow();
@@ -89,10 +95,16 @@ private slots:
 
 private:
 	void ConnectSignals() const;
+	void InitResolutionPresets();
+	double ProportionEnumToRatio(enumImageProportion proportion) const;
+	int PresetButtonIndex(const QString &name) const;
 
 	Ui::cDockImageAdjustments *ui;
 
 	cAutomatedWidgets *automatedWidgets;
+
+	cParameterContainer *resolutionPresets;
+	QList<QToolButton *> listOfPresetPushButtons;
 };
 
 #endif /* MANDELBULBER2_QT_DOCK_IMAGE_ADJUSTMENTS_H_ */

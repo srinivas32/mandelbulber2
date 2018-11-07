@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -70,8 +70,6 @@ void cDockEffects::ConnectSignals() const
 	connect(ui->logedit_aux_light_manual_placement_dist, SIGNAL(textChanged(const QString &)), this,
 		SLOT(slotEditedLineEditManualLightPlacementDistance(const QString &)));
 
-	connect(ui->logslider_aux_light_manual_placement_dist, SIGNAL(sliderMoved(int)), this,
-		SLOT(slotSliderMovedEditManualLightPlacementDistance(int)));
 	connect(
 		ui->pushButton_DOF_set_focus, SIGNAL(clicked()), this, SLOT(slotPressedButtonSetDOFByMouse()));
 	connect(
@@ -95,6 +93,9 @@ void cDockEffects::ConnectSignals() const
 
 	connect(ui->checkBox_aux_light_place_behind, SIGNAL(stateChanged(int)), this,
 		SLOT(slotChangedPlaceLightBehindObjects(int)));
+
+	connect(ui->groupCheck_DOF_monte_carlo, SIGNAL(toggled(bool)), this,
+		SLOT(slotChangedEnableMCDOF(bool)));
 }
 
 void cDockEffects::SynchronizeInterfaceBasicFogEnabled(cParameterContainer *par) const
@@ -125,7 +126,7 @@ void cDockEffects::slotPressedButtonSetLight1ByMouse() const
 	int index = gMainInterface->mainWindow->GetComboBoxMouseClickFunction()->findData(item);
 	gMainInterface->mainWindow->GetComboBoxMouseClickFunction()->setCurrentIndex(index);
 	gMainInterface->renderedImage->setClickMode(item);
-	double distance = gMainInterface->GetDistanceForPoint(gPar->Get<CVector3>("camera"));
+	const double distance = gMainInterface->GetDistanceForPoint(gPar->Get<CVector3>("camera"));
 	ui->logedit_aux_light_manual_placement_dist->setText(QString("%L1").arg(distance * 0.1));
 }
 
@@ -174,11 +175,6 @@ void cDockEffects::slotEditedLineEditManualLightPlacementDistance(const QString 
 	gMainInterface->renderedImage->SetFrontDist(systemData.locale.toDouble(text));
 }
 
-void cDockEffects::slotSliderMovedEditManualLightPlacementDistance(int value) const
-{
-	gMainInterface->renderedImage->SetFrontDist(pow(10.0, value / 100.0));
-}
-
 void cDockEffects::slotChangedPlaceLightBehindObjects(int state)
 {
 	gMainInterface->renderedImage->SetPlaceBehindObjects(state);
@@ -189,7 +185,6 @@ void cDockEffects::slotChangedComboAmbientOcclusionMode(int index) const
 	bool enabled = index == params::AOModeMultipleRays ? true : false;
 	ui->frame_lightmap_texture->setEnabled(enabled);
 	enabled = index == params::AOModeFast ? true : false;
-	ui->slider_ambient_occlusion_fast_tune->setEnabled(enabled);
 	ui->spinbox_ambient_occlusion_fast_tune->setEnabled(enabled);
 }
 
@@ -238,4 +233,17 @@ void cDockEffects::UpdateLabelAverageDOFSamples(const QString &avg)
 void cDockEffects::UpdateLabelAverageDOFNoise(const QString &avg)
 {
 	ui->label_average_DOF_noise->setText(avg);
+}
+
+void cDockEffects::slotChangedEnableMCDOF(bool state)
+{
+	if (state)
+	{
+		params::enumAOMode AOMode =
+			params::enumAOMode(ui->comboBox_ambient_occlusion_mode->currentIndex());
+		if (AOMode == params::AOModeScreenSpace)
+		{
+			ui->groupCheck_ambient_occlusion_enabled->setChecked(false);
+		}
+	}
 }

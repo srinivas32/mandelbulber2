@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -60,15 +60,15 @@ class cInterface : public QObject
 
 public:
 	cInterface(QObject *parent = nullptr);
-	~cInterface();
+	~cInterface() override;
 	void ShowUi();
 	void ConnectSignals() const;
 	void ConnectProgressAndStatisticsSignals() const;
 	void SynchronizeInterface(
 		cParameterContainer *par, cFractalContainer *parFractal, qInterface::enumReadWrite mode) const;
 	void StartRender(bool noUndo = false);
-	void MoveCamera(QString buttonName);
-	void RotateCamera(QString buttonName);
+	void MoveCamera(QString buttonName, bool synchronizeAndRender = false);
+	void RotateCamera(QString buttonName, bool synchronizeAndRender = false);
 	void CameraOrTargetEdited() const;
 	void RotationEdited() const;
 	void CameraDistanceEdited() const;
@@ -90,7 +90,9 @@ public:
 	void Undo();
 	void Redo();
 	void ResetView();
-	void SetBoundingBoxAsLimits();
+	void BoundingBoxMove(char dimension, double moveLower, double moveUpper);
+	void SetBoundingBoxAsLimitsTotal();
+	void SetBoundingBoxAsLimits(CVector3 outerBoundingMin, CVector3 outerBoundingMax);
 	void NewPrimitive(const QString &primitiveType, int index = 0);
 	void DeletePrimitive(const QString &primitiveName);
 	void RebuildPrimitives(cParameterContainer *par);
@@ -109,6 +111,7 @@ public:
 	void DisableJuliaPointMode() const;
 	void DetachMainImageWidget();
 	void AttachMainImageWidget();
+	static void ColorizeGroupBoxes(QWidget *window, int randomSeed);
 
 	bool QuitApplicationDialog();
 

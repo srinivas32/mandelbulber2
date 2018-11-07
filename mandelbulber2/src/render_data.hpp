@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-16 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -78,6 +78,32 @@ struct sRenderData
 	QMap<int, cMaterial> materials; // 'int' is an ID
 	QVector<cObjectData> objectData;
 	cStereo stereo;
+
+	void ValidateObjects()
+	{
+		for (cObjectData &object : objectData)
+		{
+			// check if material assigned to the object is defined
+			int materialId = object.materialId;
+
+			if (materials.size() == 0)
+			{
+				qCritical() << "No materials defined! Adding empty material";
+				materials.insert(1, cMaterial());
+			}
+
+			if (!materials.contains(materialId))
+			{
+				QList<int> keys = materials.keys();
+				std::sort(keys.begin(), keys.end());
+				int substituteMaterialId = keys.first();
+				qCritical() << QString("Material #%1 is not defined. Will be substitubed by material #%2")
+												 .arg(materialId)
+												 .arg(substituteMaterialId);
+				object.materialId = substituteMaterialId;
+			}
+		}
+	}
 };
 
 #endif /* MANDELBULBER2_SRC_RENDER_DATA_HPP_ */

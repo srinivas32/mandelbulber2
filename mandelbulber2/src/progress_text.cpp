@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -86,10 +86,9 @@ QString cProgressText::getText(double progress)
 
 	if (progressLim < 1.0)
 	{
-		text = QObject::tr("Done %1%, elapsed: %2, estimated to end: %3")
-						 .arg(QString::number(progressLim * 100.0, 'f', 2))
-						 .arg(TimeString(time))
-						 .arg(TimeString(timeToEnd));
+		text =
+			QObject::tr("Done %1%, elapsed: %2, estimated to end: %3")
+				.arg(QString::number(progressLim * 100.0, 'f', 2), TimeString(time), TimeString(timeToEnd));
 	}
 	else
 	{

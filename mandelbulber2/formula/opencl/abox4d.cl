@@ -1,6 +1,6 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
@@ -16,6 +16,10 @@
 
 REAL4 Abox4dIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *aux)
 {
+	REAL colorAdd = 0.0f;
+	REAL rrCol = 0.0f;
+	REAL4 zCol = z;
+
 	aux->actualScale = mad(
 		(fabs(aux->actualScale) - 1.0f), fractal->mandelboxVary4D.scaleVary, fractal->mandelbox.scale);
 
@@ -39,12 +43,10 @@ REAL4 Abox4dIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *a
 				- fabs(z.z - fractal->transformCommon.offset1111.z) - z.z;
 	z.w = fabs(z.w + fractal->transformCommon.offset1111.w)
 				- fabs(z.w - fractal->transformCommon.offset1111.w) - z.w;
-	if (z.x != oldZ.x) aux->color += fractal->mandelbox.color.factor4D.x;
-	if (z.y != oldZ.y) aux->color += fractal->mandelbox.color.factor4D.y;
-	if (z.z != oldZ.z) aux->color += fractal->mandelbox.color.factor4D.z;
-	if (z.w != oldZ.w) aux->color += fractal->mandelbox.color.factor4D.w;
+	zCol = z;
 
 	REAL rr = dot(z, z);
+	rrCol = rr;
 	if (fractal->mandelboxVary4D.rPower != 1.0f)
 		rr = native_powr(rr, fractal->mandelboxVary4D.rPower);
 
@@ -53,13 +55,11 @@ REAL4 Abox4dIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *a
 	{
 		z *= fractal->transformCommon.maxMinR2factor;
 		aux->DE *= fractal->transformCommon.maxMinR2factor;
-		aux->color += fractal->mandelbox.color.factorSp1;
 	}
 	else if (rr < fractal->transformCommon.maxR2d1)
 	{
 		z *= native_divide(fractal->transformCommon.maxR2d1, rr);
 		aux->DE *= native_divide(fractal->transformCommon.maxR2d1, rr);
-		aux->color += fractal->mandelbox.color.factorSp2;
 	}
 	z -= fractal->transformCommon.offset0000;
 
@@ -77,50 +77,59 @@ REAL4 Abox4dIteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *a
 			tp = z;
 			REAL alpha = fractal->transformCommon.rotation44a.x * M_PI_180;
 			z.x = mad(tp.x, native_cos(alpha), tp.y * native_sin(alpha));
-			z.y = tp.x * -native_sin(alpha) + tp.y * native_cos(alpha);
+			z.y = mad(tp.x, -native_sin(alpha), tp.y * native_cos(alpha));
 		}
 		if (fractal->transformCommon.rotation44a.y != 0)
 		{
 			tp = z;
 			REAL beta = fractal->transformCommon.rotation44a.y * M_PI_180;
 			z.y = mad(tp.y, native_cos(beta), tp.z * native_sin(beta));
-			z.z = tp.y * -native_sin(beta) + tp.z * native_cos(beta);
+			z.z = mad(tp.y, -native_sin(beta), tp.z * native_cos(beta));
 		}
 		if (fractal->transformCommon.rotation44a.z != 0)
 		{
 			tp = z;
 			REAL gamma = fractal->transformCommon.rotation44a.z * M_PI_180;
 			z.x = mad(tp.x, native_cos(gamma), tp.z * native_sin(gamma));
-			z.z = tp.x * -native_sin(gamma) + tp.z * native_cos(gamma);
+			z.z = mad(tp.x, -native_sin(gamma), tp.z * native_cos(gamma));
 		}
 		if (fractal->transformCommon.rotation44b.x != 0)
 		{
 			tp = z;
 			REAL delta = fractal->transformCommon.rotation44b.x * M_PI_180;
 			z.x = mad(tp.x, native_cos(delta), tp.w * native_sin(delta));
-			z.w = tp.x * -native_sin(delta) + tp.w * native_cos(delta);
+			z.w = mad(tp.x, -native_sin(delta), tp.w * native_cos(delta));
 		}
 		if (fractal->transformCommon.rotation44b.y != 0)
 		{
 			tp = z;
 			REAL epsilon = fractal->transformCommon.rotation44b.y * M_PI_180;
 			z.y = mad(tp.y, native_cos(epsilon), tp.w * native_sin(epsilon));
-			z.w = tp.y * -native_sin(epsilon) + tp.w * native_cos(epsilon);
+			z.w = mad(tp.y, -native_sin(epsilon), tp.w * native_cos(epsilon));
 		}
 		if (fractal->transformCommon.rotation44b.z != 0)
 		{
 			tp = z;
 			REAL zeta = fractal->transformCommon.rotation44b.z * M_PI_180;
 			z.z = mad(tp.z, native_cos(zeta), tp.w * native_sin(zeta));
-			z.w = tp.z * -native_sin(zeta) + tp.w * native_cos(zeta);
+			z.w = mad(tp.z, -native_sin(zeta), tp.w * native_cos(zeta));
 		}
 	}
 	z += fractal->transformCommon.additionConstant0000;
 
-	aux->foldFactor = fractal->foldColor.compFold;
-	aux->minRFactor = fractal->foldColor.compMinR;
-	REAL scaleColor = fractal->foldColor.colorMin + fabs(aux->actualScale);
-	// scaleColor += fabs(fractal->mandelbox.scale);
-	aux->scaleFactor = scaleColor * fractal->foldColor.compScale;
+	if (fractal->foldColor.auxColorEnabled)
+	{
+		if (zCol.x != oldZ.x) colorAdd += fractal->mandelbox.color.factor4D.x;
+		if (zCol.y != oldZ.y) colorAdd += fractal->mandelbox.color.factor4D.y;
+		if (zCol.z != oldZ.z) colorAdd += fractal->mandelbox.color.factor4D.z;
+		if (zCol.w != oldZ.w) colorAdd += fractal->mandelbox.color.factor4D.w;
+
+		if (rrCol < fractal->transformCommon.minR2p25)
+			colorAdd += fractal->mandelbox.color.factorSp1;
+		else if (rrCol < fractal->transformCommon.maxR2d1)
+			colorAdd += fractal->mandelbox.color.factorSp2;
+
+		aux->color += colorAdd;
+	}
 	return z;
 }

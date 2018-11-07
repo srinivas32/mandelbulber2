@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -80,7 +80,7 @@ void cDockStatistics::slotUpdateStatistics(cStatistics stat) const
 	gMainInterface->mainWindow->GetWidgetDockRenderingEngine()->UpdateLabelUsedDistanceEstimation(
 		tr("Used distance estimation algorithm: %1").arg(stat.GetDETypeString()));
 	gMainInterface->mainWindow->GetWidgetDockEffects()->UpdateLabelAverageDOFSamples(
-		tr("Average number of DOF samples: %1").arg(stat.GetAverageDOFSamples()));
+		tr("Average number of MC samples: %1").arg(stat.GetAverageDOFSamples()));
 	gMainInterface->mainWindow->GetWidgetDockEffects()->UpdateLabelAverageDOFNoise(
 		tr("Average noise [%]: %1").arg(stat.GetAverageDOFNoise() * 100.0));
 }

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -151,6 +151,8 @@ void cThumbnailWidget::AssignParameters(
 		params->Set("image_width", tWidth * oversample);
 		params->Set("image_height", tHeight * oversample);
 		params->Set("stereo_mode", int(cStereo::stereoRedCyan));
+		params->Set("DOF_max_noise", params->Get<double>("DOF_max_noise") * 10.0);
+		params->Set("DOF_min_samples", 5);
 		cSettings tempSettings(cSettings::formatCondensedText);
 		tempSettings.CreateText(params, fractal);
 		oldHash = hash;
@@ -232,7 +234,7 @@ void cThumbnailWidget::AssignParameters(
 
 void cThumbnailWidget::slotRender()
 {
-	if (image)
+	if (image && params)
 	{
 		stopRequest = true;
 		while (image->IsUsed())
@@ -249,6 +251,7 @@ void cThumbnailWidget::slotRender()
 			new cRenderJob(params, fractal, image, &stopRequest, static_cast<QWidget *>(this));
 		connect(renderJob, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
 			this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+		connect(renderJob, SIGNAL(updateImage()), this, SLOT(update()));
 
 		renderingTimeTimer.start();
 		renderJob->UseSizeFromImage(true);
@@ -278,7 +281,7 @@ void cThumbnailWidget::slotRender()
 	}
 	else
 	{
-		qCritical() << "Image not yet allocated!";
+		qCritical() << "Parameters or image not yet allocated!";
 	}
 }
 

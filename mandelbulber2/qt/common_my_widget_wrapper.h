@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -81,6 +81,10 @@ private:
 	QAction *actionAddToKeyframeAnimation;
 	QAction *actionRemoveFromKeyframeAnimation;
 
+public:
+	// these methods have to be implemented by widgets inheriting this class
+	virtual void resetToDefault() = 0;
+
 protected:
 	~CommonMyWidgetWrapper() = default;
 	cParameterContainer *parameterContainer;
@@ -95,7 +99,6 @@ protected:
 	void contextMenuEvent(QContextMenuEvent *event, QMenu *existingMenu = nullptr);
 
 	// these methods have to be implemented by widgets inheriting this class
-	virtual void resetToDefault() = 0;
 	virtual QString getDefaultAsString() = 0;
 	virtual QString getFullParameterName() = 0;
 };

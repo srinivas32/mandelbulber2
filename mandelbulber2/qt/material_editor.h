@@ -54,8 +54,9 @@ class cMaterialEditor : public QWidget
 
 public:
 	explicit cMaterialEditor(QWidget *parent = nullptr);
-	~cMaterialEditor();
+	~cMaterialEditor() override;
 	void AssignMaterial(cParameterContainer *params, int index);
+	void Colorize(int randomSeed);
 
 private slots:
 	void slotPressedButtonNewRandomPalette() const;

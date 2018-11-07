@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -52,7 +52,7 @@ class cRenderer : public QObject
 public:
 	cRenderer(const sParamRender *_params, const cNineFractals *_fractal, sRenderData *_renderData,
 		cImage *_image);
-	~cRenderer();
+	~cRenderer() override;
 	bool RenderImage();
 
 private:
@@ -77,6 +77,7 @@ signals:
 	void SendToDoList(int clientIndex, QList<int> done);
 	void StopAllClients();
 	void NotifyClientStatus();
+	void updateImage();
 };
 
 #endif /* MANDELBULBER2_SRC_RENDER_IMAGE_HPP_ */

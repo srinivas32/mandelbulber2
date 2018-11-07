@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -47,6 +47,7 @@
 
 #ifndef OPENCL_KERNEL_CODE
 #include "common_params_cl.hpp"
+#include "fractal_cl.h"
 #include "image_adjustments_cl.h"
 #include "opencl_algebra.h"
 
@@ -56,6 +57,14 @@
 #include "src/fractparams.hpp"
 #include "src/image_adjustments.h"
 #endif /* OPENCL_KERNEL_CODE */
+
+typedef enum { mapEquirectangular = 0, mapDoubleHemisphere = 1, mapFlat = 2 } enumTextureMapTypeCl;
+
+typedef enum {
+	booleanOperatorAND = 0,
+	booleanOperatorOR = 1,
+	booleanOperatorSUB = 2
+} enumBooleanOperatorCl;
 
 typedef struct
 {
@@ -89,11 +98,14 @@ typedef struct
 	cl_int ambientOcclusionEnabled; // enable global illumination
 	cl_int auxLightPreEnabled[4];
 	cl_int auxLightRandomEnabled;
+	cl_int background3ColorsEnable;
 	cl_int booleanOperatorsEnabled;
 	cl_int constantDEThreshold;
 	cl_int DOFEnabled;
 	cl_int DOFHDRMode;
 	cl_int DOFMonteCarlo;
+	cl_int DOFMonteCarloGlobalIllumination;
+	cl_int DOFMonteCarloChromaticAberration;
 	cl_int envMappingEnable;
 	cl_int fakeLightsEnabled;
 	cl_int fogEnabled;
@@ -103,10 +115,12 @@ typedef struct
 	cl_int interiorMode;
 	cl_int iterThreshMode;
 	cl_int iterFogEnabled;
+	cl_int iterFogShadows;
 	cl_int legacyCoordinateSystem;
 	cl_int limitsEnabled; // enable limits (intersections)
 	cl_int mainLightEnable;
 	cl_int mainLightPositionAsRelative;
+	cl_int monteCarloSoftShadows;
 	cl_int penetratingLights;
 	cl_int raytracedReflections;
 	cl_int shadow;			// enable shadows
@@ -157,6 +171,8 @@ typedef struct
 	cl_float DOFMaxRadius;
 	cl_float DOFBlurOpacity;
 	cl_float DOFMaxNoise;
+	cl_float DOFMonteCarloCADispersionGain;
+	cl_float DOFMonteCarloCACameraDispersion;
 	cl_float fakeLightsIntensity;
 	cl_float fakeLightsVisibility;
 	cl_float fakeLightsVisibilitySize;
@@ -170,6 +186,8 @@ typedef struct
 	cl_float iterFogColor2Maxiter;
 	cl_float iterFogOpacity;
 	cl_float iterFogOpacityTrim;
+	cl_float iterFogOpacityTrimHigh;
+	cl_float iterFogBrightnessBoost;
 	cl_float mainLightAlpha;
 	cl_float mainLightBeta;
 	cl_float mainLightIntensity;
@@ -188,6 +206,7 @@ typedef struct
 	cl_float volFogColour2Distance;
 	cl_float volFogDensity;
 	cl_float volFogDistanceFactor;
+	cl_float volFogDistanceFromSurface;
 	cl_float volumetricLightDEFactor;
 	cl_float volumetricLightIntensity[5];
 
@@ -214,7 +233,7 @@ typedef struct
 } sParamRenderCl;
 
 #ifndef OPENCL_KERNEL_CODE
-inline sParamRenderCl clCopySParamRenderCl(sParamRender &source)
+inline sParamRenderCl clCopySParamRenderCl(const sParamRender &source)
 {
 	sParamRenderCl target;
 	target.antialiasingSize = source.antialiasingSize;
@@ -252,11 +271,14 @@ inline sParamRenderCl clCopySParamRenderCl(sParamRender &source)
 		target.auxLightPreEnabled[i] = source.auxLightPreEnabled[i];
 	}
 	target.auxLightRandomEnabled = source.auxLightRandomEnabled;
+	target.background3ColorsEnable = source.background3ColorsEnable;
 	target.booleanOperatorsEnabled = source.booleanOperatorsEnabled;
 	target.constantDEThreshold = source.constantDEThreshold;
 	target.DOFEnabled = source.DOFEnabled;
 	target.DOFHDRMode = source.DOFHDRMode;
 	target.DOFMonteCarlo = source.DOFMonteCarlo;
+	target.DOFMonteCarloGlobalIllumination = source.DOFMonteCarloGlobalIllumination;
+	target.DOFMonteCarloChromaticAberration = source.DOFMonteCarloChromaticAberration;
 	target.envMappingEnable = source.envMappingEnable;
 	target.fakeLightsEnabled = source.fakeLightsEnabled;
 	target.fogEnabled = source.fogEnabled;
@@ -266,10 +288,12 @@ inline sParamRenderCl clCopySParamRenderCl(sParamRender &source)
 	target.interiorMode = source.interiorMode;
 	target.iterThreshMode = source.iterThreshMode;
 	target.iterFogEnabled = source.iterFogEnabled;
+	target.iterFogShadows = source.iterFogShadows;
 	target.legacyCoordinateSystem = source.legacyCoordinateSystem;
 	target.limitsEnabled = source.limitsEnabled;
 	target.mainLightEnable = source.mainLightEnable;
 	target.mainLightPositionAsRelative = source.mainLightPositionAsRelative;
+	target.monteCarloSoftShadows = source.monteCarloSoftShadows;
 	target.penetratingLights = source.penetratingLights;
 	target.raytracedReflections = source.raytracedReflections;
 	target.shadow = source.shadow;
@@ -327,6 +351,8 @@ inline sParamRenderCl clCopySParamRenderCl(sParamRender &source)
 	target.DOFMaxRadius = source.DOFMaxRadius;
 	target.DOFBlurOpacity = source.DOFBlurOpacity;
 	target.DOFMaxNoise = source.DOFMaxNoise;
+	target.DOFMonteCarloCADispersionGain = source.DOFMonteCarloCADispersionGain;
+	target.DOFMonteCarloCACameraDispersion = source.DOFMonteCarloCACameraDispersion;
 	target.fakeLightsIntensity = source.fakeLightsIntensity;
 	target.fakeLightsVisibility = source.fakeLightsVisibility;
 	target.fakeLightsVisibilitySize = source.fakeLightsVisibilitySize;
@@ -343,6 +369,8 @@ inline sParamRenderCl clCopySParamRenderCl(sParamRender &source)
 	target.iterFogColor2Maxiter = source.iterFogColor2Maxiter;
 	target.iterFogOpacity = source.iterFogOpacity;
 	target.iterFogOpacityTrim = source.iterFogOpacityTrim;
+	target.iterFogOpacityTrimHigh = source.iterFogOpacityTrimHigh;
+	target.iterFogBrightnessBoost = source.iterFogBrightnessBoost;
 	target.mainLightAlpha = source.mainLightAlpha;
 	target.mainLightBeta = source.mainLightBeta;
 	target.mainLightIntensity = source.mainLightIntensity;
@@ -361,6 +389,7 @@ inline sParamRenderCl clCopySParamRenderCl(sParamRender &source)
 	target.volFogColour2Distance = source.volFogColour2Distance;
 	target.volFogDensity = source.volFogDensity;
 	target.volFogDistanceFactor = source.volFogDistanceFactor;
+	target.volFogDistanceFromSurface = source.volFogDistanceFromSurface;
 	target.volumetricLightDEFactor = source.volumetricLightDEFactor;
 	for (int i = 0; i < 5; i++)
 	{

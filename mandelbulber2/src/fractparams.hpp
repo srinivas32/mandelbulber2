@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -61,7 +61,7 @@ enum enumBooleanOperator
 	booleanOperatorOR = 1,
 	booleanOperatorSUB = 2
 };
-}
+} // namespace params
 
 struct sParamRender
 {
@@ -96,11 +96,15 @@ struct sParamRender
 	bool ambientOcclusionEnabled; // enable global illumination
 	bool auxLightPreEnabled[4];
 	bool auxLightRandomEnabled;
+	bool auxLightRandomInOneColor;
+	bool background3ColorsEnable;
 	bool booleanOperatorsEnabled;
 	bool constantDEThreshold;
 	bool DOFEnabled;
 	bool DOFHDRMode;
 	bool DOFMonteCarlo;
+	bool DOFMonteCarloGlobalIllumination;
+	bool DOFMonteCarloChromaticAberration;
 	bool envMappingEnable;
 	bool fakeLightsEnabled;
 	bool fogEnabled;
@@ -110,10 +114,12 @@ struct sParamRender
 	bool interiorMode;
 	bool iterThreshMode;
 	bool iterFogEnabled;
+	bool iterFogShadows;
 	bool legacyCoordinateSystem;
 	bool limitsEnabled; // enable limits (intersections)
 	bool mainLightEnable;
 	bool mainLightPositionAsRelative;
+	bool monteCarloSoftShadows;
 	bool penetratingLights;
 	bool raytracedReflections;
 	bool shadow;			// enable shadows
@@ -126,6 +132,7 @@ struct sParamRender
 	bool volFogEnabled;
 
 	sRGB auxLightPreColour[4];
+	sRGB auxLightRandomColor;
 	sRGB background_color1; // background colour
 	sRGB background_color2;
 	sRGB background_color3;
@@ -164,6 +171,8 @@ struct sParamRender
 	double DOFMaxRadius;
 	double DOFBlurOpacity;
 	double DOFMaxNoise;
+	double DOFMonteCarloCADispersionGain;
+	double DOFMonteCarloCACameraDispersion;
 	double fakeLightsIntensity;
 	double fakeLightsVisibility;
 	double fakeLightsVisibilitySize;
@@ -177,6 +186,8 @@ struct sParamRender
 	float iterFogColor2Maxiter;
 	double iterFogOpacity;
 	float iterFogOpacityTrim;
+	float iterFogOpacityTrimHigh;
+	float iterFogBrightnessBoost;
 	double mainLightAlpha;
 	double mainLightBeta;
 	float mainLightIntensity;
@@ -195,6 +206,7 @@ struct sParamRender
 	double volFogColour2Distance;
 	float volFogDensity;
 	double volFogDistanceFactor;
+	double volFogDistanceFromSurface;
 	double volumetricLightDEFactor;
 	double volumetricLightIntensity[5];
 

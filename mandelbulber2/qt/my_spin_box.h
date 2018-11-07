@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -41,19 +41,20 @@
 
 #include "common_my_widget_wrapper.h"
 
+class cFrameSliderPopup;
+
 class MySpinBox : public QSpinBox, public CommonMyWidgetWrapper
 {
 	Q_OBJECT
 
 public:
-	MySpinBox(QWidget *parent = nullptr) : QSpinBox(parent), CommonMyWidgetWrapper(this)
-	{
-		defaultValue = 0;
-	}
+	MySpinBox(QWidget *parent = nullptr);
+	~MySpinBox() override;
 
 private:
 	int GetDefault();
 	int defaultValue;
+	cFrameSliderPopup *slider;
 
 	// methods to define from CommonMyWidgetWrapper
 	void resetToDefault() override;
@@ -63,6 +64,13 @@ private:
 protected:
 	void contextMenuEvent(QContextMenuEvent *event) override;
 	void paintEvent(QPaintEvent *event) override;
+	void focusInEvent(QFocusEvent *event) override;
+	void focusOutEvent(QFocusEvent *event) override;
+
+private slots:
+	void slotResetToDefault();
+	void slotDoubleValue();
+	void slotHalfValue();
 };
 
 #endif /* MANDELBULBER2_QT_MY_SPIN_BOX_H_ */

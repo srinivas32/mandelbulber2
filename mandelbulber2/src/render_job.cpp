@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -33,6 +33,8 @@
  */
 
 #include "render_job.hpp"
+
+#include <algorithm>
 
 #include <QWidget>
 
@@ -165,8 +167,8 @@ bool cRenderJob::Init(enumMode _mode, const cRenderingConfiguration &config)
 		if ((gNetRender->IsClient() || gNetRender->IsServer()) && canUseNetRender)
 		{
 			image->ClearImage();
-			image->UpdatePreview();
-			if (hasQWidget) imageWidget->update();
+			//			image->UpdatePreview();
+			//			if (hasQWidget) emit updateImage();
 		}
 	}
 
@@ -220,7 +222,7 @@ bool cRenderJob::InitImage(int w, int h, const sImageOptional &optional)
 				scale, image->GetPreviewVisibleWidth(), image->GetPreviewVisibleHeight(), image);
 			image->CreatePreview(
 				scale, image->GetPreviewVisibleWidth(), image->GetPreviewVisibleHeight(), imageWidget);
-			image->UpdatePreview();
+			// image->UpdatePreview();
 			emit SetMinimumWidgetSize(image->GetPreviewWidth(), image->GetPreviewHeight());
 		}
 
@@ -256,23 +258,25 @@ void cRenderJob::PrepareData(const cRenderingConfiguration &config)
 	emit updateProgressAndStatus(QObject::tr("Initialization"), QObject::tr("Loading textures"), 0.0);
 	// gApplication->processEvents();
 
+	int frameNo = paramsContainer->Get<int>("frame_no");
+
 	if (gNetRender->IsClient() && renderData->configuration.UseNetRender())
 	{
 		// get received textures from NetRender buffer
 		if (paramsContainer->Get<bool>("textured_background"))
 			renderData->textures.backgroundTexture.FromQByteArray(
-				gNetRender->GetTexture(paramsContainer->Get<QString>("file_background")),
+				gNetRender->GetTexture(paramsContainer->Get<QString>("file_background"), frameNo),
 				cTexture::doNotUseMipmaps);
 
 		if (paramsContainer->Get<bool>("env_mapping_enable"))
 			renderData->textures.envmapTexture.FromQByteArray(
-				gNetRender->GetTexture(paramsContainer->Get<QString>("file_envmap")),
+				gNetRender->GetTexture(paramsContainer->Get<QString>("file_envmap"), frameNo),
 				cTexture::doNotUseMipmaps);
 
 		if (paramsContainer->Get<int>("ambient_occlusion_mode") == params::AOModeMultipleRays
 				&& paramsContainer->Get<bool>("ambient_occlusion_enabled"))
 			renderData->textures.lightmapTexture.FromQByteArray(
-				gNetRender->GetTexture(paramsContainer->Get<QString>("file_lightmap")),
+				gNetRender->GetTexture(paramsContainer->Get<QString>("file_lightmap"), frameNo),
 				cTexture::doNotUseMipmaps);
 	}
 	else
@@ -280,16 +284,16 @@ void cRenderJob::PrepareData(const cRenderingConfiguration &config)
 		if (paramsContainer->Get<bool>("textured_background"))
 			renderData->textures.backgroundTexture =
 				cTexture(paramsContainer->Get<QString>("file_background"), cTexture::doNotUseMipmaps,
-					config.UseIgnoreErrors());
+					frameNo, config.UseIgnoreErrors());
 
 		if (paramsContainer->Get<bool>("env_mapping_enable"))
 			renderData->textures.envmapTexture = cTexture(paramsContainer->Get<QString>("file_envmap"),
-				cTexture::doNotUseMipmaps, config.UseIgnoreErrors());
+				cTexture::doNotUseMipmaps, frameNo, config.UseIgnoreErrors());
 
 		if (paramsContainer->Get<int>("ambient_occlusion_mode") == params::AOModeMultipleRays
 				&& paramsContainer->Get<bool>("ambient_occlusion_enabled"))
 			renderData->textures.lightmapTexture =
-				cTexture(paramsContainer->Get<QString>("file_lightmap"), cTexture::doNotUseMipmaps,
+				cTexture(paramsContainer->Get<QString>("file_lightmap"), cTexture::doNotUseMipmaps, frameNo,
 					config.UseIgnoreErrors());
 	}
 
@@ -380,7 +384,7 @@ bool cRenderJob::Execute()
 				if (gNetRender->IsServer())
 				{
 					// new id
-					qint32 id = rand();
+					qint32 identification = rand();
 
 					// calculation of starting positions list and sending id to clients
 					renderData->netRenderStartingPositions.clear();
@@ -407,7 +411,7 @@ bool cRenderJob::Execute()
 
 							if (clientWorkerIndex >= gNetRender->GetWorkerCount(clientIndex))
 							{
-								emit SendNetRenderSetup(clientIndex, id, startingPositionsToSend);
+								emit SendNetRenderSetup(clientIndex, identification, startingPositionsToSend);
 								clientIndex++;
 								clientWorkerIndex = 0;
 								startingPositionsToSend.clear();
@@ -439,6 +443,8 @@ bool cRenderJob::Execute()
 			sParamRender *params = new sParamRender(paramsContainer, &renderData->objectData);
 			cNineFractals *fractals = new cNineFractals(fractalContainer, paramsContainer);
 
+			renderData->ValidateObjects();
+
 			// recalculation of some parameters;
 			params->resolution = 1.0 / image->GetHeight();
 			ReduceDetail();
@@ -457,6 +463,7 @@ bool cRenderJob::Execute()
 				this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
 			connect(renderer, SIGNAL(updateStatistics(cStatistics)), this,
 				SIGNAL(updateStatistics(cStatistics)));
+			connect(renderer, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 
 			if (renderData->configuration.UseNetRender())
 			{
@@ -501,7 +508,7 @@ bool cRenderJob::Execute()
 			WriteLog("image->UpdatePreview()", 2);
 			image->UpdatePreview();
 			WriteLog("image->GetImageWidget()->update()", 2);
-			image->GetImageWidget()->update();
+			emit updateImage();
 		}
 	}
 
@@ -520,6 +527,8 @@ bool cRenderJob::Execute()
 		sParamRender *params = new sParamRender(paramsContainer, &renderData->objectData);
 		cNineFractals *fractals = new cNineFractals(fractalContainer, paramsContainer);
 
+		renderData->ValidateObjects();
+
 		image->SetImageParameters(params->imageAdjustments);
 
 		// initialize statistics (limited for OpenCL)
@@ -528,12 +537,15 @@ bool cRenderJob::Execute()
 		renderData->statistics.Reset();
 		renderData->statistics.usedDEType = fractals->GetDETypeString();
 
+		image->SetFastPreview(true);
+
 		connect(gOpenCl->openClEngineRenderFractal, SIGNAL(updateStatistics(cStatistics)), this,
 			SIGNAL(updateStatistics(cStatistics)));
+		connect(gOpenCl->openClEngineRenderFractal, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 
 		gOpenCl->openClEngineRenderFractal->Lock();
 		gOpenCl->openClEngineRenderFractal->SetParameters(
-			paramsContainer, fractalContainer, params, fractals, renderData);
+			paramsContainer, fractalContainer, params, fractals, renderData, false);
 		if (gOpenCl->openClEngineRenderFractal->LoadSourcesAndCompile(paramsContainer))
 		{
 			gOpenCl->openClEngineRenderFractal->CreateKernel4Program(paramsContainer);
@@ -557,6 +569,9 @@ bool cRenderJob::Execute()
 							 paramsContainer->Get<int>("opencl_mode"))
 							 != cOpenClEngineRenderFractal::clRenderEngineTypeFast)
 			{
+				connect(
+					gOpenCl->openClEngineRenderSSAO, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
+
 				gOpenCl->openClEngineRenderSSAO->Lock();
 				gOpenCl->openClEngineRenderSSAO->SetParameters(params);
 				if (gOpenCl->openClEngineRenderSSAO->LoadSourcesAndCompile(paramsContainer))
@@ -582,6 +597,7 @@ bool cRenderJob::Execute()
 						connect(&rendererSSAO,
 							SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), this,
 							SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
+						connect(&rendererSSAO, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 						rendererSSAO.RenderSSAO();
 
 						// refresh image at end
@@ -595,7 +611,7 @@ bool cRenderJob::Execute()
 							WriteLog("image->UpdatePreview()", 2);
 							image->UpdatePreview();
 							WriteLog("image->GetImageWidget()->update()", 2);
-							image->GetImageWidget()->update();
+							emit updateImage();
 						}
 						result = true;
 					}
@@ -616,6 +632,26 @@ bool cRenderJob::Execute()
 					params, paramsContainer, image, renderData->stopRequest, renderData->screenRegion);
 			}
 		}
+
+		if (!*renderData->stopRequest)
+		{
+			if (cOpenClEngineRenderFractal::enumClRenderEngineMode(
+						paramsContainer->Get<int>("opencl_mode"))
+						== cOpenClEngineRenderFractal::clRenderEngineTypeFast
+					|| mode == flightAnimRecord)
+				image->SetFastPreview(true);
+			else
+				image->SetFastPreview(false);
+
+			if (image->IsPreview())
+			{
+				image->UpdatePreview();
+				WriteLog("image->GetImageWidget()->update()", 2);
+				emit updateImage();
+			}
+		}
+
+		image->SetFastPreview(false);
 
 		emit updateProgressAndStatus(
 			tr("OpenCl - rendering - all finished"), progressText.getText(1.0), 1.0);
@@ -690,9 +726,8 @@ QStringList cRenderJob::CreateListOfUsedTextures() const
 	if (renderData)
 	{
 		QList<int> keys = renderData->materials.keys();
-		for (int i = 0; i < keys.size(); i++)
+		for (int matIndex : keys)
 		{
-			int matIndex = keys[i];
 			if (renderData->materials[matIndex].colorTexture.IsLoaded())
 				listOfTextures.insert(renderData->materials[matIndex].colorTexture.GetFileName());
 
@@ -709,10 +744,9 @@ QStringList cRenderJob::CreateListOfUsedTextures() const
 				listOfTextures.insert(renderData->materials[matIndex].luminosityTexture.GetFileName());
 		}
 
-		for (int i = 0; i < renderData->textures.textureList.size(); i++)
+		for (auto &texture : renderData->textures.textureList)
 		{
-			if (renderData->textures.textureList[i]->IsLoaded())
-				listOfTextures.insert(renderData->textures.textureList[i]->GetFileName());
+			if (texture->IsLoaded()) listOfTextures.insert(texture->GetFileName());
 		}
 
 		return listOfTextures.toList();

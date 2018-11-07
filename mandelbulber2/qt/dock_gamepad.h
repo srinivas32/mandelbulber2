@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -53,24 +53,24 @@ class cDockGamepad : public QWidget
 {
 	Q_OBJECT
 public:
-	explicit cDockGamepad(QWidget *parent = NULL);
-	~cDockGamepad();
+	explicit cDockGamepad(QWidget *parent = nullptr);
+	~cDockGamepad() override;
 
 private slots:
 #ifdef USE_GAMEPAD
 	void slotChangeGamepadIndex(int index);
-	void slotGamePadDeviceChanged();
+	void slotGamePadDeviceChanged() const;
 
-	void slotGamepadLook();
-	void slotGamepadMove();
+	void slotGamepadLook() const;
+	void slotGamepadMove() const;
 	void slotGamepadPause(bool value);
-	void slotGamepadRoll();
-	void slotGamepadSpeed();
+	void slotGamepadRoll() const;
+	void slotGamepadSpeed() const;
 #endif // USE_GAMEPAD
 
 private:
-	void populateGamepadList();
-	void ConnectSignals();
+	void populateGamepadList() const;
+	void ConnectSignals() const;
 
 	Ui::cDockGamepad *ui;
 

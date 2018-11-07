@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -52,37 +52,32 @@ class cOpenClEngineRenderSSAO : public cOpenClEngine
 
 public:
 	cOpenClEngineRenderSSAO(cOpenClHardware *hardware);
-	~cOpenClEngineRenderSSAO();
+	~cOpenClEngineRenderSSAO() override;
 
 #ifdef USE_OPENCL
 	void SetParameters(const sParamRender *paramRender);
 	bool LoadSourcesAndCompile(const cParameterContainer *params) override;
-	bool PreAllocateBuffers(const cParameterContainer *params) override;
-	bool AssignParametersToKernel();
-	bool WriteBuffersToQueue();
+	void RegisterInputOutputBuffers(const cParameterContainer *params) override;
+	bool AssignParametersToKernelAdditional(int argIterator) override;
 	bool ProcessQueue(qint64 pixelsLeft, qint64 pixelIndex);
-	bool ReadBuffersFromQueue();
 	bool Render(cImage *image, bool *stopRequest);
-	void ReleaseMemory();
 	size_t CalcNeededMemory() override;
 
 private:
+	const int zBufferIndex = 0;
+	const int sineCosineIndex = 1;
+	const int outputIndex = 0;
+
 	QString GetKernelName() override;
 
 	sParamsSSAO paramsSSAO;
 	float intensity;
-
-	cl_float *inZBuffer;
-	cl::Buffer *inCLZBuffer;
 	int numberOfPixels;
-
-	cl_float *outBuffer;
-	cl::Buffer *outCl;
-
 #endif
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);
+	void updateImage();
 };
 
 #endif /* MANDELBULBER2_SRC_OPENCL_ENGINE_RENDER_SSAO_H_ */

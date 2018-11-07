@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -45,6 +45,7 @@
 #include "src/error_message.hpp"
 #include "src/fractal_container.hpp"
 #include "src/fractal_list.hpp"
+#include "src/initparameters.hpp"
 #include "src/interface.hpp"
 #include "src/my_ui_loader.h"
 #include "src/render_window.hpp"
@@ -70,9 +71,8 @@ void cTabFractal::InitWidgetNames() const
 {
 	QList<QWidget *> widgetList = findChildren<QWidget *>();
 
-	for (int i = 0; i < widgetList.size(); i++)
+	for (auto widget : widgetList)
 	{
-		QWidget *widget = widgetList[i];
 		QString oldName = widget->objectName();
 		if (oldName.size() > 0)
 		{
@@ -105,7 +105,7 @@ void cTabFractal::Init(bool firstTab, int _tabIndex)
 	QList<QPair<int, QString> /* */> insertHeader;
 	insertHeader << QPair<int, QString>(fractal::aboxMod1, QObject::tr("Formulas"));
 	insertHeader << QPair<int, QString>(fractal::abox4d, QObject::tr("Formulas 4d"));
-	insertHeader << QPair<int, QString>(fractal::transfAddConstant, QObject::tr("Transforms"));
+	insertHeader << QPair<int, QString>(fractal::transfAbsAddConstant, QObject::tr("Transforms"));
 	insertHeader << QPair<int, QString>(fractal::transfAddConstant4d, QObject::tr("Transforms 4d"));
 	insertHeader << QPair<int, QString>(fractal::transfHybridColor, QObject::tr("Hybrid coloring"));
 
@@ -132,8 +132,8 @@ void cTabFractal::Init(bool firstTab, int _tabIndex)
 
 void cTabFractal::slotChangedComboFractal(int indexInComboBox)
 {
-	QString comboName = this->sender()->objectName();
-	int index = qobject_cast<QComboBox *>(this->sender())->itemData(indexInComboBox).toInt();
+	QString comboName = sender()->objectName();
+	int index = qobject_cast<QComboBox *>(sender())->itemData(indexInComboBox).toInt();
 
 	QString fullFormulaName = fractalList[index].nameInComboBox;
 	if (fractalList[index].internalID > 0)
@@ -154,6 +154,10 @@ void cTabFractal::slotChangedComboFractal(int indexInComboBox)
 			QVBoxLayout *layout = ui->verticalLayout_fractal;
 			layout->addWidget(fractalWidget);
 			uiFile.close();
+
+			if (gPar->Get<bool>("ui_colorize"))
+				cInterface::ColorizeGroupBoxes(fractalWidget, gPar->Get<int>("ui_colorize_random_seed"));
+
 			fractalWidget->show();
 			automatedWidgets->ConnectSignalsForSlidersInWindow(fractalWidget);
 			SynchronizeInterfaceWindow(fractalWidget, &gParFractal->at(tabIndex), qInterface::write);
@@ -173,6 +177,13 @@ void cTabFractal::slotChangedComboFractal(int indexInComboBox)
 				}
 
 				case fractal::cpixelAlreadyHas:
+				{
+					ui->checkBox_dont_add_c_constant->setText(QObject::tr("Don't add global C constant"));
+					ui->checkBox_dont_add_c_constant->setEnabled(false);
+					break;
+				}
+
+				case fractal::cpixelUndefined:
 				{
 					ui->checkBox_dont_add_c_constant->setText(QObject::tr("Don't add global C constant"));
 					ui->checkBox_dont_add_c_constant->setEnabled(false);
@@ -265,10 +276,8 @@ void cTabFractal::FrameIterationFormulaSetWidgetsVisibility(bool visible) const
 {
 	ui->label_formula_iterations->setVisible(visible);
 	ui->spinboxInt_formula_iterations->setVisible(visible);
-	ui->sliderInt_formula_iterations->setVisible(visible);
 	ui->label_formula_weight->setVisible(visible);
 	ui->spinbox_formula_weight->setVisible(visible);
-	ui->slider_formula_weight->setVisible(visible);
 	ui->label_formula_start_iteration->setVisible(visible);
 	ui->label_formula_stop_iteration->setVisible(visible);
 	ui->spinboxInt_formula_start_iteration->setVisible(visible);

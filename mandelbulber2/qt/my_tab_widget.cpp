@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -42,7 +42,7 @@ MyTabWidget::MyTabWidget(QWidget *parent) : QTabWidget(parent)
 {
 	MyTabBar *bar = new MyTabBar();
 	connect(bar, SIGNAL(swapTabs(int, int)), this, SIGNAL(swapTabs(int, int)));
-	this->setTabBar(bar);
+	setTabBar(bar);
 	bar->setupMoveButtons();
 }
 

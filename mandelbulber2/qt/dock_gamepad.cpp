@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -60,7 +60,7 @@ cDockGamepad::~cDockGamepad()
 	delete ui;
 }
 
-void cDockGamepad::ConnectSignals()
+void cDockGamepad::ConnectSignals() const
 {
 #ifdef USE_GAMEPAD
 	connect(ui->comboBox_gamepad_device, SIGNAL(currentIndexChanged(int)), this,
@@ -89,9 +89,6 @@ void cDockGamepad::ConnectSignals()
 	connect(&gamepad, SIGNAL(buttonAChanged(bool)), this, SLOT(slotGamepadSpeed()));
 	connect(&gamepad, SIGNAL(buttonBChanged(bool)), this, SLOT(slotGamepadSpeed()));
 
-	connect(this->ui->groupCheck_gamepad_enabled, SIGNAL(toggled(bool)), &gamepad,
-		SLOT(setConnected(bool)));
-
 	connect(QGamepadManager::instance(), SIGNAL(gamepadConnected(int)), this,
 		SLOT(slotGamePadDeviceChanged()));
 	connect(QGamepadManager::instance(), SIGNAL(gamepadDisconnected(int)), this,
@@ -110,12 +107,12 @@ void cDockGamepad::slotChangeGamepadIndex(int index)
 	}
 }
 
-void cDockGamepad::slotGamePadDeviceChanged()
+void cDockGamepad::slotGamePadDeviceChanged() const
 {
 	populateGamepadList();
 }
 
-void cDockGamepad::populateGamepadList()
+void cDockGamepad::populateGamepadList() const
 {
 	ui->comboBox_gamepad_device->clear();
 	QList<int> deviceIds = QGamepadManager::instance()->connectedGamepads();
@@ -140,92 +137,107 @@ void cDockGamepad::populateGamepadList()
 	}
 }
 
-void cDockGamepad::slotGamepadLook()
+void cDockGamepad::slotGamepadLook() const
 {
-	// Joystick Axis values vary from -1 to 0 to 1
-	double pitch = gamepad.axisLeftX();
-	double yaw = gamepad.axisLeftY();
-	WriteLog("Gamepad - slotGamepadLook-Yaw | value: " + QString::number(yaw), 3);
-	WriteLog("Gamepad - slotGamepadLook-Pitch | value: " + QString::number(pitch), 3);
-	ui->sl_gamepad_angle_yaw->setValue(100 * yaw);
-	ui->sl_gamepad_angle_pitch->setValue(100 * pitch);
-	double sensitivity = 0.5;
-	CVector2<double> yawPitch(pitch, yaw);
-	yawPitch = yawPitch.Deadband() * sensitivity;
-	emit gMainInterface->renderedImage->YawAndPitchChanged(yawPitch);
+	if (ui->groupCheck_gamepad_enabled->isChecked())
+	{
+		// Joystick Axis values vary from -1 to 0 to 1
+		const double pitch = gamepad.axisLeftX();
+		const double yaw = gamepad.axisLeftY();
+		WriteLog("Gamepad - slotGamepadLook-Yaw | value: " + QString::number(yaw), 3);
+		WriteLog("Gamepad - slotGamepadLook-Pitch | value: " + QString::number(pitch), 3);
+		ui->sl_gamepad_angle_yaw->setValue(100 * yaw);
+		ui->sl_gamepad_angle_pitch->setValue(100 * pitch);
+		const double sensitivity = 0.5;
+		CVector2<double> yawPitch(pitch, yaw);
+		yawPitch = yawPitch.Deadband() * sensitivity;
+		emit gMainInterface->renderedImage->YawAndPitchChanged(yawPitch);
+	}
 }
 
-void cDockGamepad::slotGamepadMove()
+void cDockGamepad::slotGamepadMove() const
 {
-	// Joystick Axis values vary from -1 to 0 to 1
-	// -1 for down, and 1 for up, 0 for neutral
-	// Invert the Y Axis for right Joystick
-	double x = gamepad.axisRightX();
-	double y = gamepad.axisRightY() * -1.0;
-	CVector2<double> strafe(x, y);
-	double sensitivity = 5.0;
-	strafe = strafe.Deadband() * sensitivity;
-	bool joystick = fabs(strafe.x) > 0 || fabs(strafe.y) > 0;
-	// Trigger values vary from 0 to 1
-	double reverse = gamepad.buttonL2();
-	double forward = gamepad.buttonR2();
-	double z = forward - reverse / 2.0;
-	bool trigger = fabs(z) > 0;
-	WriteLog("Gamepad - slotGamepadMove-X | value: " + QString::number(x), 3);
-	WriteLog("Gamepad - slotGamepadMove-Y | value: " + QString::number(y), 3);
-	WriteLog("Gamepad - slotGamepadMove-Z | value: " + QString::number(z), 3);
-	ui->sl_gamepad_movement_x->setValue(100 * x);
-	ui->sl_gamepad_movement_y->setValue(100 * y);
-	ui->sl_gamepad_movement_z->setValue(100 * z);
-	// Maintain z-axis speed
-	sensitivity = 1 / 10.0;
-	double threshold = .001;
-	z = z * sensitivity;
-	// Forward Accelerate [threshold to 1 / sensitivity]
-	if (fabs(z) < threshold && z >= 0.0) z = threshold;
-	// Reverse Backwards [-threshold to -1 / sensitivity]
-	if (fabs(z) < threshold && z <= 0.0) z = -threshold;
-	if (joystick) emit gMainInterface->renderedImage->StrafeChanged(strafe / 2.0);
-	if (trigger) emit gMainInterface->renderedImage->SpeedSet(z / 2.0);
+	if (ui->groupCheck_gamepad_enabled->isChecked())
+	{
+		// Joystick Axis values vary from -1 to 0 to 1
+		// -1 for down, and 1 for up, 0 for neutral
+		// Invert the Y Axis for right Joystick
+		const double x = gamepad.axisRightX();
+		const double y = gamepad.axisRightY() * -1.0;
+		CVector2<double> strafe(x, y);
+		double sensitivity = 5.0;
+		strafe = strafe.Deadband() * sensitivity;
+		const bool joystick = fabs(strafe.x) > 0 || fabs(strafe.y) > 0;
+		// Trigger values vary from 0 to 1
+		const double reverse = gamepad.buttonL2();
+		const double forward = gamepad.buttonR2();
+		double z = forward - reverse / 2.0;
+		const bool trigger = fabs(z) > 0;
+		WriteLog("Gamepad - slotGamepadMove-X | value: " + QString::number(x), 3);
+		WriteLog("Gamepad - slotGamepadMove-Y | value: " + QString::number(y), 3);
+		WriteLog("Gamepad - slotGamepadMove-Z | value: " + QString::number(z), 3);
+		ui->sl_gamepad_movement_x->setValue(100 * x);
+		ui->sl_gamepad_movement_y->setValue(100 * y);
+		ui->sl_gamepad_movement_z->setValue(100 * z);
+		// Maintain z-axis speed
+		sensitivity = 1 / 10.0;
+		const double threshold = .001;
+		z = z * sensitivity;
+		// Forward Accelerate [threshold to 1 / sensitivity]
+		if (fabs(z) < threshold && z >= 0.0) z = threshold;
+		// Reverse Backwards [-threshold to -1 / sensitivity]
+		if (fabs(z) < threshold && z <= 0.0) z = -threshold;
+		if (joystick) emit gMainInterface->renderedImage->StrafeChanged(strafe / 2.0);
+		if (trigger) emit gMainInterface->renderedImage->SpeedSet(z / 2.0);
+	}
 }
 
 void cDockGamepad::slotGamepadPause(bool value)
 {
-	if (!value)
+	if (ui->groupCheck_gamepad_enabled->isChecked())
 	{
-		WriteLog("Gamepad - slotGamepadPause | activated", 3);
-		emit gMainInterface->renderedImage->Pause();
+		if (!value)
+		{
+			WriteLog("Gamepad - slotGamepadPause | activated", 3);
+			emit gMainInterface->renderedImage->Pause();
+		}
 	}
 }
 
-void cDockGamepad::slotGamepadRoll()
+void cDockGamepad::slotGamepadRoll() const
 {
-	// Button values are either false to true
-	double value = 0;
-	if (gamepad.buttonL1()) value += 1;
-	if (gamepad.buttonR1()) value -= 1;
-	WriteLog("Gamepad - slotGamepadRoll | value: " + QString::number(value), 3);
-	ui->sl_gamepad_angle_roll->setValue(100 * value);
-	emit gMainInterface->renderedImage->RotationChanged(value);
+	if (ui->groupCheck_gamepad_enabled->isChecked())
+	{
+		// Button values are either false to true
+		double value = 0;
+		if (gamepad.buttonL1()) value += 1;
+		if (gamepad.buttonR1()) value -= 1;
+		WriteLog("Gamepad - slotGamepadRoll | value: " + QString::number(value), 3);
+		ui->sl_gamepad_angle_roll->setValue(100 * value);
+		emit gMainInterface->renderedImage->RotationChanged(value);
+	}
 }
 
-void cDockGamepad::slotGamepadSpeed()
+void cDockGamepad::slotGamepadSpeed() const
 {
-	// Button values are either false to true
-	double value = 0;
-	if (gamepad.buttonA()) value += 1;
-	if (gamepad.buttonB()) value -= 1;
-	WriteLog("Gamepad - slotGamepadSpeed | value: " + QString::number(value), 3);
-	ui->sl_gamepad_movement_z->setValue(100 * value);
-	if (gamepad.buttonA() != gamepad.buttonB())
+	if (ui->groupCheck_gamepad_enabled->isChecked())
 	{
-		if (gamepad.buttonA())
+		// Button values are either false to true
+		double value = 0;
+		if (gamepad.buttonA()) value += 1;
+		if (gamepad.buttonB()) value -= 1;
+		WriteLog("Gamepad - slotGamepadSpeed | value: " + QString::number(value), 3);
+		ui->sl_gamepad_movement_z->setValue(100 * value);
+		if (gamepad.buttonA() != gamepad.buttonB())
 		{
-			emit gMainInterface->renderedImage->SpeedChanged(1.1);
-		}
-		else
-		{
-			emit gMainInterface->renderedImage->SpeedChanged(0.9);
+			if (gamepad.buttonA())
+			{
+				emit gMainInterface->renderedImage->SpeedChanged(1.1);
+			}
+			else
+			{
+				emit gMainInterface->renderedImage->SpeedChanged(0.9);
+			}
 		}
 	}
 }

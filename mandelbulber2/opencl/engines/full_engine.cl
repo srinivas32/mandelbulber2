@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -39,8 +39,8 @@ int GetInteger(int byte, __global char *array)
 }
 
 //------------------ MAIN RENDER FUNCTION --------------------
-kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
-	__constant sClInConstants *consts, int initRandomSeed)
+kernel void fractal3D(__global sClPixel *out, __global char *inBuff, __global char *inTextureBuff,
+	__constant sClInConstants *consts, image2d_t image2dBackground, int initRandomSeed)
 {
 	// get actual pixel
 	const int imageX = get_global_id(0);
@@ -61,32 +61,43 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	float height = convert_float(consts->params.imageHeight);
 	float resolution = 1.0f / height;
 
-	//-------- decode data file ----------------
+	//-------- decode main data file ----------------
 	// main offset for materials
 	int materialsMainOffset = GetInteger(0, inBuff);
 	int AOVectorsMainOffset = GetInteger(1 * sizeof(int), inBuff);
 	int lightsMainOffset = GetInteger(2 * sizeof(int), inBuff);
+	int primitivesMainOffset = GetInteger(3 * sizeof(int), inBuff);
+	int objectsMainOffset = GetInteger(4 * sizeof(int), inBuff);
 
-	//--- main material
+	//--- materials
+	__global sMaterialCl *materials[MAT_ARRAY_SIZE];
+	__global float4 *palettes[MAT_ARRAY_SIZE];
+	int paletteLengths[MAT_ARRAY_SIZE];
 
 	// number of materials
 	int numberOfMaterials = GetInteger(materialsMainOffset, inBuff);
 
-	// materials 0 offset:
-	const int materialAddressOffset = materialsMainOffset + 1 * sizeof(int);
-	int material0Offset = GetInteger(materialAddressOffset, inBuff);
+	for (int i = 0; i < MAT_ARRAY_SIZE; i++)
+	{
+		// material offset:
+		const int materialAddressOffset = materialsMainOffset + (i + 1) * sizeof(int);
+		int materialOffset = GetInteger(materialAddressOffset, inBuff);
 
-	// material header
-	int materialClOffset = GetInteger(material0Offset, inBuff);
-	int paletteItemsOffset = GetInteger(material0Offset + sizeof(int), inBuff);
-	int paletteSize = GetInteger(material0Offset + sizeof(int) * 2, inBuff);
-	int paletteLength = GetInteger(material0Offset + sizeof(int) * 3, inBuff);
+		// material header
+		int materialClOffset = GetInteger(materialOffset, inBuff);
+		int paletteItemsOffset = GetInteger(materialOffset + sizeof(int), inBuff);
+		int paletteSize = GetInteger(materialOffset + sizeof(int) * 2, inBuff);
+		int paletteLengthTemp = GetInteger(materialOffset + sizeof(int) * 3, inBuff);
+		paletteLengths[i] = paletteLengthTemp;
 
-	// material data
-	__global sMaterialCl *material = (__global sMaterialCl *)&inBuff[materialClOffset];
+		// material data
+		__global sMaterialCl *materialTemp = (__global sMaterialCl *)&inBuff[materialClOffset];
+		materials[i] = materialTemp;
 
-	// palette data
-	__global float4 *palette = (__global float4 *)&inBuff[paletteItemsOffset];
+		// palette data
+		__global float4 *paletteTemp = (__global float4 *)&inBuff[paletteItemsOffset];
+		palettes[i] = paletteTemp;
+	}
 
 	//--- AO vectors
 
@@ -106,7 +117,49 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	__global sLightCl *__attribute__((aligned(16))) lights =
 		(__global sLightCl *)&inBuff[lightssOffset];
 
-	//--------- end of data file ----------------------------------
+	//--- Primitives
+
+	// primitives count
+	int numberOfPrimitives = GetInteger(primitivesMainOffset, inBuff);
+	int primitivesGlobalPositionOffset = GetInteger(primitivesMainOffset + 1 * sizeof(int), inBuff);
+	int primitivesOffset = GetInteger(primitivesMainOffset + 2 * sizeof(int), inBuff);
+
+	// global position of primitives
+	__global sPrimitiveGlobalPositionCl *primitivesGlobalPosition =
+		(__global sPrimitiveGlobalPositionCl *)&inBuff[primitivesGlobalPositionOffset];
+
+	// data for primitives
+	__global sPrimitiveCl *__attribute__((aligned(16))) primitives =
+		(__global sPrimitiveCl *)&inBuff[primitivesOffset];
+
+	//--- Objects
+
+	int numberOfObjects = GetInteger(objectsMainOffset, inBuff);
+	int objectsOffset = GetInteger(objectsMainOffset + 1 * sizeof(int), inBuff);
+
+	__global sObjectDataCl *__attribute__((aligned(16))) objectsData =
+		(__global sObjectDataCl *)&inBuff[objectsOffset];
+
+//--------- end of data file ----------------------------------
+
+//------------------ decode texture data -----------
+#ifdef USE_TEXTURES
+	__global char4 *textures[NUMBER_OF_TEXTURES];
+	int2 textureSizes[NUMBER_OF_TEXTURES];
+
+	for (int i = 0; i < NUMBER_OF_TEXTURES; i++)
+	{
+		int textureMainOffset = GetInteger(i * sizeof(int), inTextureBuff);
+		int textureDataOffset = GetInteger(textureMainOffset + 0 * sizeof(int), inTextureBuff);
+		int textureWidth = GetInteger(textureMainOffset + 1 * sizeof(int), inTextureBuff);
+		int textureHeight = GetInteger(textureMainOffset + 2 * sizeof(int), inTextureBuff);
+		textureSizes[i] = (int2){textureWidth, textureHeight};
+
+		__global uchar4 *texture = (__global uchar4 *)&inTextureBuff[textureDataOffset];
+		textures[i] = texture;
+	}
+#endif
+	//------------------ end of texture data -----------
 
 	// auxiliary vectors
 	const float3 one = (float3){1.0f, 0.0f, 0.0f};
@@ -133,21 +186,42 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	rot = RotateZ(rot, -consts->params.sweetSpotHAngle);
 	rot = RotateX(rot, consts->params.sweetSpotVAngle);
 
+	matrix33 rotInv = TransposeMatrix(rot);
+
 	// starting point for ray-marching
 	float3 start = consts->params.camera;
 
-	// view vector
+// view vector
+#ifdef PERSP_EQUIRECTANGULAR
+	float aspectRatio = 2.0f;
+#else
 	float aspectRatio = width / height;
+#endif
 	float2 normalizedScreenPoint;
 	normalizedScreenPoint.x = (screenPoint.x / width - 0.5f) * aspectRatio;
 	normalizedScreenPoint.y = -(screenPoint.y / height - 0.5f);
 	if (consts->params.legacyCoordinateSystem) normalizedScreenPoint.y *= -1.0f;
+
+#ifdef MONTE_CARLO_ANTI_ALIASING
+	normalizedScreenPoint.x += (Random(1000.0f, &randomSeed) / 1000.0f - 0.5f) / width * aspectRatio;
+	normalizedScreenPoint.y += (Random(1000.0f, &randomSeed) / 1000.0f - 0.5f) / height;
+#endif
 
 	float3 viewVectorNotRotated = CalculateViewVector(normalizedScreenPoint, consts->params.fov);
 	float3 viewVector = Matrix33MulFloat3(rot, viewVectorNotRotated);
 
 #ifdef MONTE_CARLO_DOF
 	MonteCarloDOF(&start, &viewVector, consts, rot, &randomSeed);
+#endif
+
+#ifdef CHROMATIC_ABERRATION
+	float hue = Random(3600, &randomSeed) / 10.0f;
+	float3 rgbFromHsv = Hsv2rgb(fmod(360.0f + hue - 60.0f, 360.0f), 1.0f, 1.0f) * 2.0f;
+	float3 randVector =
+		(float3){0.0f, hue / 20000.0f * consts->params.DOFMonteCarloCACameraDispersion, 0.0f};
+	float3 randVectorRot = Matrix33MulFloat3(rot, randVector);
+	viewVector -= randVectorRot;
+	viewVector = normalize(viewVector);
 #endif
 
 #ifdef PERSP_FISH_EYE_CUT
@@ -168,14 +242,27 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	sRenderData renderData;
 	renderData.lightVector = lightVector;
 	renderData.viewVectorNotRotated = viewVectorNotRotated;
-	renderData.material = material;
-	renderData.palette = palette;
+	renderData.materials = materials;
+	renderData.palettes = palettes;
 	renderData.AOVectors = AOVectors;
 	renderData.lights = lights;
-	renderData.paletteSize = paletteLength;
+	renderData.paletteLengths = paletteLengths;
 	renderData.numberOfLights = numberOfLights;
 	renderData.AOVectorsCount = AOVectorsCount;
 	renderData.reflectionsMax = reflectionsMax;
+	renderData.primitives = primitives;
+	renderData.numberOfPrimitives = numberOfPrimitives;
+	renderData.primitivesGlobalPosition = primitivesGlobalPosition;
+	renderData.objectsData = objectsData;
+	renderData.mRot = rot;
+	renderData.mRotInv = rotInv;
+#ifdef USE_TEXTURES
+	renderData.textures = textures;
+	renderData.textureSizes = textureSizes;
+#endif
+#ifdef CHROMATIC_ABERRATION
+	renderData.hue = hue;
+#endif
 
 	float4 resultShader = 0.0f;
 	float3 objectColour = 0.0f;
@@ -202,7 +289,8 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 		recursionIn.objectColour = objectColour;
 		recursionIn.rayBranch = rayBranchReflection;
 
-		sRayRecursionOut recursionOut = RayRecursion(recursionIn, &renderData, consts, &randomSeed);
+		sRayRecursionOut recursionOut =
+			RayRecursion(recursionIn, &renderData, consts, image2dBackground, &randomSeed);
 		resultShader = recursionOut.resultShader;
 		objectColour = recursionOut.objectColour;
 		depth = recursionOut.rayMarchingOut.depth;
@@ -216,9 +304,16 @@ kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 
 	sClPixel pixel;
 
+#ifdef CHROMATIC_ABERRATION
+	pixel.R = resultShader.s0 * rgbFromHsv.s0;
+	pixel.G = resultShader.s1 * rgbFromHsv.s1;
+	pixel.B = resultShader.s2 * rgbFromHsv.s2;
+#else
 	pixel.R = resultShader.s0;
 	pixel.G = resultShader.s1;
 	pixel.B = resultShader.s2;
+#endif
+
 	pixel.zBuffer = depth;
 	pixel.colR = objectColour.s0 * 256.0f;
 	pixel.colG = objectColour.s1 * 256.0f;

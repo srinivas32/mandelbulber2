@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -63,7 +63,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("image_height", 600, 5, 65535, morphNone, paramStandard);
 	par->addParam("tiles", 1, 1, 64, morphNone, paramStandard);
 	par->addParam("tile_number", 0, morphNone, paramStandard);
-	par->addParam("image_proportion", 0, morphNone, paramNoSave);
+	par->addParam("image_proportion", 0, morphNone, paramStandard);
 	par->addParam("antialiasing_enabled", false, morphNone, paramStandard);
 	par->addParam("antialiasing_size", 2, 1, 10, morphNone, paramStandard);
 
@@ -99,6 +99,10 @@ void InitParams(cParameterContainer *par)
 	par->addParam("keyframe_collision_thresh", 1.0e-6, 1e-15, 1.0e2, morphNone, paramStandard);
 	par->addParam("keyframe_auto_validate", true, morphNone, paramApp);
 	par->addParam("keyframe_constant_target_distance", 0.1, 1e-10, 1.0e2, morphNone, paramStandard);
+	par->addParam("show_camera_path", true, morphNone, paramApp);
+	par->addParam("show_target_path", true, morphNone, paramApp);
+	for (int i = 1; i <= 4; i++)
+		par->addParam("show_light_path", i, true, morphNone, paramApp);
 
 	// camera
 	par->addParam("camera", CVector3(3.0, -6.0, 2.0), morphAkima, paramStandard);
@@ -186,7 +190,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("repeat_from", 1, 1, 9, morphLinear, paramStandard);
 	par->addParam(
 		"delta_DE_function", int(fractal::preferredDEFunction), 0, 4, morphNone, paramStandard);
-	par->addParam("delta_DE_method", int(fractal::preferredDEMethod), 0, 1, morphNone, paramStandard);
+	par->addParam("delta_DE_method", int(fractal::preferredDEMethod), 0, 2, morphNone, paramStandard);
 	par->addParam("use_default_bailout", true, morphNone, paramStandard);
 	par->addParam("initial_waxis", 0.0, morphAkima, paramStandard);
 	par->addParam("linear_DE_offset", 0.0, morphLinear, paramStandard);
@@ -232,6 +236,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("contrast", 1.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("gamma", 1.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("hdr", false, morphLinear, paramStandard);
+	par->addParam("saturation", 1.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("ambient_occlusion", 1.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("ambient_occlusion_quality", 4, 1, 10, morphLinear, paramStandard);
 	par->addParam("ambient_occlusion_fast_tune", 1.0, 1e-5, 1e5, morphLinear, paramStandard);
@@ -263,6 +268,8 @@ void InitParams(cParameterContainer *par)
 	par->addParam("background_color", 1, sRGB(0, 38306, 65535), morphLinear, paramStandard);
 	par->addParam("background_color", 2, sRGB(65535, 65535, 65535), morphLinear, paramStandard);
 	par->addParam("background_color", 3, sRGB(0, 10000, 500), morphLinear, paramStandard);
+	par->addParam("background_3_colors_enable", true, morphLinear, paramStandard);
+
 	par->addParam("fog_color", 1, sRGB(30000, 30000, 30000), morphLinear, paramStandard);
 	par->addParam("fog_color", 2, sRGB(0, 30000, 65535), morphLinear, paramStandard);
 	par->addParam("fog_color", 3, sRGB(65535, 65535, 65535), morphLinear, paramStandard);
@@ -272,15 +279,20 @@ void InitParams(cParameterContainer *par)
 	par->addParam("volumetric_fog_colour_1_distance", 1.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("volumetric_fog_colour_2_distance", 2.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("volumetric_fog_distance_factor", 1.0, 0.0, 1e15, morphLinear, paramStandard);
+	par->addParam(
+		"volumetric_fog_distance_from_surface", 1e-15, 0.0, 1e15, morphLinear, paramStandard);
 
 	par->addParam("iteration_fog_enable", false, morphLinear, paramStandard);
 	par->addParam("iteration_fog_opacity", 1000.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("iteration_fog_opacity_trim", 4.0, 0.0, 1000.0, morphLinear, paramStandard);
+	par->addParam("iteration_fog_opacity_trim_high", 250.0, 0.0, 1000.0, morphLinear, paramStandard);
 	par->addParam("iteration_fog_color_1_maxiter", 8.0, 0.0, 1000.0, morphLinear, paramStandard);
 	par->addParam("iteration_fog_color_2_maxiter", 12.0, 0.0, 1000.0, morphLinear, paramStandard);
 	par->addParam("iteration_fog_color", 1, sRGB(65535, 65535, 65535), morphLinear, paramStandard);
 	par->addParam("iteration_fog_color", 2, sRGB(65535, 65535, 65535), morphLinear, paramStandard);
 	par->addParam("iteration_fog_color", 3, sRGB(65535, 65535, 65535), morphLinear, paramStandard);
+	par->addParam("iteration_fog_brightness_boost", 1.0, 0.0, 1e6, morphLinear, paramStandard);
+	par->addParam("iteration_fog_shadows", true, morphLinear, paramStandard);
 
 	par->addParam("hdr_blur_enabled", false, morphLinear, paramStandard);
 	par->addParam("hdr_blur_radius", 10.0, 0.1, 1000.0, morphLinear, paramStandard);
@@ -291,7 +303,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("basic_fog_visibility", 20.0, 0.0, 1e15, morphLinear, paramStandard);
 	par->addParam("basic_fog_color", sRGB(59399, 61202, 65535), morphLinear, paramStandard);
 	par->addParam("DOF_enabled", false, morphLinear, paramStandard);
-	par->addParam("DOF_focus", 6.0, 0.0, 200.0, morphLinear, paramStandard);
+	par->addParam("DOF_focus", 6.0, 0.0, 10000.0, morphLinear, paramStandard);
 	par->addParam("DOF_radius", 10.0, 0.0, 200.0, morphLinear, paramStandard);
 	par->addParam("DOF_max_radius", 250.0, 2.0, 1000.0, morphLinear, paramStandard);
 	par->addParam("DOF_HDR", false, morphLinear, paramStandard);
@@ -301,6 +313,11 @@ void InitParams(cParameterContainer *par)
 	par->addParam("DOF_samples", 100, morphLinear, paramStandard);
 	par->addParam("DOF_min_samples", 10, morphLinear, paramStandard);
 	par->addParam("DOF_max_noise", 1.0, 0.00001, 100.0, morphLinear, paramStandard);
+	par->addParam("DOF_MC_global_illumination", false, morphLinear, paramStandard);
+	par->addParam("DOF_MC_CA_enable", false, morphLinear, paramStandard);
+	par->addParam("DOF_MC_CA_dispersion_gain", 1.0, 1e-15, 1000.0, morphLinear, paramStandard);
+	par->addParam("DOF_MC_CA_camera_dispersion", 1.0, 1e-15, 1000.0, morphLinear, paramStandard);
+	par->addParam("MC_soft_shadows_enable", false, morphLinear, paramStandard);
 
 	// main light
 	par->addParam("main_light_intensity", 1.0, 0.0, 1e15, morphLinear, paramStandard);
@@ -355,6 +372,8 @@ void InitParams(cParameterContainer *par)
 	par->addParam(
 		"random_lights_distribution_center", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
 	par->addParam("random_lights_group", false, morphLinear, paramStandard);
+	par->addParam("random_lights_one_color_enable", false, morphLinear, paramStandard);
+	par->addParam("random_lights_color", sRGB(65535, 65535, 65535), morphLinear, paramStandard);
 
 	// fake lights
 	par->addParam("fake_lights_enabled", false, morphLinear, paramStandard);
@@ -367,9 +386,9 @@ void InitParams(cParameterContainer *par)
 	par->addParam("fake_lights_color", sRGB(65535, 65535, 65535), morphLinear, paramStandard);
 
 	par->addParam("all_primitives_position", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
-	par->addParam("all_primitives_rotation", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
+	par->addParam("all_primitives_rotation", CVector3(0.0, 0.0, 0.0), morphAkimaAngle, paramStandard);
 	par->addParam("fractal_position", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
-	par->addParam("fractal_rotation", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
+	par->addParam("fractal_rotation", CVector3(0.0, 0.0, 0.0), morphAkimaAngle, paramStandard);
 	par->addParam("repeat", CVector3(0.0, 0.0, 0.0), morphLinear, paramStandard);
 
 // OpenCL Support
@@ -462,6 +481,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("meas_point", CVector3(0.0, 0.0, 0.0), morphNone, paramNoSave);
 	par->addParam("meas_distance_from_last", 0.0, morphNone, paramNoSave);
 	par->addParam("meas_distance_from_camera", 0.0, morphNone, paramNoSave);
+	par->addParam("meas_aligned_rotation", CVector3(0.0, 0.0, 0.0), morphNone, paramNoSave);
 
 	//----------------------- preferences ---------------------
 	par->addParam("language", QString("unknown"), morphNone, paramApp);
@@ -470,6 +490,9 @@ void InitParams(cParameterContainer *par)
 	par->addParam("ui_font_size", systemData.GetPreferredFontPointSize(), 5, 50, morphNone, paramApp);
 	par->addParam(
 		"toolbar_icon_size", systemData.GetPreferredThumbnailSize() / 2, 20, 400, morphNone, paramApp);
+	par->addParam("ui_colorize", true, morphNone, paramApp);
+	par->addParam("ui_colorize_random_seed", 12345, morphNone, paramApp);
+
 	par->addParam("limit_CPU_cores", get_cpu_count(), 1, get_cpu_count(), morphNone, paramApp);
 
 	// image file configuration
@@ -491,6 +514,7 @@ void InitParams(cParameterContainer *par)
 	par->addParam("normal_postfix", QString("_normal"), morphNone, paramApp);
 
 	par->addParam("append_alpha_png", true, morphNone, paramApp);
+	par->addParam("linear_colorspace", true, morphNone, paramApp);
 	par->addParam("jpeg_quality", 95, 1, 100, morphNone, paramApp);
 	par->addParam("stereoscopic_in_separate_files", false, morphNone, paramApp);
 
@@ -503,9 +527,11 @@ void InitParams(cParameterContainer *par)
 		QStringList({"gpu", "default", "all", "cpu", "accelerator"}));
 	par->addParam("opencl_device_list", QString(""), morphNone, paramApp);
 	par->addParam(
-		"opencl_mode", 1, morphNone, paramApp, QStringList({"none", "fast", "limited", "full"}));
+		"opencl_mode", 3, morphNone, paramApp, QStringList({"none", "fast", "limited", "full"}));
 	par->addParam("opencl_precision", 0, morphNone, paramApp, QStringList({"single", "double"}));
 	par->addParam("opencl_memory_limit", 512, 1, 10000, morphNone, paramApp);
+	par->addParam("opencl_disable_build_cache", false, morphNone, paramApp);
+	par->addParam("opencl_use_fast_relaxed_math", true, morphNone, paramApp);
 
 	WriteLog("Parameters initialization finished", 3);
 }
@@ -523,6 +549,8 @@ void InitFractalParams(cParameterContainer *par)
 	QStringList qslOrderOfZyx({"zyx", "zxy", "yzx", "yxz", "xzy", "xyz"});
 	QStringList qslOrderOfFolds({"type1", "type2", "type3", "type4", "type5"});
 	QStringList qslOrderOfTransf({"typeT1", "typeT1Mod", "typeT2", "typeT3", "typeT4", "typeT5b"});
+	QStringList qslOrderOf3Folds({"type1", "type2", "type3"});
+	// hmmm?? comboBoxes
 
 	par->addParam("power", 9.0, morphAkima, paramStandard);
 	par->addParam("alpha_angle_offset", 0.0, morphAkimaAngle, paramStandard);
@@ -619,6 +647,36 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("sinTan2Trig_atan2_or_atan", 0, morphNone, paramStandard, qslAtan2Atan);
 	par->addParam("sinTan2Trig_order_of_zyx", 0, morphNone, paramStandard, qslOrderOfZyx);
 
+	// SurfFold
+	par->addParam("surfFolds_order_of_folds_1", 0, morphNone, paramStandard, qslOrderOfFolds);
+	par->addParam("surfFolds_order_of_folds_2", 0, morphNone, paramStandard, qslOrderOfFolds);
+	par->addParam("surfFolds_order_of_folds_3", 0, morphNone, paramStandard, qslOrderOfFolds);
+	par->addParam("surfFolds_order_of_folds_4", 0, morphNone, paramStandard, qslOrderOfFolds);
+	par->addParam("surfFolds_order_of_folds_5", 0, morphNone, paramStandard, qslOrderOfFolds);
+
+	// Benesi Mag Transforms
+	par->addParam("magTransf_order_of_transf_1", 0, morphNone, paramStandard, qslOrderOfTransf);
+	par->addParam("magTransf_order_of_transf_2", 0, morphNone, paramStandard, qslOrderOfTransf);
+	par->addParam("magTransf_order_of_transf_3", 0, morphNone, paramStandard, qslOrderOfTransf);
+	par->addParam("magTransf_order_of_transf_4", 0, morphNone, paramStandard, qslOrderOfTransf);
+	par->addParam("magTransf_order_of_transf_5", 0, morphNone, paramStandard, qslOrderOfTransf);
+
+	// asurf3Folds
+	par->addParam("aSurf3Folds_order_of_folds_1", 0, morphNone, paramStandard, qslOrderOf3Folds);
+	par->addParam("aSurf3Folds_order_of_folds_2", 0, morphNone, paramStandard, qslOrderOf3Folds);
+	par->addParam("aSurf3Folds_order_of_folds_3", 0, morphNone, paramStandard, qslOrderOf3Folds);
+
+	// Basic comboBox
+	par->addParam("combo_mode_A", 0, morphNone, paramStandard,
+		QStringList({"combo_mode0", "combo_mode1", "combo_mode2", "combo_mode3", "combo_mode4",
+			"combo_mode5", "combo_mode6", "combo_mode7"}));
+
+	// donut
+	par->addParam("donut_ring_radius", 1.0, morphAkima, paramStandard);
+	par->addParam("donut_ring_thickness", 0.1, morphAkima, paramStandard);
+	par->addParam("donut_factor", 3.0, morphAkima, paramStandard);
+	par->addParam("donut_number", 9.0, morphAkima, paramStandard);
+
 	// surfBox
 	par->addParam("surfBox_enabledX1", true, morphLinear, paramStandard);
 	par->addParam("surfBox_enabledY1", true, morphLinear, paramStandard);
@@ -644,31 +702,6 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("surfBox_offset1A_222", CVector3(2.0, 2.0, 2.0), morphAkima, paramStandard);
 	par->addParam("surfBox_offset1B_222", CVector3(2.0, 2.0, 2.0), morphAkima, paramStandard);
 	par->addParam("surfBox_scale1Z1", 1.0, morphAkima, paramStandard);
-
-	// SurfFold
-	par->addParam("surfFolds_order_of_folds_1", 0, morphNone, paramStandard, qslOrderOfFolds);
-	par->addParam("surfFolds_order_of_folds_2", 0, morphNone, paramStandard, qslOrderOfFolds);
-	par->addParam("surfFolds_order_of_folds_3", 0, morphNone, paramStandard, qslOrderOfFolds);
-	par->addParam("surfFolds_order_of_folds_4", 0, morphNone, paramStandard, qslOrderOfFolds);
-	par->addParam("surfFolds_order_of_folds_5", 0, morphNone, paramStandard, qslOrderOfFolds);
-
-	// Benesi Mag Transforms
-	par->addParam("magTransf_order_of_transf_1", 0, morphNone, paramStandard, qslOrderOfTransf);
-	par->addParam("magTransf_order_of_transf_2", 0, morphNone, paramStandard, qslOrderOfTransf);
-	par->addParam("magTransf_order_of_transf_3", 0, morphNone, paramStandard, qslOrderOfTransf);
-	par->addParam("magTransf_order_of_transf_4", 0, morphNone, paramStandard, qslOrderOfTransf);
-	par->addParam("magTransf_order_of_transf_5", 0, morphNone, paramStandard, qslOrderOfTransf);
-
-	// Basic comboBox
-	par->addParam("combo_mode_A", 0, morphNone, paramStandard,
-		QStringList({"combo_mode0", "combo_mode1", "combo_mode2", "combo_mode3", "combo_mode4",
-			"combo_mode5", "combo_mode6", "combo_mode7"}));
-
-	// donut
-	par->addParam("donut_ring_radius", 1.0, morphAkima, paramStandard);
-	par->addParam("donut_ring_thickness", 0.1, morphAkima, paramStandard);
-	par->addParam("donut_factor", 3.0, morphAkima, paramStandard);
-	par->addParam("donut_number", 9.0, morphAkima, paramStandard);
 
 	// curvilinear
 	par->addParam("Cpara_enabledLinear", true, morphLinear, paramStandard);
@@ -697,52 +730,39 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("analyticDE_offset_0", 0.0, morphAkima, paramStandard);
 	par->addParam("analyticDE_offset_1", 1.0, morphAkima, paramStandard);
 	par->addParam("analyticDE_offset_2", 1.0, morphAkima, paramStandard);
-	par->addParam("analyticDE_factor_2", 2.0, morphAkima, paramStandard);
+	// par->addParam("analyticDE_factor_2", 2.0, morphAkima, paramStandard);
 	par->addParam("analyticDE_scale_1", 1.0, morphAkima, paramStandard);
+	par->addParam("analyticDE_enabled", true, morphLinear, paramStandard);
 	par->addParam("analyticDE_enabled_false", false, morphLinear, paramStandard);
-	par->addParam("analyticDE_enabled_auxR2_false", false, morphLinear, paramStandard);
-	par->addParam("analyticDE_offset_linear", 1.0, morphAkima, paramStandard);
-	par->addParam("analyticDE_scale_linear", 1.0, morphAkima, paramStandard);
+	// par->addParam("analyticDE_enabled_auxR2_false", false, morphLinear, paramStandard);
+	// par->addParam("analyticDE_offset_linear", 1.0, morphAkima, paramStandard);
+	// par->addParam("analyticDE_scale_linear", 1.0, morphAkima, paramStandard);
 
 	// color controls
-	par->addParam("fold_color_color_min", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_comp_fold", 1.0, morphAkima, paramStandard);
-	par->addParam("fold_color_comp_fold0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_comp_minR", 1.0, morphAkima, paramStandard);
-	par->addParam("fold_color_comp_scale", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_old_scale1", 1.0, morphAkima, paramStandard);
-	par->addParam("fold_color_new_scale0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_parab_scale0", 0.0, morphAkima, paramStandard);
+	par->addParam("fold_color_aux_color_enabled", true, morphLinear, paramStandard);
+	par->addParam("fold_color_aux_color_enabled_false", false, morphLinear, paramStandard);
+
 	par->addParam("fold_color_scaleA0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleB0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_scaleC0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleD0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_scaleE0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleF0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_scaleG0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleA1", 1.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleB1", 1.0, morphAkima, paramStandard);
 	par->addParam("fold_color_scaleC1", 1.0, morphAkima, paramStandard);
-	par->addParam("fold_color_period1", 1.0, morphAkima, paramStandard);
-	par->addParam("fold_color_trig_add1", 1.0, morphAkima, paramStandard);
 
-	par->addParam("fold_color_limit_min0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_limit_max9999", 9999.0, morphAkima, paramStandard);
 	par->addParam("fold_color_int_Ax0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_int_Ay0", 0.0, morphAkima, paramStandard);
 	par->addParam("fold_color_int_Az0", 0.0, morphAkima, paramStandard);
-	par->addParam("fold_color_parab_enabled_false", false, morphLinear, paramStandard);
-	par->addParam("fold_color_cos_enabled_false", false, morphLinear, paramStandard);
-	par->addParam("fold_color_aux_color_enabled_false", false, morphLinear, paramStandard);
+
 	par->addParam("fold_color_distance_enabled_false", false, morphLinear, paramStandard);
 
 	// common parameters for transforming formulas
+	par->addParam("transf_angle_0", 0.0, morphAkimaAngle, paramStandard);
 	par->addParam("transf_alpha_angle_offset", 0.0, morphAkimaAngle, paramStandard);
 	par->addParam("transf_beta_angle_offset", 0.0, morphAkimaAngle, paramStandard);
 	par->addParam("transf_folding_value", 2.0, morphAkima, paramStandard);
 	par->addParam("transf_folding_limit", 1.0, morphAkima, paramStandard);
 	par->addParam("transf_multiplication", 2.0, morphAkima, paramStandard);
-	par->addParam("transf_minimum_radius_neg1", -1.0, morphAkima, paramStandard);
 	par->addParam("transf_minimum_radius_0", 0.0, morphAkima, paramStandard);
 	par->addParam("transf_minimum_radius_05", 0.5, morphAkima, paramStandard);
 	par->addParam("transf_minimum_radius_06", 0.6, morphAkima, paramStandard);
@@ -792,6 +812,7 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("transf_int_A", 0, morphLinear, paramStandard);
 	par->addParam("transf_int_B", 0, morphLinear, paramStandard);
 	par->addParam("transf_int_1", 1, morphLinear, paramStandard);
+	par->addParam("transf_int_6", 6, morphLinear, paramStandard);
 	par->addParam("transf_int8_X", 8, morphLinear, paramStandard);
 	par->addParam("transf_int8_Y", 8, morphLinear, paramStandard);
 	par->addParam("transf_int8_Z", 8, morphLinear, paramStandard);
@@ -799,6 +820,7 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("transf_start_iterations", 0, morphLinear, paramStandard);
 	par->addParam("transf_start_iterations_250", 250, morphLinear, paramStandard);
 	par->addParam("transf_stop_iterations", 250, morphLinear, paramStandard);
+	par->addParam("transf_stop_iterations_15", 15, morphLinear, paramStandard);
 	par->addParam("transf_start_iterations_A", 0, morphLinear, paramStandard);
 	par->addParam("transf_stop_iterations_A", 250, morphLinear, paramStandard);
 	par->addParam("transf_start_iterations_B", 0, morphLinear, paramStandard);
@@ -813,6 +835,10 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("transf_stop_iterations_E", 250, morphLinear, paramStandard);
 	par->addParam("transf_start_iterations_F", 0, morphLinear, paramStandard);
 	par->addParam("transf_stop_iterations_F", 250, morphLinear, paramStandard);
+	par->addParam("transf_start_iterations_G", 0, morphLinear, paramStandard);
+	par->addParam("transf_stop_iterations_G", 250, morphLinear, paramStandard);
+	par->addParam("transf_start_iterations_H", 0, morphLinear, paramStandard);
+	par->addParam("transf_stop_iterations_H", 250, morphLinear, paramStandard);
 	par->addParam("transf_start_iterations_M", 0, morphLinear, paramStandard);
 	par->addParam("transf_stop_iterations_M", 250, morphLinear, paramStandard);
 	par->addParam("transf_start_iterations_P", 0, morphLinear, paramStandard);
@@ -898,6 +924,7 @@ void InitFractalParams(cParameterContainer *par)
 
 	par->addParam("transf_rotation", CVector3(0.0, 0.0, 0.0), morphAkimaAngle, paramStandard);
 	par->addParam("transf_rotation2", CVector3(0.0, 0.0, 0.0), morphAkimaAngle, paramStandard);
+	par->addParam("transf_rotationVary", CVector3(0.0, 0.0, 0.0), morphAkimaAngle, paramStandard);
 	par->addParam("transf_rotation44a", CVector3(0.0, 0.0, 0.0), morphAkimaAngle,
 		paramStandard); // ......................
 	par->addParam("transf_rotation44b", CVector3(0.0, 0.0, 0.0), morphAkimaAngle,
@@ -975,6 +1002,7 @@ void InitFractalParams(cParameterContainer *par)
 	par->addParam("transf_function_enabledSw_false", false, morphLinear, paramStandard);
 	par->addParam("transf_function_enabledX_false", false, morphLinear, paramStandard);
 	par->addParam("transf_rotation_enabled", false, morphLinear, paramStandard);
+	par->addParam("transf_rotation2_enabled_false", false, morphLinear, paramStandard);
 
 	// platonic_solid
 
@@ -994,7 +1022,7 @@ void InitPrimitiveParams(
 	par->addParam(
 		QString(primitiveName) + "_position", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
 	par->addParam(
-		QString(primitiveName) + "_rotation", CVector3(0.0, 0.0, 0.0), morphAkima, paramStandard);
+		QString(primitiveName) + "_rotation", CVector3(0.0, 0.0, 0.0), morphAkimaAngle, paramStandard);
 
 	// left to keep compatibility with older versions
 	par->addParam(
@@ -1047,11 +1075,16 @@ void InitPrimitiveParams(
 				QString(primitiveName) + "_repeat", CVector3(0.0, 0.0, 0.0), morphLinear, paramStandard);
 			break;
 		case fractal::objWater:
-			par->addParam(QString(primitiveName) + "_amplitude", 0.02, morphAkima, paramStandard);
+			par->addParam(QString(primitiveName) + "_relative_amplitude", 0.2, morphAkima, paramStandard);
 			par->addParam(QString(primitiveName) + "_length", 0.1, morphAkima, paramStandard);
 			par->addParam(QString(primitiveName) + "_anim_speed", 1.0, morphAkima, paramStandard);
 			par->addParam(QString(primitiveName) + "_iterations", 5, morphAkima, paramStandard);
 			par->addParam(QString(primitiveName) + "_empty", false, morphAkima, paramStandard);
+			par->addParam(
+				QString(primitiveName) + "_wave_from_objects_enable", false, morphAkima, paramStandard);
+			par->addParam(QString(primitiveName) + "_wave_from_objects_relative_amplitude", 0.5,
+				morphAkima, paramStandard);
+
 			break;
 		case fractal::objTorus:
 			par->addParam(QString(primitiveName) + "_radius", 1.0, morphAkima, paramStandard);
@@ -1069,84 +1102,22 @@ void InitPrimitiveParams(
 
 void InitMaterialParams(int materialId, cParameterContainer *par)
 {
-	par->addParam(cMaterial::Name("is_defined", materialId), false, morphNone, paramStandard);
-	par->addParam(cMaterial::Name("name", materialId), QString("material %1").arg(materialId),
-		morphNone, paramStandard);
-	par->addParam(cMaterial::Name("shading", materialId), 1.0, 0.0, 1e15, morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("specular", materialId), 1.0, 0.0, 1e15, morphAkima, paramStandard);
-	par->addParam(
-		cMaterial::Name("specular_width", materialId), 1.0, 1e-10, 1e15, morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("specular_color", materialId), sRGB(65535, 65535, 65535),
-		morphAkima, paramStandard);
-	par->addParam(
-		cMaterial::Name("reflectance", materialId), 0.0, 0.0, 1e15, morphAkima, paramStandard);
-	par->addParam(
-		cMaterial::Name("luminosity", materialId), 0.0, 0.0, 1e15, morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("transparency_of_surface", materialId), 0.0, 0.0, 1.0, morphAkima,
+	par->addParam(cMaterial::Name("color_texture_intensity", materialId), 1.0, 0.0, 1e10, morphAkima,
 		paramStandard);
-	par->addParam(cMaterial::Name("transparency_of_interior", materialId), 1.0, 0.0, 1.0, morphAkima,
-		paramStandard);
-	par->addParam(cMaterial::Name("transparency_index_of_refraction", materialId), 1.5, 0.0, 100.0,
-		morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("surface_color", materialId), sRGB(50000, 50000, 50000), morphAkima,
-		paramStandard);
-	par->addParam(cMaterial::Name("transparency_interior_color", materialId),
-		sRGB(65535, 65535, 65535), morphLinear, paramStandard);
-	par->addParam(cMaterial::Name("luminosity_color", materialId), sRGB(65535, 65535, 65535),
+	par->addParam(cMaterial::Name("coloring_palette_offset", materialId), 0.0, 0.0, 256.0,
 		morphLinear, paramStandard);
 	par->addParam(
-		cMaterial::Name("fresnel_reflectance", materialId), false, morphLinear, paramStandard);
-	par->addParam(cMaterial::Name("texture_center", materialId), CVector3(0.0, 0.0, 0.0), morphAkima,
-		paramStandard);
-	par->addParam(cMaterial::Name("texture_rotation", materialId), CVector3(0.0, 0.0, 0.0),
-		morphAkimaAngle, paramStandard);
-	par->addParam(cMaterial::Name("texture_scale", materialId), CVector3(1.0, 1.0, 1.0), morphAkima,
-		paramStandard);
+		cMaterial::Name("coloring_palette_size", materialId), 10, 1, 255, morphLinear, paramStandard);
 	par->addParam(
 		cMaterial::Name("coloring_random_seed", materialId), 269259, morphLinear, paramStandard);
 	par->addParam(cMaterial::Name("coloring_saturation", materialId), 1.0, 0.0, 1000.0, morphLinear,
 		paramStandard);
 	par->addParam(
 		cMaterial::Name("coloring_speed", materialId), 1.0, 0.0, 1e15, morphLinear, paramStandard);
-	par->addParam(
-		cMaterial::Name("coloring_palette_size", materialId), 10, 1, 255, morphLinear, paramStandard);
-	par->addParam(cMaterial::Name("coloring_palette_offset", materialId), 0.0, 0.0, 256.0,
-		morphLinear, paramStandard);
-	par->addParam(cMaterial::Name("texture_mapping_type", materialId), int(texture::mappingPlanar),
-		morphNone, paramStandard);
-	par->addParam(
-		cMaterial::Name("use_colors_from_palette", materialId), true, morphLinear, paramStandard);
-	par->addParam(
-		cMaterial::Name("use_color_texture", materialId), false, morphLinear, paramStandard);
-	par->addParam(
-		cMaterial::Name("use_diffusion_texture", materialId), false, morphLinear, paramStandard);
-	par->addParam(
-		cMaterial::Name("use_luminosity_texture", materialId), false, morphLinear, paramStandard);
-	par->addParam(
-		cMaterial::Name("use_displacement_texture", materialId), false, morphLinear, paramStandard);
-	par->addParam(
-		cMaterial::Name("use_normal_map_texture", materialId), false, morphLinear, paramStandard);
-	par->addParam(cMaterial::Name("normal_map_texture_from_bumpmap", materialId), false, morphLinear,
-		paramStandard);
-	par->addParam(cMaterial::Name("color_texture_intensity", materialId), 1.0, 0.0, 1e10, morphAkima,
-		paramStandard);
-	par->addParam(cMaterial::Name("luminosity_texture_intensity", materialId), 1.0, 0.0, 10.0,
-		morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("diffusion_texture_intensity", materialId), 1.0, 0.0, 1.0,
+	par->addParam(cMaterial::Name("diffusion_texture_intensity", materialId), 1.0, 0.0, 1e10,
 		morphAkima, paramStandard);
 	par->addParam(cMaterial::Name("displacement_texture_height", materialId), 0.1, 1e-12, 1e4,
 		morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("normal_map_texture_height", materialId), 1.0, 1e-4, 1e4,
-		morphAkima, paramStandard);
-	par->addParam(cMaterial::Name("normal_map_texture_invert_green", materialId), false, morphNone,
-		paramStandard);
-	par->addParam(cMaterial::Name("fractal_coloring_algorithm", materialId),
-		int(sFractalColoring::fractalColoringStandard), 0, 4, morphNone, paramStandard);
-	par->addParam(cMaterial::Name("fractal_coloring_sphere_radius", materialId), 1.0, 0.0, 1e20,
-		morphNone, paramStandard);
-	par->addParam(cMaterial::Name("fractal_coloring_line_direction", materialId),
-		CVector3(1.0, 0.0, 0.0), morphNone, paramStandard);
-
 	par->addParam(cMaterial::Name("file_color_texture", materialId),
 		QDir::toNativeSeparators(
 									systemData.sharedDir + "textures" + QDir::separator() + "color_texture.jpg"),
@@ -1155,19 +1126,215 @@ void InitMaterialParams(int materialId, cParameterContainer *par)
 		QDir::toNativeSeparators(
 									systemData.sharedDir + "textures" + QDir::separator() + "diffusion_texture.jpg"),
 		morphNone, paramStandard);
-	par->addParam(cMaterial::Name("file_luminosity_texture", materialId),
-		QDir::toNativeSeparators(
-									systemData.sharedDir + "textures" + QDir::separator() + "luminosity_texture.jpg"),
-		morphNone, paramStandard);
 	par->addParam(cMaterial::Name("file_displacement_texture", materialId),
 		QDir::toNativeSeparators(systemData.sharedDir + "textures" + QDir::separator()
 														 + "displacement_texture.jpg"),
 		morphNone, paramStandard);
-
+	par->addParam(cMaterial::Name("file_luminosity_texture", materialId),
+		QDir::toNativeSeparators(
+									systemData.sharedDir + "textures" + QDir::separator() + "luminosity_texture.jpg"),
+		morphNone, paramStandard);
 	par->addParam(cMaterial::Name("file_normal_map_texture", materialId),
 		QDir::toNativeSeparators(
 									systemData.sharedDir + "textures" + QDir::separator() + "normal_map_texture.jpg"),
 		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_add_enabled_false", materialId), false, morphNone,
+		paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_add_max", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_add_spread", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_add_start_value", materialId), 0.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_algorithm", materialId),
+		int(fractalColoring_Standard), 0, 4, morphNone, paramStandard); // = 0,0,4
+	par->addParam(cMaterial::Name("fractal_coloring_aux_color_false", materialId), false, morphNone,
+		paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_aux_color_hybrid_weight", materialId), 0.0, -1e20,
+		1e20, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_aux_color_scale1", materialId), 1.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_aux_color_weight", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_color_4D_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_color_preV215_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_cos_add", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_cos_enabled_false", materialId), false, morphNone,
+		paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_cos_period", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_cos_start_value", materialId), 0.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_extra_color_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_extra_color_options_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_global_palette_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_div_de_scale1", materialId), 1.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_i_start_value", materialId), 0, 0, 9999,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_ic_fabs_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_ic_rad_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_ic_rad_weight", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_ic_xyz_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_init_cond_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_initial_color_value", materialId), 0.0, -1e20,
+		1e20, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_iter_add_scale_enabled_true", materialId), true,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_iter_add_scale", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_iter_group_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_iter_scale_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_iter_scale", materialId), 0.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_line_direction", materialId),
+		CVector4(1.0, 0.0, 0.0, 0.0), morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_max_color_value", materialId), 1e6, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_min_color_value", materialId), 0.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_orbit_trap_scale1", materialId), 1.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_orbit_trap_true", materialId), true, morphNone,
+		paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_orbit_trap_weight", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_parab_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_parab_scale", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_parab_start_value", materialId), 0.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_div_1e13_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_div_de_1e13_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_div_de_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_div_de_squared_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_div_de_weight", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_enabled_false", materialId), false, morphNone,
+		paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_squared_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_rad_weight", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_round_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_round_scale", materialId), 1.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_sphere_radius", materialId), 1.0, 0.0, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_temp_limit_false", materialId), false, morphNone,
+		paramStandard); // TODO remove when finished
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_000", materialId), CVector3(1.0, 1.0, 1.0),
+		morphAkima, paramStandard); // vec4??
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_bias_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_div_1e13_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_fabs_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_iter_scale", materialId), 0.0, -1e20, 1e20,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_x_sqrd_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_y_sqrd_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyz_z_sqrd_enabled_false", materialId), false,
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("fractal_coloring_xyzC_111", materialId), CVector3(1.0, 1.0, 1.0),
+		morphAkima, paramStandard); // vec4??
+	par->addParam(
+		cMaterial::Name("fresnel_reflectance", materialId), false, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("iridescence_enabled", materialId), false, morphLinear, paramStandard);
+	par->addParam(cMaterial::Name("iridescence_intensity", materialId), 1.0, 1e-10, 1e15, morphAkima,
+		paramStandard);
+	par->addParam(cMaterial::Name("iridescence_subsurface_thickness", materialId), 1.0, 1e-10, 1e15,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("is_defined", materialId), false, morphNone, paramStandard);
+	par->addParam(cMaterial::Name("luminosity_color", materialId), sRGB(65535, 65535, 65535),
+		morphLinear, paramStandard);
+	par->addParam(cMaterial::Name("luminosity_texture_intensity", materialId), 1.0, 0.0, 1e10,
+		morphAkima, paramStandard);
+	par->addParam(
+		cMaterial::Name("luminosity", materialId), 0.0, 0.0, 1e15, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("metallic", materialId), true, morphLinear, paramStandard);
+	par->addParam(cMaterial::Name("name", materialId), QString("material %1").arg(materialId),
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("normal_map_texture_from_bumpmap", materialId), false, morphLinear,
+		paramStandard);
+	par->addParam(cMaterial::Name("normal_map_texture_height", materialId), 1.0, 1e-4, 1e4,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("normal_map_texture_invert_green", materialId), false, morphNone,
+		paramStandard);
+	par->addParam(
+		cMaterial::Name("reflectance", materialId), 0.0, 0.0, 1e15, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("shading", materialId), 1.0, 0.0, 1e15, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("specular_color", materialId), sRGB(65535, 65535, 65535),
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("specular_metallic_roughness", materialId), 0.1, 0.0, 1e4,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("specular_metallic_width", materialId), 1.0, 1e-10, 1e15,
+		morphAkima, paramStandard);
+	par->addParam(
+		cMaterial::Name("specular_metallic", materialId), 2.0, 0.0, 1e15, morphAkima, paramStandard);
+	par->addParam(
+		cMaterial::Name("specular_plastic_enable", materialId), true, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("specular_width", materialId), 0.05, 1e-10, 1e15, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("specular", materialId), 5.0, 0.0, 1e15, morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("surface_color", materialId), sRGB(50000, 50000, 50000), morphAkima,
+		paramStandard);
+	par->addParam(cMaterial::Name("texture_center", materialId), CVector3(0.0, 0.0, 0.0), morphAkima,
+		paramStandard);
+	par->addParam(cMaterial::Name("texture_fractalize_cube_size", materialId), 2.0, 1e-15, 1e5,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("texture_fractalize_start_iteration", materialId), 0, 0, 250,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("texture_fractalize", materialId), false, morphNone, paramStandard);
+	par->addParam(cMaterial::Name("texture_mapping_type", materialId), int(texture::mappingPlanar),
+		morphNone, paramStandard);
+	par->addParam(cMaterial::Name("texture_rotation", materialId), CVector3(0.0, 0.0, 0.0),
+		morphAkimaAngle, paramStandard);
+	par->addParam(cMaterial::Name("texture_scale", materialId), CVector3(1.0, 1.0, 1.0), morphAkima,
+		paramStandard);
+	par->addParam(cMaterial::Name("transparency_index_of_refraction", materialId), 1.5, 0.0, 100.0,
+		morphAkima, paramStandard);
+	par->addParam(cMaterial::Name("transparency_interior_color", materialId),
+		sRGB(65535, 65535, 65535), morphLinear, paramStandard);
+	par->addParam(cMaterial::Name("transparency_of_interior", materialId), 1.0, 0.0, 1.0, morphAkima,
+		paramStandard);
+	par->addParam(cMaterial::Name("transparency_of_surface", materialId), 0.0, 0.0, 1.0, morphAkima,
+		paramStandard);
+	par->addParam(
+		cMaterial::Name("use_color_texture", materialId), false, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("use_colors_from_palette", materialId), true, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("use_diffusion_texture", materialId), false, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("use_displacement_texture", materialId), false, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("use_luminosity_texture", materialId), false, morphLinear, paramStandard);
+	par->addParam(
+		cMaterial::Name("use_normal_map_texture", materialId), false, morphLinear, paramStandard);
 
 	cColorPalette palette(par->Get<int>(cMaterial::Name("coloring_palette_size", materialId)),
 		par->Get<int>(cMaterial::Name("coloring_random_seed", materialId)), 1.0);
@@ -1227,11 +1394,13 @@ void DeletePrimitiveParams(
 			par->DeleteParameter(QString(primitiveName) + "_repeat");
 			break;
 		case fractal::objWater:
-			par->DeleteParameter(QString(primitiveName) + "_amplitude");
+			par->DeleteParameter(QString(primitiveName) + "_relative_amplitude");
 			par->DeleteParameter(QString(primitiveName) + "_length");
 			par->DeleteParameter(QString(primitiveName) + "_anim_speed");
 			par->DeleteParameter(QString(primitiveName) + "_iterations");
 			par->DeleteParameter(QString(primitiveName) + "_empty");
+			par->DeleteParameter(QString(primitiveName) + "_wave_from_objects_enable");
+			par->DeleteParameter(QString(primitiveName) + "_wave_from_objects_relative_amplitude");
 			break;
 
 		default: break;
@@ -1241,10 +1410,9 @@ void DeletePrimitiveParams(
 void DeleteAllPrimitiveParams(cParameterContainer *par)
 {
 	QList<QString> list = par->GetListOfParameters();
-	for (int i = 0; i < list.size(); i++)
+	for (auto &parameterName : list)
 	{
-		QString parameterName = list.at(i);
-		if (parameterName.left(parameterName.indexOf('_')) == "primitive")
+		if (parameterName.leftRef(parameterName.indexOf('_')) == "primitive")
 		{
 			par->DeleteParameter(parameterName);
 		}
@@ -1254,10 +1422,9 @@ void DeleteAllPrimitiveParams(cParameterContainer *par)
 void DeleteAllMaterialParams(cParameterContainer *par)
 {
 	QList<QString> list = par->GetListOfParameters();
-	for (int i = 0; i < list.size(); i++)
+	for (auto &parameterName : list)
 	{
-		QString parameterName = list.at(i);
-		if (parameterName.left(3) == "mat")
+		if (parameterName.leftRef(3) == "mat")
 		{
 			par->DeleteParameter(parameterName);
 		}

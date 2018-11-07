@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -77,7 +77,7 @@ public:
 
 	cRenderWorker(const sParamRender *_params, const cNineFractals *_fractal,
 		sThreadData *_threadData, sRenderData *_data, cImage *_image);
-	~cRenderWorker();
+	~cRenderWorker() override;
 
 	// PrepareAOVectors() is public because is needed also for OpenCL data
 	void PrepareAOVectors();
@@ -105,6 +105,7 @@ private:
 
 	struct sRayMarchingIn
 	{
+		inline sRayMarchingIn &operator=(const sRayMarchingIn &assign) = default;
 		CVector3 start;
 		CVector3 direction;
 		double minScan;
@@ -115,6 +116,7 @@ private:
 
 	struct sRayMarchingInOut
 	{
+		inline sRayMarchingInOut &operator=(const sRayMarchingInOut &assign) = default;
 		sStep *stepBuff;
 		int *buffCount;
 	};
@@ -197,35 +199,44 @@ private:
 	void RayMarching(sRayMarchingIn &in, sRayMarchingInOut *inOut, sRayMarchingOut *out) const;
 	double CalcDistThresh(CVector3 point) const;
 	double CalcDelta(CVector3 point) const;
-	static double IterOpacity(double step, double iters, double maxN, double trim, double opacitySp);
+	static double IterOpacity(
+		double step, double iters, double maxN, double trim, double trimHigh, double opacitySp);
 	sRayRecursionOut RayRecursion(sRayRecursionIn in, sRayRecursionInOut &inOut);
 	void MonteCarloDOF(CVector3 *startRay, CVector3 *viewVector) const;
 	double MonteCarloDOFNoiseEstimation(
 		sRGBFloat pixel, int repeat, sRGBFloat pixelSum, sRGBFloat &StdDevSum);
 
 	// shaders
-	sRGBAfloat ObjectShader(
-		const sShaderInputData &input, sRGBAfloat *surfaceColour, sRGBAfloat *specularOut) const;
+	sRGBAfloat ObjectShader(const sShaderInputData &input, sRGBAfloat *surfaceColour,
+		sRGBAfloat *specularOut, sRGBFloat *iridescence) const;
 	CVector3 CalculateNormals(const sShaderInputData &input) const;
 	static sRGBAfloat MainShading(const sShaderInputData &input);
 	sRGBAfloat MainShadow(const sShaderInputData &input) const;
-	sRGBAfloat MainSpecular(const sShaderInputData &input) const;
+	sRGBAfloat SpecularHighlight(const sShaderInputData &input, CVector3 lightVector,
+		float specularWidth, float roughness) const;
+	sRGBAfloat SpecularHighlightCombined(
+		const sShaderInputData &input, CVector3 lightVector, sRGBAfloat surfaceColor) const;
 	sRGBAfloat SurfaceColour(const sShaderInputData &input) const;
 	sRGBAfloat FastAmbientOcclusion(const sShaderInputData &input) const;
 	sRGBAfloat AmbientOcclusion(const sShaderInputData &input) const;
 	sRGBAfloat EnvMapping(const sShaderInputData &input) const;
-	sRGBAfloat AuxLightsShader(const sShaderInputData &input, sRGBAfloat *specularOut) const;
-	double AuxShadow(const sShaderInputData &input, double distance, CVector3 lightVector) const;
-	sRGBAfloat LightShading(
-		const sShaderInputData &input, const sLight *light, int number, sRGBAfloat *outSpecular) const;
+	sRGBAfloat AuxLightsShader(
+		const sShaderInputData &input, sRGBAfloat surfaceColor, sRGBAfloat *specularOut) const;
+	double AuxShadow(
+		const sShaderInputData &input, double distance, CVector3 lightVector, double intensity) const;
+	sRGBAfloat LightShading(const sShaderInputData &input, sRGBAfloat surfaceColor,
+		const sLight *light, int number, sRGBAfloat *outSpecular) const;
 	sRGBAfloat BackgroundShader(const sShaderInputData &input) const;
-	sRGBAfloat FakeLights(const sShaderInputData &input, sRGBAfloat *fakeSpec) const;
+	sRGBAfloat FakeLights(
+		const sShaderInputData &input, sRGBAfloat surfaceColor, sRGBAfloat *fakeSpec) const;
 	sRGBAfloat VolumetricShader(
 		const sShaderInputData &input, sRGBAfloat oldPixel, sRGBAfloat *opacityOut) const;
 
 	sRGBFloat TextureShader(
 		const sShaderInputData &input, texture::enumTextureSelection texSelect, cMaterial *mat) const;
 	CVector3 NormalMapShader(const sShaderInputData &input) const;
+	sRGBFloat IridescenceShader(const sShaderInputData &input) const;
+	sRGBFloat GlobalIlumination(const sShaderInputData &input, sRGBAfloat objectColor) const;
 
 	// data got from main thread
 	const sParamRender *params;
@@ -243,6 +254,7 @@ private:
 	CVector3 baseZ;
 	CVector3 viewAngle;
 	CVector3 shadowVector;
+	double actualHue;
 	int AOVectorsCount;
 	int reflectionsMax;
 	bool stopRequest;

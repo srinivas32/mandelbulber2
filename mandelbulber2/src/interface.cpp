@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -59,6 +59,7 @@
 #include "opencl_global.h"
 #include "post_effect_hdr_blur.h"
 #include "queue.hpp"
+#include "random.hpp"
 #include "render_data.hpp"
 #include "render_job.hpp"
 #include "render_ssao.h"
@@ -227,9 +228,9 @@ void cInterface::ShowUi()
 	progressBar->setAlignment(Qt::AlignCenter);
 	progressBarLayout->addWidget(progressBar);
 
-	QFrame *progressBarFrame = new QFrame;
-	progressBarFrame->setLayout(progressBarLayout);
-	mainWindow->ui->statusbar->addPermanentWidget(progressBarFrame);
+	QFrame *progressBarFrameInternal = new QFrame;
+	progressBarFrameInternal->setLayout(progressBarLayout);
+	mainWindow->ui->statusbar->addPermanentWidget(progressBarFrameInternal);
 
 	mainWindow->setWindowTitle(QString("Mandelbulber (") + systemData.lastSettingsFile + ")");
 
@@ -260,6 +261,9 @@ void cInterface::ShowUi()
 	mainWindow->GetWidgetDockNavigation()->EnableOpenCLModeComboBox(
 		gPar->Get<bool>("opencl_enabled"));
 #endif
+
+	if (gPar->Get<bool>("ui_colorize"))
+		ColorizeGroupBoxes(mainWindow, gPar->Get<int>("ui_colorize_random_seed"));
 
 	renderedImage->show();
 
@@ -366,6 +370,8 @@ void cInterface::ConnectSignals() const
 		SLOT(slotMenuAboutManual()));
 	connect(
 		mainWindow->ui->actionUser_News, SIGNAL(triggered()), mainWindow, SLOT(slotMenuAboutNews()));
+	connect(mainWindow->ui->actionUser_HotKeys, SIGNAL(triggered()), mainWindow,
+		SLOT(slotMenuAboutHotKeys()));
 	connect(mainWindow->ui->actionAbout_Mandelbulber, SIGNAL(triggered()), mainWindow,
 		SLOT(slotMenuAboutMandelbulber()));
 	connect(mainWindow->ui->actionAbout_ThirdParty, SIGNAL(triggered()), mainWindow,
@@ -391,11 +397,11 @@ void cInterface::ConnectSignals() const
 		SLOT(slotKeyPressOnImage(QKeyEvent *)));
 	connect(renderedImage, SIGNAL(keyRelease(QKeyEvent *)), mainWindow,
 		SLOT(slotKeyReleaseOnImage(QKeyEvent *)));
-	connect(renderedImage, SIGNAL(mouseWheelRotated(int)), mainWindow,
-		SLOT(slotMouseWheelRotatedOnImage(int)));
+	connect(renderedImage, SIGNAL(mouseWheelRotatedWithCtrl(int, int, int)), mainWindow,
+		SLOT(slotMouseWheelRotatedWithCtrlOnImage(int, int, int)));
 
 	connect(mainWindow->ui->widgetDockRenderingEngine, SIGNAL(stateChangedConnectDetailLevel(int)),
-		gMainInterface->mainWindow->ui->widgetImageAjustments, SLOT(slotCheckedDetailLevelLock(int)));
+		gMainInterface->mainWindow->ui->widgetImageAdjustments, SLOT(slotCheckedDetailLevelLock(int)));
 
 	// DockWidgets and Toolbar
 
@@ -520,13 +526,13 @@ void cInterface::StartRender(bool noUndo)
 	cRenderJob *renderJob = new cRenderJob(
 		gPar, gParFractal, mainImage, &stopRequest, renderedImage); // deleted by deleteLater()
 
-	QObject::connect(renderJob,
-		SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)), mainWindow,
-		SLOT(slotUpdateProgressAndStatus(const QString &, const QString &, double)));
-	QObject::connect(renderJob, SIGNAL(updateStatistics(cStatistics)),
-		mainWindow->ui->widgetDockStatistics, SLOT(slotUpdateStatistics(cStatistics)));
-	QObject::connect(renderJob, SIGNAL(fullyRendered(const QString &, const QString &)), systemTray,
+	connect(renderJob, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
+		mainWindow, SLOT(slotUpdateProgressAndStatus(const QString &, const QString &, double)));
+	connect(renderJob, SIGNAL(updateStatistics(cStatistics)), mainWindow->ui->widgetDockStatistics,
+		SLOT(slotUpdateStatistics(cStatistics)));
+	connect(renderJob, SIGNAL(fullyRendered(const QString &, const QString &)), systemTray,
 		SLOT(showMessage(const QString &, const QString &)));
+	connect(renderJob, SIGNAL(updateImage()), renderedImage, SLOT(update()));
 
 	cRenderingConfiguration config;
 	config.EnableNetRender();
@@ -543,6 +549,7 @@ void cInterface::StartRender(bool noUndo)
 	// show distance in statistics table
 	double distance = GetDistanceForPoint(gPar->Get<CVector3>("camera"), gPar, gParFractal);
 	mainWindow->ui->widgetDockStatistics->UpdateDistanceToFractal(distance);
+	gKeyframeAnimation->UpdateActualCameraPosition(gPar->Get<CVector3>("camera"));
 
 	QThread *thread = new QThread; // deleted by deleteLater()
 	renderJob->moveToThread(thread);
@@ -555,13 +562,14 @@ void cInterface::StartRender(bool noUndo)
 	thread->start();
 }
 
-void cInterface::MoveCamera(QString buttonName)
+void cInterface::MoveCamera(QString buttonName, bool synchronizeAndRender)
 {
 	using namespace cameraMovementEnums;
 
 	WriteLog("cInterface::MoveCamera(QString buttonName): button: " + buttonName, 2);
+
 	// get data from interface
-	SynchronizeInterface(gPar, gParFractal, qInterface::read);
+	if (synchronizeAndRender) SynchronizeInterface(gPar, gParFractal, qInterface::read);
 	CVector3 camera = gPar->Get<CVector3>("camera");
 	CVector3 target = gPar->Get<CVector3>("target");
 	CVector3 topVector = gPar->Get<CVector3>("camera_top");
@@ -643,9 +651,8 @@ void cInterface::MoveCamera(QString buttonName)
 	double dist = cameraTarget.GetDistance();
 	gPar->Set("camera_distance_to_target", dist);
 
-	SynchronizeInterface(gPar, gParFractal, qInterface::write);
-
-	StartRender();
+	if (synchronizeAndRender) SynchronizeInterface(gPar, gParFractal, qInterface::write);
+	if (synchronizeAndRender) StartRender();
 }
 
 void cInterface::CameraOrTargetEdited() const
@@ -678,14 +685,14 @@ void cInterface::CameraOrTargetEdited() const
 	SynchronizeInterface(gPar, gParFractal, qInterface::write);
 }
 
-void cInterface::RotateCamera(QString buttonName)
+void cInterface::RotateCamera(QString buttonName, bool synchronizeAndRender)
 {
 	using namespace cameraMovementEnums;
 
 	WriteLog("cInterface::RotateCamera(QString buttonName): button: " + buttonName, 2);
 
 	// get data from interface
-	SynchronizeInterface(gPar, gParFractal, qInterface::read);
+	if (synchronizeAndRender) SynchronizeInterface(gPar, gParFractal, qInterface::read);
 	CVector3 camera = gPar->Get<CVector3>("camera");
 	CVector3 target = gPar->Get<CVector3>("target");
 	CVector3 topVector = gPar->Get<CVector3>("camera_top");
@@ -768,9 +775,8 @@ void cInterface::RotateCamera(QString buttonName)
 	double dist = cameraTarget.GetDistance();
 	gPar->Set("camera_distance_to_target", dist);
 
-	SynchronizeInterface(gPar, gParFractal, qInterface::write);
-
-	StartRender();
+	if (synchronizeAndRender) SynchronizeInterface(gPar, gParFractal, qInterface::write);
+	if (synchronizeAndRender) StartRender();
 }
 
 void cInterface::RotationEdited() const
@@ -938,6 +944,7 @@ void cInterface::RefreshMainImage()
 		imageAdjustments.brightness = gPar->Get<double>("brightness");
 		imageAdjustments.contrast = gPar->Get<double>("contrast");
 		imageAdjustments.imageGamma = gPar->Get<double>("gamma");
+		imageAdjustments.saturation = gPar->Get<double>("saturation");
 		imageAdjustments.hdrEnabled = gPar->Get<bool>("hdr");
 
 		mainImage->SetImageParameters(imageAdjustments);
@@ -960,7 +967,12 @@ void cInterface::RefreshPostEffects()
 	if (!mainImage->IsUsed())
 	{
 		mainImage->NullPostEffect();
+
 		RefreshMainImage();
+
+		// replace image size parameters in case if user changed image size just before image update
+		gPar->Set("image_width", mainImage->GetWidth());
+		gPar->Set("image_height", mainImage->GetHeight());
 
 		stopRequest = false;
 		if (gPar->Get<bool>("ambient_occlusion_enabled")
@@ -1007,6 +1019,7 @@ void cInterface::RefreshPostEffects()
 					SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
 					gMainInterface->mainWindow,
 					SLOT(slotUpdateProgressAndStatus(const QString &, const QString &, double)));
+				connect(&rendererSSAO, SIGNAL(updateImage()), renderedImage, SLOT(update()));
 
 				rendererSSAO.RenderSSAO();
 
@@ -1035,10 +1048,10 @@ void cInterface::RefreshPostEffects()
 				sParamRender params(gPar);
 				// cRenderingConfiguration config;
 				cPostRenderingDOF dof(mainImage);
-				QObject::connect(&dof,
-					SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
+				connect(&dof, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)),
 					gMainInterface->mainWindow,
 					SLOT(slotUpdateProgressAndStatus(const QString &, const QString &, double)));
+				connect(&dof, SIGNAL(updateImage()), renderedImage, SLOT(update()));
 				cRegion<int> screenRegion(0, 0, mainImage->GetWidth(), mainImage->GetHeight());
 				dof.Render(screenRegion,
 					params.DOFRadius * (mainImage->GetWidth() + mainImage->GetHeight()) / 2000.0,
@@ -1162,6 +1175,17 @@ void cInterface::SetByMouse(
 
 			if (perspType == params::perspEquirectangular) aspectRatio = 2.0;
 
+			double wheelDistance = 1.0;
+			if (clickMode == RenderedImage::clickMoveCamera)
+			{
+
+				if (mode.length() > 1) // if mouse wheel delta is available
+				{
+					int wheelDelta = mode.at(1).toInt();
+					wheelDistance = 0.001 * fabs(wheelDelta);
+				}
+			}
+
 			CVector3 angles = cameraTarget.GetRotation();
 			CRotationMatrix mRot;
 			mRot.SetRotation(angles);
@@ -1172,6 +1196,8 @@ void cInterface::SetByMouse(
 			normalizedPoint.x = (imagePoint.x / width - 0.5) * aspectRatio;
 			normalizedPoint.y = (imagePoint.y / height - 0.5) * (-1.0) * reverse;
 
+			normalizedPoint *= wheelDistance;
+
 			viewVector = CalculateViewVector(normalizedPoint, fov, perspType, mRot);
 
 			CVector3 point = camera + viewVector * depth;
@@ -1181,7 +1207,10 @@ void cInterface::SetByMouse(
 				case RenderedImage::clickMoveCamera:
 				{
 					double distance = (camera - point).Length();
+
 					double moveDistance = (stepMode == absolute) ? movementStep : distance * movementStep;
+					moveDistance *= wheelDistance;
+
 					if (stepMode == relative)
 					{
 						if (moveDistance > depth * 0.99) moveDistance = depth * 0.99;
@@ -1257,6 +1286,7 @@ void cInterface::SetByMouse(
 				{
 					double frontDist = gPar->Get<double>("aux_light_manual_placement_dist");
 					bool placeBehind = gPar->Get<bool>("aux_light_place_behind");
+					double distanceLimit = gPar->Get<double>("view_distance_max");
 					CVector3 pointCorrected;
 					if (!placeBehind)
 					{
@@ -1264,8 +1294,8 @@ void cInterface::SetByMouse(
 					}
 					else
 					{
-						double distanceBehind = traceBehindFractal(
-							gPar, gParFractal, frontDist, viewVector, depth, 1.0 / mainImage->GetHeight());
+						double distanceBehind = traceBehindFractal(gPar, gParFractal, frontDist, viewVector,
+							depth, 1.0 / mainImage->GetHeight(), distanceLimit);
 						pointCorrected = point + viewVector * distanceBehind;
 					}
 					double estDistance = GetDistanceForPoint(pointCorrected, gPar, gParFractal);
@@ -1329,6 +1359,18 @@ void cInterface::SetByMouse(
 					ReEnablePeriodicRefresh();
 					break;
 				}
+				case RenderedImage::clickWrapLimitsAroundObject:
+				{
+					double distanceCameraToCenter = CVector3(camera - point).Length();
+					CVector3 distanceV111_100 = CVector3(1.0 * distanceCameraToCenter,
+						1.0 * distanceCameraToCenter, 1.0 * distanceCameraToCenter);
+					CVector3 limitMin = point - distanceV111_100;
+					CVector3 limitMax = point + distanceV111_100;
+					// try to find object close limits in the bounding box defined by point +- 100% distance
+					// to view vector
+					SetBoundingBoxAsLimits(limitMin, limitMax);
+					break;
+				}
 			}
 		}
 	}
@@ -1361,6 +1403,7 @@ void cInterface::Undo()
 {
 	bool refreshFrames = false;
 	bool refreshKeyframes = false;
+	gMainInterface->DisablePeriodicRefresh();
 	gInterfaceReadyForSynchronization = false;
 	if (gUndo.Undo(gPar, gParFractal, gAnimFrames, gKeyframes, &refreshFrames, &refreshKeyframes))
 	{
@@ -1373,12 +1416,14 @@ void cInterface::Undo()
 		StartRender(true);
 	}
 	gInterfaceReadyForSynchronization = true;
+	gMainInterface->ReEnablePeriodicRefresh();
 }
 
 void cInterface::Redo()
 {
 	bool refreshFrames = false;
 	bool refreshKeyframes = false;
+	gMainInterface->DisablePeriodicRefresh();
 	gInterfaceReadyForSynchronization = false;
 	if (gUndo.Redo(gPar, gParFractal, gAnimFrames, gKeyframes, &refreshFrames, &refreshKeyframes))
 	{
@@ -1391,6 +1436,7 @@ void cInterface::Redo()
 		StartRender(true);
 	}
 	gInterfaceReadyForSynchronization = true;
+	gMainInterface->ReEnablePeriodicRefresh();
 }
 
 void cInterface::ResetView()
@@ -1464,8 +1510,44 @@ void cInterface::ResetView()
 	StartRender();
 }
 
-void cInterface::SetBoundingBoxAsLimits()
+void cInterface::BoundingBoxMove(char dimension, double moveLower, double moveUpper)
 {
+	SynchronizeInterface(gPar, gParFractal, qInterface::read);
+	CVector3 limitMin = gPar->Get<CVector3>("limit_min");
+	CVector3 limitMax = gPar->Get<CVector3>("limit_max");
+	CVector3 limitDifference = limitMax - limitMin;
+	switch (dimension)
+	{
+		case 'x':
+			limitMin.x -= moveLower * limitDifference.x;
+			limitMax.x += moveUpper * limitDifference.x;
+			break;
+		case 'y':
+			limitMin.y -= moveLower * limitDifference.y;
+			limitMax.y += moveUpper * limitDifference.y;
+			break;
+		case 'z':
+			limitMin.z -= moveLower * limitDifference.z;
+			limitMax.z += moveUpper * limitDifference.z;
+			break;
+	}
+	gPar->Set("limit_min", limitMin);
+	gPar->Set("limit_max", limitMax);
+	SynchronizeInterface(gPar, gParFractal, qInterface::write);
+}
+
+void cInterface::SetBoundingBoxAsLimitsTotal()
+{
+	double outerBounding = gPar->Get<double>("limit_outer_bounding");
+	CVector3 outerBoundingMin(-outerBounding, -outerBounding, -outerBounding);
+	CVector3 outerBoundingMax(outerBounding, outerBounding, outerBounding);
+	SetBoundingBoxAsLimits(outerBoundingMin, outerBoundingMax);
+}
+
+void cInterface::SetBoundingBoxAsLimits(CVector3 outerBoundingMin, CVector3 outerBoundingMax)
+{
+	CVector3 boundingCenter = (outerBoundingMin + outerBoundingMax) / 2;
+
 	SynchronizeInterface(gPar, gParFractal, qInterface::read);
 
 	cParameterContainer parTemp = *gPar;
@@ -1479,7 +1561,7 @@ void cInterface::SetBoundingBoxAsLimits()
 	CVector3 orthDirection;
 	CVector3 point;
 	double dist;
-	double outerBounding = gPar->Get<double>("limit_outer_bounding");
+
 	stopRequest = false;
 
 	// negative x limit
@@ -1487,7 +1569,7 @@ void cInterface::SetBoundingBoxAsLimits()
 		QObject::tr("bounding box as limit"), QObject::tr("Negative X Limit"), 0.0 / 6.0);
 	direction = CVector3(1, 0, 0);
 	orthDirection = CVector3(0, 1, 0);
-	point = CVector3(-outerBounding, 0, 0);
+	point = CVector3(outerBoundingMin.x, boundingCenter.y, boundingCenter.z);
 	dist =
 		CalculateDistanceMinPlane(*params, *fractals, point, direction, orthDirection, &stopRequest);
 	double minX = point.x + dist;
@@ -1497,7 +1579,7 @@ void cInterface::SetBoundingBoxAsLimits()
 		QObject::tr("bounding box as limit"), QObject::tr("Negative Y Limit"), 1.0 / 6.0);
 	direction = CVector3(0, 1, 0);
 	orthDirection = CVector3(0, 0, 1);
-	point = CVector3(0, -outerBounding, 0);
+	point = CVector3(boundingCenter.x, outerBoundingMin.y, boundingCenter.z);
 	dist =
 		CalculateDistanceMinPlane(*params, *fractals, point, direction, orthDirection, &stopRequest);
 	double minY = point.y + dist;
@@ -1507,7 +1589,7 @@ void cInterface::SetBoundingBoxAsLimits()
 		QObject::tr("bounding box as limit"), QObject::tr("Negative Z Limit"), 2.0 / 6.0);
 	direction = CVector3(0, 0, 1);
 	orthDirection = CVector3(1, 0, 0);
-	point = CVector3(0, 0, -outerBounding);
+	point = CVector3(boundingCenter.x, boundingCenter.y, outerBoundingMin.z);
 	dist =
 		CalculateDistanceMinPlane(*params, *fractals, point, direction, orthDirection, &stopRequest);
 	double minZ = point.z + dist;
@@ -1517,7 +1599,7 @@ void cInterface::SetBoundingBoxAsLimits()
 		QObject::tr("bounding box as limit"), QObject::tr("Positive X Limit"), 3.0 / 6.0);
 	direction = CVector3(-1, 0, 0);
 	orthDirection = CVector3(0, -1, 0);
-	point = CVector3(outerBounding, 0, 0);
+	point = CVector3(outerBoundingMax.x, boundingCenter.y, boundingCenter.z);
 	dist =
 		CalculateDistanceMinPlane(*params, *fractals, point, direction, orthDirection, &stopRequest);
 	double maxX = point.x - dist;
@@ -1527,7 +1609,7 @@ void cInterface::SetBoundingBoxAsLimits()
 		QObject::tr("bounding box as limit"), QObject::tr("Positive Y Limit"), 4.0 / 6.0);
 	direction = CVector3(0, -1, 0);
 	orthDirection = CVector3(0, 0, -1);
-	point = CVector3(0, outerBounding, 0);
+	point = CVector3(boundingCenter.x, outerBoundingMax.y, boundingCenter.z);
 	dist =
 		CalculateDistanceMinPlane(*params, *fractals, point, direction, orthDirection, &stopRequest);
 	double maxY = point.y - dist;
@@ -1537,7 +1619,7 @@ void cInterface::SetBoundingBoxAsLimits()
 		QObject::tr("bounding box as limit"), QObject::tr("Positive Z Limit"), 5.0 / 6.0);
 	direction = CVector3(0, 0, -1);
 	orthDirection = CVector3(-1, 0, 0);
-	point = CVector3(0, 0, outerBounding);
+	point = CVector3(boundingCenter.x, boundingCenter.y, outerBoundingMax.z);
 	dist =
 		CalculateDistanceMinPlane(*params, *fractals, point, direction, orthDirection, &stopRequest);
 	double maxZ = point.z - dist;
@@ -1575,10 +1657,9 @@ void cInterface::NewPrimitive(const QString &primitiveType, int index)
 		{
 			newId++;
 			occupied = false;
-			for (int i = 0; i < listOfPrimitives.size(); i++)
+			for (const auto &primitiveItem : listOfPrimitives)
 			{
-				if (objectType == listOfPrimitives.at(i).type && newId == listOfPrimitives.at(i).id)
-					occupied = true;
+				if (objectType == primitiveItem.type && newId == primitiveItem.id) occupied = true;
 			}
 		}
 	}
@@ -1614,6 +1695,13 @@ void cInterface::NewPrimitive(const QString &primitiveType, int index)
 	deleteButton->setObjectName(QString("deleteButton_") + primitiveFullName);
 	buttonsLayout->addWidget(deleteButton);
 
+	QHBoxLayout *buttonsLayout2 = new QHBoxLayout();
+	layout->addLayout(buttonsLayout2);
+
+	QPushButton *alignButton = new QPushButton(QObject::tr("Align rotation to camera"), mainWidget);
+	alignButton->setObjectName(QString("alignButton_") + primitiveFullName);
+	buttonsLayout2->addWidget(alignButton);
+
 	MyGroupBox *groupBox = new MyGroupBox(mainWidget);
 	groupBox->setObjectName(QString("groupCheck_") + primitiveFullName + "_enabled");
 	groupBox->setCheckable(true);
@@ -1640,17 +1728,19 @@ void cInterface::NewPrimitive(const QString &primitiveType, int index)
 
 		// rename widgets
 		QList<QWidget *> listOfWidgets = primitiveWidget->findChildren<QWidget *>();
-		for (int i = 0; i < listOfWidgets.size(); i++)
+		for (auto &widget : listOfWidgets)
 		{
-			QString name = listOfWidgets[i]->objectName();
+			QString name = widget->objectName();
 			int firstDash = name.indexOf('_');
 			QString newName = name.insert(firstDash + 1, primitiveFullName + "_");
-			listOfWidgets[i]->setObjectName(newName);
+			widget->setObjectName(newName);
 		}
 
 		connect(deleteButton, SIGNAL(clicked()), mainWindow, SLOT(slotPressedButtonDeletePrimitive()));
 		connect(setPositionButton, SIGNAL(clicked()), mainWindow,
 			SLOT(slotPressedButtonSetPositionPrimitive()));
+		connect(
+			alignButton, SIGNAL(clicked()), mainWindow, SLOT(slotPressedButtonAlignPrimitiveAngle()));
 
 		// adding parameters
 		if (index == 0) // for only new primitive
@@ -1661,6 +1751,12 @@ void cInterface::NewPrimitive(const QString &primitiveType, int index)
 
 		mainWindow->automatedWidgets->ConnectSignalsForSlidersInWindow(mainWidget);
 		SynchronizeInterfaceWindow(mainWidget, gPar, qInterface::write);
+
+		if (gPar->Get<bool>("ui_colorize"))
+		{
+			cInterface::ColorizeGroupBoxes(
+				groupBox, gPar->Get<int>("ui_colorize_random_seed") + Random(65535));
+		}
 
 		ComboMouseClickUpdate();
 	}
@@ -1700,9 +1796,9 @@ void cInterface::DeletePrimitive(const QString &primitiveName)
 void cInterface::RebuildPrimitives(cParameterContainer *par)
 {
 	// clear all widgets
-	for (int i = 0; i < listOfPrimitives.size(); i++)
+	for (const auto &primitiveItem : listOfPrimitives)
 	{
-		QString widgetName = QString("widgetmain_") + listOfPrimitives.at(i).name;
+		QString widgetName = QString("widgetmain_") + primitiveItem.name;
 		QWidget *widget =
 			mainWindow->ui->widgetDockFractal->GetContainerWithPrimitives()->findChild<QWidget *>(
 				widgetName);
@@ -1711,9 +1807,8 @@ void cInterface::RebuildPrimitives(cParameterContainer *par)
 	listOfPrimitives.clear();
 
 	QList<QString> listOfParameters = par->GetListOfParameters();
-	for (int i = 0; i < listOfParameters.size(); i++)
+	for (auto &parameterName : listOfParameters)
 	{
-		QString parameterName = listOfParameters.at(i);
 		if (parameterName.left(parameterName.indexOf('_')) == "primitive")
 		{
 			QStringList split = parameterName.split('_');
@@ -1722,9 +1817,9 @@ void cInterface::RebuildPrimitives(cParameterContainer *par)
 			int index = split.at(2).toInt();
 
 			bool found = false;
-			for (int l = 0; l < listOfPrimitives.size(); l++)
+			for (const auto &listOfPrimitive : listOfPrimitives)
 			{
-				if (listOfPrimitives.at(l).name == primitiveName)
+				if (listOfPrimitive.name == primitiveName)
 				{
 					found = true;
 					break;
@@ -1795,19 +1890,23 @@ void cInterface::ComboMouseClickUpdate() const
 	item.append(int(RenderedImage::clickGetPoint));
 	combo->addItem(QObject::tr("Get point coordinates"), item);
 
+	item.clear();
+	item.append(int(RenderedImage::clickWrapLimitsAroundObject));
+	combo->addItem(QObject::tr("Wrap Limits around object"), item);
+
 	if (listOfPrimitives.size() > 0)
 	{
-		for (int i = 0; i < listOfPrimitives.size(); i++)
+		for (const auto &primitiveItem : listOfPrimitives)
 		{
-			QString primitiveName = PrimitiveNames(listOfPrimitives.at(i).type);
-			int index = listOfPrimitives.at(i).id;
+			QString primitiveName = PrimitiveNames(primitiveItem.type);
+			int index = primitiveItem.id;
 			QString comboItemString =
 				QString(QObject::tr("Place ")) + primitiveName + QString(" #") + QString::number(index);
 			item.clear();
 			item.append(int(RenderedImage::clickPlacePrimitive));
-			item.append(int(listOfPrimitives.at(i).type));
-			item.append(listOfPrimitives.at(i).id);
-			item.append(listOfPrimitives.at(i).name);
+			item.append(int(primitiveItem.type));
+			item.append(primitiveItem.id);
+			item.append(primitiveItem.name);
 			combo->addItem(comboItemString, item);
 		}
 	}
@@ -2002,6 +2101,7 @@ void cInterface::OptimizeStepFactor(double qualityTarget)
 	tempParam.Set("iteration_fog_enable", false);
 	tempParam.Set("fake_lights_enabled", false);
 	tempParam.Set("main_light_volumetric_enabled", false);
+	tempParam.Set("opencl_mode", 0); // disable OpenCL
 	for (int i = 1; i <= 4; i++)
 	{
 		tempParam.Set("aux_light_enabled", i, false);
@@ -2175,6 +2275,10 @@ void cInterface::InitPeriodicRefresh()
 void cInterface::InitMaterialsUi()
 {
 	materialEditor = new cMaterialEditor(mainWindow->ui->scrollArea_material);
+
+	if (gPar->Get<bool>("ui_colorize"))
+		materialEditor->Colorize(gPar->Get<int>("ui_colorize_random_seed"));
+
 	mainWindow->ui->verticalLayout_materials->addWidget(materialEditor);
 
 	materialListModel = new cMaterialItemModel(mainWindow->ui->scrollArea_material);
@@ -2207,6 +2311,10 @@ void cInterface::MaterialSelected(int matIndex)
 	{
 		delete materialEditor;
 		materialEditor = new cMaterialEditor(mainWindow->ui->scrollArea_material);
+
+		if (gPar->Get<bool>("ui_colorize"))
+			materialEditor->Colorize(gPar->Get<int>("ui_colorize_random_seed"));
+
 		mainWindow->ui->verticalLayout_materials->addWidget(materialEditor);
 		materialEditor->AssignMaterial(gPar, matIndex);
 		connect(materialEditor, SIGNAL(materialChanged(int)), materialListModel,
@@ -2313,4 +2421,53 @@ void cInterface::AttachMainImageWidget()
 void cInterface::CameraMovementModeChanged(int index)
 {
 	renderedImage->SetCameraMovementMode(index);
+}
+
+void cInterface::ColorizeGroupBoxes(QWidget *window, int randomSeed)
+{
+	QList<QGroupBox *> widgets;
+	widgets = window->findChildren<QGroupBox *>();
+	if (qobject_cast<QGroupBox *>(window)) // check if QGroupBox
+	{
+		widgets.append(static_cast<QGroupBox *>(window));
+	}
+	QPalette palette = window->palette();
+	QColor globalColor = palette.background().color();
+	int brightness = globalColor.value();
+
+	int rBase = globalColor.red();
+	int gBase = globalColor.green();
+	int bBase = globalColor.blue();
+
+	cRandom random;
+	random.Initialize(randomSeed);
+
+	foreach (QGroupBox *groupbox, widgets)
+	{
+		QColor buttonColor;
+		if (brightness > 20)
+		{
+			int r = random.Random(40) + rBase - 20;
+			r = clamp(r, 0, 255);
+			int g = random.Random(40) + gBase - 20;
+			g = clamp(g, 0, 255);
+			int b = random.Random(40) + bBase - 20;
+			b = clamp(b, 0, 255);
+			buttonColor = QColor(r, g, b);
+		}
+		else
+		{
+			int r = random.Random(40) + rBase;
+			r = clamp(r, 0, 255);
+			int g = random.Random(40) + gBase;
+			g = clamp(g, 0, 255);
+			int b = random.Random(40) + bBase;
+			b = clamp(b, 0, 255);
+			buttonColor = QColor(r, g, b);
+		}
+
+		QPalette newPalette(buttonColor);
+		groupbox->setPalette(newPalette);
+		groupbox->setAutoFillBackground(true);
+	}
 }

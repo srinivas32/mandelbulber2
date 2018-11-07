@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -49,7 +49,7 @@ CVector3 CVector3::RotateAroundVectorByAngle(CVector3 axis, double angle) const
 
 CVector4 CVector4::RotateAroundVectorByAngle(CVector3 axis, double angle) const
 {
-	const CVector3 oldVector = this->GetXYZ();
+	const CVector3 oldVector = GetXYZ();
 	CVector3 vector = oldVector * cos(angle);
 	vector += (axis.Cross(oldVector)) * sin(angle);
 	vector += axis * axis.Dot(oldVector) * (1 - cos(angle));
@@ -119,19 +119,7 @@ CMatrix33::CMatrix33(const CVector3 &v1, const CVector3 &v2, const CVector3 &v3)
 	m33 = v3.z;
 }
 
-CMatrix33 &CMatrix33::operator=(const CMatrix33 &matrix)
-{
-	m11 = matrix.m11;
-	m12 = matrix.m12;
-	m13 = matrix.m13;
-	m21 = matrix.m21;
-	m22 = matrix.m22;
-	m23 = matrix.m23;
-	m31 = matrix.m31;
-	m32 = matrix.m32;
-	m33 = matrix.m33;
-	return *this;
-}
+CMatrix33 &CMatrix33::operator=(const CMatrix33 &matrix) = default;
 
 CMatrix33 CMatrix33::operator*(const CMatrix33 &matrix) const
 {
@@ -396,27 +384,7 @@ CMatrix44::CMatrix44(const CVector4 &v1, const CVector4 &v2, const CVector4 &v3,
 	m44 = v4.w;
 }
 
-CMatrix44 &CMatrix44::operator=(const CMatrix44 &matrix)
-{
-	m11 = matrix.m11;
-	m12 = matrix.m12;
-	m13 = matrix.m13;
-	m14 = matrix.m14;
-	m21 = matrix.m21;
-	m22 = matrix.m22;
-	m23 = matrix.m23;
-	m24 = matrix.m24;
-	m31 = matrix.m31;
-	m32 = matrix.m32;
-	m33 = matrix.m33;
-	m34 = matrix.m34;
-	m41 = matrix.m41;
-	m42 = matrix.m42;
-	m43 = matrix.m43;
-	m44 = matrix.m44;
-
-	return *this;
-}
+CMatrix44 &CMatrix44::operator=(const CMatrix44 &matrix) = default;
 
 CMatrix44 CMatrix44::operator*(const CMatrix44 &matrix) const
 {

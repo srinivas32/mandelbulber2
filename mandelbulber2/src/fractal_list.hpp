@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,6 +34,8 @@
 
 #ifndef MANDELBULBER2_SRC_FRACTAL_LIST_HPP_
 #define MANDELBULBER2_SRC_FRACTAL_LIST_HPP_
+
+#include <utility>
 
 #include <QtCore>
 
@@ -105,10 +107,10 @@ enum enumFractalFormula
 	aboxMod1 = 64,				// fix scale v2.11 v2.12
 	mandelbulbMulti = 65, // updated V2.08
 	benesiPineTree = 66,
-	benesiT1PineTree = 67, // updated V2.09
+	benesiT1PineTree = 67, // updated V2.09, rot2 v2.14
 	msltoeSym3Mod = 68,
 	msltoeSym4Mod = 69,
-	eiffieMsltoe = 70, // updated V2.08
+	eiffieMsltoe = 70, // updated V2.08. DE v2.15
 	riemannSphereMsltoeV1 = 71,
 	riemannSphereMsltoe = 72,
 	amazingSurf = 73, // fix scale v2.12
@@ -119,41 +121,41 @@ enum enumFractalFormula
 	mandelbulbVaryPowerV1 = 78,
 	quaternion4d = 79, // updated V2.10
 	msltoeSym3Mod2 = 80,
-	msltoeSym3Mod3 = 81,
+	msltoeSym3Mod3 = 81, // DE v2.15
 	msltoeDonut = 82,
 	iqBulb = 83,
 	quickDudleyMod = 84,
 	// V2.08
 	riemannBulbMsltoeMod2 = 85,
-	msltoeToroidal = 86,
+	msltoeToroidal = 86,		// update DE v2.15
 	aboxModKaliEiffie = 87, // updated z.z scale V2.09
 	collatz = 88,
 	collatzMod = 89,
-	mengerPwr2Poly = 90,
-	mandelboxMenger = 91,
+	mengerPwr2Poly = 90,	// DE v2.15
+	mandelboxMenger = 91, // DE v2.15
 	mandelbulbKali = 92,
 	mandelbulbKaliMulti = 93,
 	mandelbulbBermarte = 94,
 	mengerMiddleMod = 95,
-	msltoeToroidalMulti = 96,
+	msltoeToroidalMulti = 96, // update DE v2.15
 	amazingSurfMulti = 97,
 	// V2.09
 	mengerCrossKIFS = 98,
-	mengerPrismShape = 99, // fix T1 T1M V2.10
+	mengerPrismShape = 99, // fix T1 T1M V2.10. DE v2.15
 	benesiMagTransforms = 100,
 	pseudoKleinianStdDE = 101, // fix T1 T1M V2.10
 	bristorbrot4d = 102,
-	pseudoKleinian = 103,			// fix DE V2.10
-	pseudoKleinianMod1 = 104, // fix T1 T1M V2.10 & DE
-	benesiPwr2Mandelbulb = 105,
+	pseudoKleinian = 103,				// fix DE V2.10
+	pseudoKleinianMod1 = 104,		// fix T1 T1M V2.10 & DE
+	benesiPwr2Mandelbulb = 105, // rot2 v2.14
 	mengerCrossMod1 = 106,
 	// V2.10
-	mengerPrismShape2 = 107,
-	mixPinski4d = 108, // fixed V2.11
-	sierpinski4d = 109,
-	sierpinski3d = 110,
-	menger4d = 111,			// fixed V2.11
-	menger4dMod1 = 112, // fixed V2.11
+	mengerPrismShape2 = 107, // DE v2.15
+	mixPinski4d = 108,			 // fixed V2.11
+	sierpinski4d = 109,			 // update DE v2.15
+	sierpinski3d = 110,			 // update DE v2.15
+	menger4d = 111,					 // fixed V2.11
+	menger4dMod1 = 112,			 // fixed V2.11
 	mengerSmooth = 113,
 	mengerSmoothMod1 = 114,
 	mengerOcto = 115,
@@ -163,7 +165,7 @@ enum enumFractalFormula
 	mandelbulbMulti2 = 118, // mbulb default changed V2.12
 	aboxMod11 = 119,				// fixed varyscale v2.12
 	// V2.12
-	mandelbulbQuat = 120,
+	mandelbulbQuat = 120, // DE 2.15
 	mandelbulbJuliabulb = 121,
 	josKleinian = 122,
 	aboxMod12 = 123,
@@ -172,9 +174,23 @@ enum enumFractalFormula
 	boxFoldBulbPow2V3 = 126,
 	aboxMod13 = 127,
 	boxFoldQuat = 128,
+	// 2.13
+	coastalbrot = 129,
+	modulusMengerSponge = 130,
+	modulusMandelbulb = 131,
+	amazingSurfMod2 = 132, // fixed comboBox v2.14
+	// 2.14
+	mandelboxVariable = 133,
+	boxFold4dBulbPow2 = 134,
+	aboxModKaliV2 = 135,
+	// 2.15
+	aboxModKaliV3 = 136,
 
 	// 152 to 172 reserved for scator
-	imaginaryScatorPower2 = 152,
+	scatorPower2Imaginary = 152, // fixed r calc v2.14
+	scatorPower2Real = 156,			 // added V2.15
+	scatorPower2 = 173,					 // added V2.15
+	scatorPower2StdR = 174,			 // added V2.15
 
 	transfAddConstant = 1001,
 	transfRotation = 1002,
@@ -198,13 +214,13 @@ enum enumFractalFormula
 	transfBoxFold = 1020,
 	transfSphericalFold = 1021,
 	transfZvectorAxisSwap = 1022,
-	transfFabsAddConstant = 1023,
-	transfNegFabsAddConstant = 1024,
-	transfFabsAddTgladFold = 1025,
+	transfAbsAddConstant = 1023,
+	transfNegAbsAddConstant = 1024,
+	transfAbsAddTgladFold = 1025, // fixed tweak groupCheck V2.14
 	transfMultipleAngle = 1026,
 	transfRPower = 1027,
 	transfIterationWeight = 1028, // fixed V2.10
-	transfFabsAddMulti = 1029,
+	transfAbsAddMulti = 1029,
 	transfSphericalPwrFold = 1030,
 	transfAddCpixelVaryV1 = 1031,
 	transfScaleVaryV1 = 1032,
@@ -219,38 +235,38 @@ enum enumFractalFormula
 	transfIterationWeight4d = 1041, // fixed V2.10
 	transfSphericalFold4d = 1042,		// updated V2.11
 	transfScale4d = 1043,
-	transfFabsAddConstant4d = 1044,
-	transfFabsAddTgladFold4d = 1045,
+	transfAbsAddConstant4d = 1044,
+	transfAbsAddTgladFold4d = 1045,
 	// v2.08
 	transfSurfFoldMulti = 1046,
 	transfPwr2Polynomial = 1047,
 	transfRotationFoldingPlane = 1048,
 	transfSphericalFoldAbox = 1049,
 	transfSphericalFoldVaryV1 = 1050,
-	transfQuaternionFold = 1051,
-	transfMengerFold = 1052,
+	transfQuaternionFold = 1051, // changed DE v2.15
+	transfMengerFold = 1052,		 // fixed  v2.15
 	// V2.09
 	transfInvCylindrical = 1053,
 	transfRpow3 = 1054,
-	transfSphericalInv = 1055,
+	transfSphericalInv = 1055, // fixed modesRadius1 v2.15
 	transfFoldingTetra3d = 1056,
 	transfBoxFoldVaryV1 = 1057,
 	// 2.10
 	transfSurfBoxFold = 1058,
-	transfOctoFold = 1059,
+	transfOctoFold = 1059, // added aox.r_dz v2.14
 	transfScaleVaryVCL = 1060,
 	transfSphericalFoldVaryVCL = 1061,
 	transfAddExp2Z = 1062, // updated V2.12
 	transfReciprocal3 = 1063,
 	transfRotationFolding = 1064,
-	transfFabsAddConditional = 1065,
+	transfAbsAddConditional = 1065,
 	transfReciprocal4d = 1066,
-	transfFabsAddConditional4d = 1067,
-	transfSphericalOffsetVCL = 1068,
+	transfAbsAddConditional4d = 1067,
+	transfSphericalOffsetVCL = 1068, // fixed v2.14
 	transfRotation4d = 1069,
 	// 2.11
 	transfParabFold = 1070,
-	transfScaleVaryV212 = 1071, // upated, renamed V2.12
+	transfScaleVaryV212 = 1071, // updated, renamed V2.12
 	transfSphericalFoldCHS = 1072,
 	transfSphericalFoldParab = 1073,
 	// 2.12
@@ -258,19 +274,33 @@ enum enumFractalFormula
 	transfBoxFold4dTglad = 1075,
 	transfSphericalFoldCuboid = 1076,
 	transfSphericalFoldXYZBias = 1077,
+	// 2.13
+	transfAddCpixelRotated = 1078,
+	transfAddConstantMod1 = 1079,
+	// 2.14
+	transfPolyFoldSym = 1080,
+	transfPolyFoldSymMulti = 1081,
+	// 2.15
+	transfSinOrCos = 1082,
+	transfSinAndCos = 1083,
+	transfSinAndCosMax = 1084,
+	transfBlockify = 1085,
+	transfAddCpixelScator = 1086,
+	transfAddCpixelSinOrCos = 1087,
 
 	// hybrid color trial
-
 	transfHybridColor = 2000,
 	transfHybridColor2 = 2001,
 	testing = 2100,
+	testing4d = 2101,
+	testingLog = 2102,
 };
 }
 
 struct sFractal;
 struct sExtendedAux;
 
-typedef void (*fractalFormulaFcn)(CVector4 &, const sFractal *, sExtendedAux &);
+using fractalFormulaFcn = void (*)(CVector4 &, const sFractal *, sExtendedAux &);
 
 struct sFractalDescription
 {
@@ -291,8 +321,8 @@ struct sFractalDescription
 		fractal::enumCPixelAddition _cpixelAddition, double _defaultBailout,
 		fractal::enumDEAnalyticFunction _DEAnalyticFunction,
 		fractal::enumColoringFunction _coloringFunction)
-			: nameInComboBox(_nameInComboBox),
-				internalName(_internalName),
+			: nameInComboBox(std::move(_nameInComboBox)),
+				internalName(std::move(_internalName)),
 				internalID(_internalID),
 				fractalFormulaFunction(_fractalFormulaFunction),
 				DEType(_DEType),
@@ -315,7 +345,7 @@ struct sFractalDescription
 	QString getUiFilename() const
 	{
 		return systemData.sharedDir + "formula" + QDir::separator() + "ui" + QDir::separator()
-					 + "fractal_" + internalName + ".ui";
+					 + internalName + ".ui";
 	}
 	QString getOpenCLFilename() const
 	{

@@ -1,6 +1,6 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
@@ -19,7 +19,6 @@ REAL4 MsltoeToroidalMultiIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 	if (fractal->transformCommon.functionEnabledFalse) // pre-scale
 	{
 		z *= fractal->transformCommon.scale3D111;
-		aux->r_dz *= native_divide(length(z), aux->r);
 		aux->DE = aux->DE * native_divide(length(z), aux->r) + 1.0f;
 	}
 	// Toroidal bulb multi
@@ -106,28 +105,27 @@ REAL4 MsltoeToroidalMultiIteration(REAL4 z, __constant sFractalCl *fractal, sExt
 		z.z = -rp * sinth;
 	}
 
-	if (fractal->analyticDE.enabledFalse)
-	{ // analytic log DE adjustment
-		if (fractal->analyticDE.enabledAuxR2False) aux->r_dz *= aux->r_dz;
-		aux->r_dz = mad(native_powr(aux->r, fractal->transformCommon.pwr4 - fractal->analyticDE.offset1)
-											* fractal->transformCommon.pwr4 * fractal->analyticDE.scale1,
-			aux->r_dz, fractal->analyticDE.offset2);
+	// DEcalc
+	if (!fractal->analyticDE.enabledFalse)
+	{ // analytic DE adjustment,default is,  scale1 & offset1 & offset2 = 1.0f
+		aux->DE = mad(native_powr(aux->r, fractal->transformCommon.pwr4 - 1.0f) * aux->DE * aux->DE,
+			fractal->transformCommon.pwr4, 1.0f);
 	}
 	else
-	{ // default, i.e. scale1 & offset1 & offset2 = 1.0f
-		aux->r_dz =
-			mad(native_powr(aux->r, fractal->transformCommon.pwr4 - 1.0f) * aux->r_dz * aux->r_dz,
-				fractal->transformCommon.pwr4, 1.0f);
+	{
+		if (!fractal->transformCommon.functionEnabledAyFalse) aux->DE *= aux->DE;
+		aux->DE = mad(native_powr(aux->r, fractal->transformCommon.pwr4 - fractal->analyticDE.offset1)
+										* fractal->transformCommon.pwr4 * fractal->analyticDE.scale1,
+			aux->DE, fractal->analyticDE.offset2);
 	}
 
 	if (fractal->transformCommon.functionEnabledAxFalse) // spherical offset
 	{
-		REAL lengthTempZ = length(-z);
+		REAL lengthTempZ = -length(z);
 		// if (lengthTempZ > -1e-21f) lengthTempZ = -1e-21f;   //  z is neg.)
 		z *= 1.0f + native_divide(fractal->transformCommon.offset, lengthTempZ);
 		z *= fractal->transformCommon.scale;
 		aux->DE = mad(aux->DE, fabs(fractal->transformCommon.scale), 1.0f);
-		aux->r_dz *= fabs(fractal->transformCommon.scale);
 	}
 	// then add Cpixel constant vector
 	return z;

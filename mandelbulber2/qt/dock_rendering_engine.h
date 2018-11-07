@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -52,7 +52,7 @@ class cDockRenderingEngine : public QWidget
 	Q_OBJECT
 public:
 	explicit cDockRenderingEngine(QWidget *parent = nullptr);
-	~cDockRenderingEngine();
+	~cDockRenderingEngine() override;
 
 	void SynchronizeInterfaceDistanceEstimation(cParameterContainer *par) const;
 	void ComboDeltaDEFunctionSetEnabled(bool enabled) const;
@@ -68,7 +68,23 @@ private slots:
 	static void slotPressedButtonOptimizeForHQ();
 	static void slotDetailLevelChanged();
 	void slotChangedComboDistanceEstimationMethod(int index) const;
+
+	// Limits
 	static void slotPressedButtonSetBoundingBoxAsLimits();
+	static void slotPressedButtonBoundingBoxSizeXUp();
+	static void slotPressedButtonBoundingBoxSizeXDown();
+	static void slotPressedButtonBoundingBoxSizeYUp();
+	static void slotPressedButtonBoundingBoxSizeYDown();
+	static void slotPressedButtonBoundingBoxSizeZUp();
+	static void slotPressedButtonBoundingBoxSizeZDown();
+	static void slotPressedButtonBoundingBoxMoveXNeg();
+	static void slotPressedButtonBoundingBoxMoveXPos();
+	static void slotPressedButtonBoundingBoxMoveYNeg();
+	static void slotPressedButtonBoundingBoxMoveYPos();
+	static void slotPressedButtonBoundingBoxMoveZNeg();
+	static void slotPressedButtonBoundingBoxMoveZPos();
+
+	void slotCalculateDistanceThreshold();
 
 	// NetRender
 	void slotNetRenderClientConnect() const;
@@ -77,6 +93,7 @@ private slots:
 	static void slotNetRenderServerStop();
 	void slotNetRenderClientServerChange(int index) const;
 	static void slotCheckBoxDisableNetRender(bool on);
+	void slotNetRenderKickAndKill();
 	void slotNetRenderClientListUpdate() const;
 	void slotNetRenderClientListUpdate(int i) const;
 	void slotNetRenderClientListUpdate(int i, int j) const;

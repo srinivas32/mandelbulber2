@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -58,18 +58,17 @@ QString Test::testFolder()
 
 void Test::init()
 {
-	if (QFileInfo(testFolder()).exists()) cleanup();
+	if (QFileInfo::exists(testFolder())) cleanup();
 	CreateFolder(testFolder());
 }
 
 void Test::cleanup()
 {
-	DeleteAllFilesFromDirectory(testFolder(), "*");
-	QDir().rmdir(testFolder());
+	QDir(testFolder()).removeRecursively();
 }
 
 // start of test cases
-void Test::renderExamplesWrapper()
+void Test::renderExamplesWrapper() const
 {
 	if (IsBenchmarking())
 	{
@@ -81,11 +80,11 @@ void Test::renderExamplesWrapper()
 	}
 }
 
-void Test::renderExamples()
+void Test::renderExamples() const
 {
 	// this renders all example files in a resolution of 5x5 px
 	// and benchmarks the runtime
-	QString examplePath =
+	const QString examplePath =
 		QDir::toNativeSeparators(systemData.sharedDir + QDir::separator() + "examples");
 	QDirIterator it(
 		examplePath, QStringList() << "*.fract", QDir::Files, QDirIterator::Subdirectories);
@@ -156,7 +155,7 @@ void Test::renderExamples()
 	{
 		QElapsedTimer timer;
 		timer.start();
-		QString filename = it.next();
+		const QString filename = it.next();
 		if (!IsBenchmarking()) WriteLogCout("trying file: " + filename + "\n", 2);
 		cSettings parSettings(cSettings::formatFullText);
 		parSettings.BeQuiet(true);
@@ -174,7 +173,7 @@ void Test::renderExamples()
 
 		if (exampleOutputPath != "")
 		{
-			QString imgFileName =
+			const QString imgFileName =
 				QDir(exampleOutputPath).absolutePath() + QDir::separator() + QFileInfo(filename).baseName();
 			SaveImage(imgFileName, ImageFileSave::IMAGE_FILE_TYPE_PNG, image, nullptr);
 		}
@@ -192,7 +191,7 @@ void Test::renderExamples()
 	delete testPar;
 }
 
-void Test::netrender()
+void Test::netrender() const
 {
 	if (IsBenchmarking()) return; // no reasonable generic network benchmark
 	// test connection of server / client over localhost
@@ -217,7 +216,7 @@ void Test::netrender()
 	delete netRenderServer;
 }
 
-void Test::testFlightWrapper()
+void Test::testFlightWrapper() const
 {
 	if (IsBenchmarking())
 	{
@@ -229,9 +228,9 @@ void Test::testFlightWrapper()
 	}
 }
 
-void Test::testFlight()
+void Test::testFlight() const
 {
-	QString exampleFlightFile =
+	const QString exampleFlightFile =
 		QDir::toNativeSeparators(systemData.sharedDir + QDir::separator() + "examples"
 														 + QDir::separator() + "flight_anim_menger sponge_3.fract");
 
@@ -282,7 +281,7 @@ void Test::testFlight()
 	delete flightAnimation;
 }
 
-void Test::testKeyframeWrapper()
+void Test::testKeyframeWrapper() const
 {
 	if (IsBenchmarking())
 	{
@@ -294,9 +293,9 @@ void Test::testKeyframeWrapper()
 	}
 }
 
-void Test::testKeyframe()
+void Test::testKeyframe() const
 {
-	QString exampleKeyframeFile =
+	const QString exampleKeyframeFile =
 		QDir::toNativeSeparators(systemData.sharedDir + QDir::separator() + "examples"
 														 + QDir::separator() + "keyframe_anim_mandelbulb.fract");
 
@@ -347,7 +346,7 @@ void Test::testKeyframe()
 	delete testKeyframeAnimation;
 }
 
-void Test::renderSimpleWrapper()
+void Test::renderSimpleWrapper() const
 {
 	if (IsBenchmarking())
 	{
@@ -359,11 +358,11 @@ void Test::renderSimpleWrapper()
 	}
 }
 
-void Test::renderSimple()
+void Test::renderSimple() const
 {
 	// this renders an example file in an "usual" resolution of 100x100 px
 	// and benchmarks the runtime
-	QString simpleExampleFileName =
+	const QString simpleExampleFileName =
 		QDir::toNativeSeparators(systemData.sharedDir + QDir::separator() + "examples"
 														 + QDir::separator() + "mandelbox001.fract");
 
@@ -404,6 +403,156 @@ void Test::renderSimple()
 	else
 		QVERIFY2(renderJob->Execute(), "example render failed.");
 
+	delete renderJob;
+	delete image;
+	delete testKeyframes;
+	delete testAnimFrames;
+	delete testParFractal;
+	delete testPar;
+}
+
+void Test::testImageSaveWrapper() const
+{
+	if (IsBenchmarking())
+	{
+		QBENCHMARK_ONCE { renderImageSave(); }
+	}
+	else
+	{
+		renderImageSave();
+	}
+}
+
+void Test::renderImageSave() const
+{
+	// this renders an example file in an "usual" resolution of 100x100 px
+	// and benchmarks the runtime, then saves each image type
+	const QString simpleExampleFileName =
+		QDir::toNativeSeparators(systemData.sharedDir + QDir::separator() + "examples"
+														 + QDir::separator() + "mandelbulb001.fract");
+
+	cParameterContainer *testPar = new cParameterContainer;
+	cFractalContainer *testParFractal = new cFractalContainer;
+	cAnimationFrames *testAnimFrames = new cAnimationFrames;
+	cKeyframes *testKeyframes = new cKeyframes;
+
+	testPar->SetContainerName("main");
+	InitParams(testPar);
+	testPar->Set("normal_enabled", true);
+	/****************** TEMPORARY CODE FOR MATERIALS *******************/
+
+	InitMaterialParams(1, testPar);
+
+	/*******************************************************************/
+	for (int i = 0; i < NUMBER_OF_FRACTALS; i++)
+	{
+		testParFractal->at(i).SetContainerName(QString("fractal") + QString::number(i));
+		InitFractalParams(&testParFractal->at(i));
+	}
+	bool stopRequest = false;
+	cImage *image = new cImage(testPar->Get<int>("image_width"), testPar->Get<int>("image_height"));
+	cRenderingConfiguration config;
+	config.DisableRefresh();
+	config.DisableProgressiveRender();
+
+	cSettings parSettings(cSettings::formatFullText);
+	parSettings.BeQuiet(true);
+	parSettings.LoadFromFile(simpleExampleFileName);
+	parSettings.Decode(testPar, testParFractal, testAnimFrames, testKeyframes);
+	testPar->Set("image_width", IsBenchmarking() ? 20 * difficulty : 100);
+	testPar->Set("image_height", IsBenchmarking() ? 20 * difficulty : 100);
+
+	cRenderJob *renderJob = new cRenderJob(testPar, testParFractal, image, &stopRequest);
+	renderJob->Init(cRenderJob::still, config);
+
+	if (IsBenchmarking())
+		renderJob->Execute();
+	else
+		QVERIFY2(renderJob->Execute(), "example render failed.");
+
+	QList<ImageFileSave::enumImageFileType> fileTypes = {
+		ImageFileSave::IMAGE_FILE_TYPE_PNG, ImageFileSave::IMAGE_FILE_TYPE_JPG};
+#ifdef USE_TIFF
+	fileTypes.append(ImageFileSave::IMAGE_FILE_TYPE_TIFF);
+#endif /* USE_TIFF */
+#ifdef USE_EXR
+	fileTypes.append(ImageFileSave::IMAGE_FILE_TYPE_EXR);
+#endif /* USE_EXR */
+
+	QStringList imageChannelNames = ImageFileSave::ImageChannelNames();
+	for (auto fileType : fileTypes)
+	{
+		for (int appendAlphaIndex = 0; appendAlphaIndex < 2; appendAlphaIndex++)
+		{
+			bool isPngOrTiff = fileType == ImageFileSave::IMAGE_FILE_TYPE_PNG;
+#ifdef USE_EXR
+			isPngOrTiff = isPngOrTiff || fileType == ImageFileSave::IMAGE_FILE_TYPE_TIFF;
+#endif																										 /* USE_EXR */
+			if (appendAlphaIndex == 1 && !isPngOrTiff) continue; // ignore this test
+			gPar->Set("append_alpha_png", appendAlphaIndex == 1 ? true : false);
+
+			int combinationContentTypes = 2 * 2 * 2 * 2; // foreach content type enabled or not flags
+			int combinationQualityTypes =
+				3 * 3 * 3 * 3; // foreach content type the possible quality types (8, 16, 32bit)
+
+			for (int c = 0; c < combinationContentTypes * combinationQualityTypes; c++)
+			{
+				int contentTypeIndex = c / combinationQualityTypes;
+				int qualityTypeIndex = c % combinationContentTypes;
+				bool skipPermutation = false;
+				bool anyEnabled = false;
+				QString filenameChannels = "";
+				for (int content = 0; content < imageChannelNames.size(); content++)
+				{
+					QString imageChannelName = imageChannelNames[content];
+					bool enabled = (1 << content) & contentTypeIndex;
+					int qualityType = (qualityTypeIndex / (int)pow(3, content)) % 3;
+					ImageFileSave::enumImageChannelQualityType qualityTypeValue =
+						qualityType == 0 ? ImageFileSave::IMAGE_CHANNEL_QUALITY_8
+														 : (qualityType == 1 ? ImageFileSave::IMAGE_CHANNEL_QUALITY_16
+																								 : ImageFileSave::IMAGE_CHANNEL_QUALITY_32);
+					QString qualityString = qualityType == 0 ? "8" : (qualityType == 1 ? "16" : "32");
+
+					if (!enabled && qualityType != 0)
+					{
+						skipPermutation = true;
+						break;
+					}
+					if (enabled)
+					{
+						if ((imageChannelName == "zbuffer" && fileType == ImageFileSave::IMAGE_FILE_TYPE_JPG)
+								|| (qualityTypeValue == ImageFileSave::IMAGE_CHANNEL_QUALITY_8
+										 && fileType == ImageFileSave::IMAGE_FILE_TYPE_EXR)
+								|| (qualityTypeValue == ImageFileSave::IMAGE_CHANNEL_QUALITY_32
+										 && fileType == ImageFileSave::IMAGE_FILE_TYPE_PNG)
+								|| (qualityTypeValue != ImageFileSave::IMAGE_CHANNEL_QUALITY_8
+										 && fileType == ImageFileSave::IMAGE_FILE_TYPE_JPG))
+						{
+							// jpg cannot save zbuffer, jpg can only save 8bit
+							// exr cannot save 8 bit
+							// png cannot save 32 bit
+							skipPermutation = true;
+							break;
+						}
+					}
+
+					if (enabled) filenameChannels += imageChannelName + "-" + qualityString + " ";
+					anyEnabled = anyEnabled || enabled;
+					gPar->Set(imageChannelName + "_enabled", enabled);
+					gPar->Set(imageChannelName + "_quality", (int)qualityTypeValue);
+				}
+				if (skipPermutation) continue;
+				if (!anyEnabled) continue; // no image channels selected
+
+				QString folderName = testFolder() + QDir::separator();
+				folderName += ImageFileSave::ImageFileExtension(fileType) + " ";
+				folderName += (appendAlphaIndex ? QString("[+alpha] ") : QString(""));
+				folderName += filenameChannels;
+				CreateFolder(folderName);
+				SaveImage(folderName + QDir::separator() + "out", fileType, image, nullptr);
+			}
+		}
+	}
 	delete renderJob;
 	delete image;
 	delete testKeyframes;

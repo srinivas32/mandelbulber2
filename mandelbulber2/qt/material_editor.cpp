@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -43,6 +43,7 @@
 #include "src/automated_widgets.hpp"
 #include "src/common_math.h"
 #include "src/fractal_coloring.hpp"
+#include "src/interface.hpp"
 #include "src/material.h"
 #include "src/synchronize_interface.hpp"
 #include "src/system.hpp"
@@ -96,17 +97,17 @@ void cMaterialEditor::AssignMaterial(cParameterContainer *params, int index)
 		ui->widget_material_preview->AssignMaterial(parameterContainer, index, this);
 		isMaterialAssigned = true;
 
-		QList<QWidget *> materialWidgets = this->findChildren<QWidget *>();
-		for (int i = 0; i < materialWidgets.size(); i++)
+		QList<QWidget *> materialWidgets = findChildren<QWidget *>();
+		for (auto &materialWidget : materialWidgets)
 		{
-			if (!materialWidgets[i]->objectName().isEmpty())
+			if (!materialWidget->objectName().isEmpty())
 			{
-				QString objectName = materialWidgets[i]->objectName();
+				QString objectName = materialWidget->objectName();
 				int posOfDash = objectName.indexOf('_');
 				if (posOfDash > 0)
 				{
 					QString newName = objectName.insert(posOfDash, QString("_mat%1").arg(index));
-					materialWidgets[i]->setObjectName(newName);
+					materialWidget->setObjectName(newName);
 				}
 			}
 		}
@@ -174,18 +175,12 @@ void cMaterialEditor::slotChangedSpinBoxPaletteSize(int value) const
 
 void cMaterialEditor::slotChangedComboFractalColoringAlgorithm(int index) const
 {
-	sFractalColoring::enumFractalColoringAlgorithm selection =
-		sFractalColoring::enumFractalColoringAlgorithm(index);
-	ui->slider_fractal_coloring_sphere_radius->setEnabled(
-		selection == sFractalColoring::fractalColoringSphere);
-	ui->spinbox_fractal_coloring_sphere_radius->setEnabled(
-		selection == sFractalColoring::fractalColoringSphere);
-	ui->vect3_fractal_coloring_line_direction_x->setEnabled(
-		selection == sFractalColoring::fractalColoringLine);
-	ui->vect3_fractal_coloring_line_direction_y->setEnabled(
-		selection == sFractalColoring::fractalColoringLine);
-	ui->vect3_fractal_coloring_line_direction_z->setEnabled(
-		selection == sFractalColoring::fractalColoringLine);
+	enumFractalColoring selection = enumFractalColoring(index);
+	ui->spinbox_fractal_coloring_sphere_radius->setEnabled(selection == fractalColoring_Sphere);
+	ui->vect4_fractal_coloring_line_direction_x->setEnabled(selection == fractalColoring_Line);
+	ui->vect4_fractal_coloring_line_direction_y->setEnabled(selection == fractalColoring_Line);
+	ui->vect4_fractal_coloring_line_direction_z->setEnabled(selection == fractalColoring_Line);
+	ui->vect4_fractal_coloring_line_direction_w->setEnabled(selection == fractalColoring_Line);
 }
 
 void cMaterialEditor::slotPressedButtonGetPaletteFromImage()
@@ -209,4 +204,9 @@ void cMaterialEditor::slotPressedButtonGetPaletteFromImage()
 		ui->colorpalette_surface_color_palette->SetPalette(palette);
 		systemData.lastImagePaletteFile = filename;
 	}
+}
+
+void cMaterialEditor::Colorize(int randomSeed)
+{
+	cInterface::ColorizeGroupBoxes(this, randomSeed);
 }

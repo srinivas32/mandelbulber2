@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -41,15 +41,15 @@
 
 #include "common_my_widget_wrapper.h"
 
+class cFrameSliderPopup;
+
 class MyDoubleSpinBox : public QDoubleSpinBox, public CommonMyWidgetWrapper
 {
 	Q_OBJECT
 
 public:
-	MyDoubleSpinBox(QWidget *parent = nullptr) : QDoubleSpinBox(parent), CommonMyWidgetWrapper(this)
-	{
-		defaultValue = 0;
-	};
+	MyDoubleSpinBox(QWidget *parent = nullptr);
+	~MyDoubleSpinBox() override;
 
 	void resetToDefault() override;
 	QString getDefaultAsString() override;
@@ -58,10 +58,25 @@ public:
 private:
 	double GetDefault();
 	double defaultValue;
+	cFrameSliderPopup *slider;
+	bool hasDial;
 
 protected:
 	void contextMenuEvent(QContextMenuEvent *event) override;
 	void paintEvent(QPaintEvent *event) override;
+	void focusInEvent(QFocusEvent *event) override;
+	void focusOutEvent(QFocusEvent *event) override;
+
+private slots:
+	void slotSliderTimerUpdateValue();
+	void slotResetToDefault();
+	void slotZeroValue();
+	void slot180Value();
+	void slot90Value();
+	void slotMinus90Value();
+	void slotDoubleValue();
+	void slotHalfValue();
+	void slotRoundValue();
 };
 
 #endif /* MANDELBULBER2_QT_MY_DOUBLE_SPIN_BOX_H_ */

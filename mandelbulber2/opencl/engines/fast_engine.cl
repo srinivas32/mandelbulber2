@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -32,8 +32,14 @@
  * Fast kernel for rendering opencl with missing effects
  */
 
+int GetInteger(int byte, __global char *array)
+{
+	__global int *intPointer = (__global int *)&array[byte];
+	return *intPointer;
+}
+
 //------------------ MAIN RENDER FUNCTION --------------------
-kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
+kernel void fractal3D(__global sClPixel *out, __global char *inBuff,
 	__constant sClInConstants *consts, int initRandomSeed)
 {
 	// get actual pixel
@@ -48,6 +54,41 @@ kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
 	float width = convert_float(consts->params.imageWidth);
 	float height = convert_float(consts->params.imageHeight);
 	float resolution = 1.0f / height;
+
+	//-------- decode data file ----------------
+	int primitivesMainOffset = GetInteger(3 * sizeof(int), inBuff);
+
+	//--- Primitives
+
+	// primitives count
+	int numberOfPrimitives = GetInteger(primitivesMainOffset, inBuff);
+	int primitivesGlobalPositionOffset = GetInteger(primitivesMainOffset + 1 * sizeof(int), inBuff);
+	int primitivesOffset = GetInteger(primitivesMainOffset + 2 * sizeof(int), inBuff);
+
+	// global position of primitives
+	__global sPrimitiveGlobalPositionCl *primitivesGlobalPosition =
+		(__global sPrimitiveGlobalPositionCl *)&inBuff[primitivesGlobalPositionOffset];
+
+	// data for primitives
+	__global sPrimitiveCl *__attribute__((aligned(16))) primitives =
+		(__global sPrimitiveCl *)&inBuff[primitivesOffset];
+
+	//--------- end of data file ----------------------------------
+
+	sRenderData renderData;
+	renderData.lightVector = 0;
+	renderData.viewVectorNotRotated = 0;
+	renderData.material = 0;
+	renderData.palette = 0;
+	renderData.AOVectors = 0;
+	renderData.lights = 0;
+	renderData.paletteLength = 0;
+	renderData.numberOfLights = 0;
+	renderData.AOVectorsCount = 0;
+	renderData.reflectionsMax = 0;
+	renderData.primitives = primitives;
+	renderData.numberOfPrimitives = numberOfPrimitives;
+	renderData.primitivesGlobalPosition = primitivesGlobalPosition;
 
 	// auxiliary vectors
 	const float3 one = (float3){1.0f, 0.0f, 0.0f};
@@ -75,8 +116,12 @@ kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
 	// starting point for ray-marching
 	float3 start = consts->params.camera;
 
-	// view vector
+// view vector
+#ifdef PERSP_EQUIRECTANGULAR
+	float aspectRatio = 2.0f;
+#else
 	float aspectRatio = width / height;
+#endif
 	float2 normalizedScreenPoint;
 	normalizedScreenPoint.x = (screenPoint.x / width - 0.5f) * aspectRatio;
 	normalizedScreenPoint.y = -(screenPoint.y / height - 0.5f);
@@ -96,6 +141,7 @@ kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
 	sClCalcParams calcParam;
 	calcParam.N = consts->params.N;
 	calcParam.normalCalculationMode = false;
+	calcParam.iterThreshMode = consts->params.iterThreshMode;
 	distThresh = 1e-6f;
 
 	formulaOut outF;
@@ -108,7 +154,7 @@ kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
 		distThresh = CalcDistThresh(point, consts);
 		calcParam.distThresh = distThresh;
 		calcParam.detailSize = distThresh;
-		outF = CalculateDistance(consts, point, &calcParam);
+		outF = CalculateDistance(consts, point, &calcParam, &renderData);
 		distance = outF.distance;
 
 		if (distance < distThresh * 0.95f)
@@ -142,7 +188,7 @@ kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
 					point -= viewVector * step;
 				}
 			}
-			outF = CalculateDistance(consts, point, &calcParam);
+			outF = CalculateDistance(consts, point, &calcParam, &renderData);
 			distance = outF.distance;
 			step *= 0.5f;
 		}
@@ -159,7 +205,8 @@ kernel void fractal3D(__global sClPixel *out, __global sClInBuff *inBuff,
 	{
 		distThresh = CalcDistThresh(point, consts);
 
-		float3 normal = NormalVector(consts, point, distance, distThresh, false, &calcParam);
+		float3 normal =
+			NormalVector(consts, &renderData, point, distance, distThresh, false, &calcParam);
 
 		float shade = dot(lightVector, normal);
 		if (shade < 0.0f) shade = 0.0f;

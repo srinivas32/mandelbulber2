@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -38,6 +38,8 @@
 
 #ifndef MANDELBULBER2_SRC_FILE_IMAGE_HPP_
 #define MANDELBULBER2_SRC_FILE_IMAGE_HPP_
+
+#include <utility>
 
 #include <QtCore>
 
@@ -104,7 +106,7 @@ public:
 		}
 		structSaveImageChannel(enumImageContentType _contentType,
 			enumImageChannelQualityType _channelQuality, QString _postfix)
-				: contentType(_contentType), channelQuality(_channelQuality), postfix(_postfix)
+				: contentType(_contentType), channelQuality(_channelQuality), postfix(std::move(_postfix))
 		{
 		}
 
@@ -116,15 +118,13 @@ public:
 	typedef QMap<enumImageContentType, structSaveImageChannel> ImageConfig;
 	static QString ImageFileExtension(enumImageFileType imageFileType);
 	static QString ImageChannelName(enumImageContentType imageContentType);
+	static QStringList ImageChannelNames();
 	static QString ImageNameWithoutExtension(QString path);
 	static enumImageFileType ImageFileType(QString imageFileExtension);
 	static ImageFileSave *create(
 		QString filename, enumImageFileType fileType, cImage *image, ImageConfig imageConfig);
 	virtual void SaveImage() = 0;
 	virtual QString getJobName() = 0;
-	void updateProgressAndStatusChannel(double progress);
-	void updateProgressAndStatusStarted();
-	void updateProgressAndStatusFinished();
 	static const uint64_t SAVE_CHUNK_SIZE = 64;
 
 protected:
@@ -136,6 +136,10 @@ protected:
 	int totalChannel;
 
 	ImageFileSave(QString filename, cImage *image, ImageConfig imageConfig);
+
+	void updateProgressAndStatusChannel(double progress);
+	void updateProgressAndStatusStarted();
+	void updateProgressAndStatusFinished();
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);

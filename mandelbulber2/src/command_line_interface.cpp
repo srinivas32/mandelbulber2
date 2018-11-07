@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -27,7 +27,8 @@
  *
  * ###########################################################################
  *
- * Authors: Krzysztof Marczak (buddhi1980@gmail.com), Sebastian Jennen (jenzebas@gmail.com)
+ * Authors: Krzysztof Marczak (buddhi1980@gmail.com), Sebastian Jennen (jenzebas@gmail.com),
+ *  Robert Pancoast (RobertPancoast77@gmail.com)
  *
  * cCommandLineInterface - CLI Input handler
  */
@@ -38,6 +39,7 @@
 
 #include "animation_frames.hpp"
 #include "error_message.hpp"
+#include "file_image.hpp"
 #include "fractal_container.hpp"
 #include "global_data.hpp"
 #include "headless.h"
@@ -45,6 +47,7 @@
 #include "interface.hpp"
 #include "keyframes.hpp"
 #include "netrender.hpp"
+#include "old_settings.hpp"
 #include "opencl_global.h"
 #include "opencl_hardware.h"
 #include "queue.hpp"
@@ -101,12 +104,13 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 
 	const QCommandLineOption formatOption(QStringList({"f", "format"}),
 		QCoreApplication::translate("main", "Image output format:\n"
-																				"  jpg - JPEG format (default)\n"
-																				"  png - PNG format\n"
+																				"  jpg  - JPEG format (default)\n"
+																				"  png  - PNG format\n"
+																				"  exr  - EXR format\n"
+																				"  tiff - TIFF format\n"
+																				" Legacy formats for still frames:\n"
 																				"  png16 - 16-bit PNG format\n"
-																				"  png16alpha - 16-bit PNG with alpha channel format\n"
-																				"  exr - EXR format\n"
-																				"  tiff - TIFF format"),
+																				"  png16alpha - 16-bit PNG with alpha channel format"),
 		QCoreApplication::translate("main", "FORMAT"));
 
 	const QCommandLineOption resOption(
@@ -143,8 +147,9 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 		QCoreApplication::translate("main", "N"));
 
 	const QCommandLineOption logFilepathOption(
-		QStringList({"logfilepath"}), QCoreApplication::translate("main",
-																		"Specify the full path and filename of the System Log File."),
+		QStringList({"logfilepath"}),
+		QCoreApplication::translate(
+			"main", "Specify custom system log filepath (default is: ~/.mandelbulber_log.txt)."),
 		QCoreApplication::translate("main", "N"));
 
 	const QCommandLineOption queueOption(QStringList({"q", "queue"}),
@@ -160,6 +165,11 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 			" parameter difficulty (1 -> very easy, > 20 -> very hard, 10 -> default)."
 			" When [output] option is set to a folder, the example-test images will be stored there."));
 
+	const QCommandLineOption gpuOption(
+		QStringList({"g", "gpu"}),
+		QCoreApplication::translate(
+			"main", "Runs the program in opencl mode and selects first available gpu device."));
+
 	const QCommandLineOption touchOption(
 		QStringList({"T", "touch"}),
 		QCoreApplication::translate(
@@ -168,7 +178,7 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 	const QCommandLineOption voxelOption(QStringList({"V", "voxel"}),
 		QCoreApplication::translate("main", "Renders the voxel volume. Output formats are:\n"
 																				"  slice - stack of PNG images into one folder (default)\n"
-																				"  ply - Polygon File Format (single 3d file)\n"),
+																				"  ply   - Polygon File Format (single 3d file)\n"),
 		QCoreApplication::translate("main", "FORMAT"));
 
 	const QCommandLineOption statsOption(QStringList({"stats"}),
@@ -212,6 +222,7 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 	parser.addOption(voxelOption);
 	parser.addOption(overrideOption);
 	parser.addOption(statsOption);
+	parser.addOption(gpuOption);
 	parser.addOption(helpInputOption);
 	parser.addOption(helpExamplesOption);
 	parser.addOption(helpOpenClOption);
@@ -249,6 +260,7 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 	cliData.test = parser.isSet(testOption);
 	cliData.benchmark = parser.isSet(benchmarkOption);
 	cliData.touch = parser.isSet(touchOption);
+	cliData.gpu = parser.isSet(gpuOption);
 	cliData.showInputHelp = parser.isSet(helpInputOption);
 	cliData.showExampleHelp = parser.isSet(helpExamplesOption);
 	cliData.showOpenCLHelp = parser.isSet(helpOpenClOption);
@@ -268,9 +280,7 @@ cCommandLineInterface::cCommandLineInterface(QCoreApplication *qApplication)
 	cliOperationalMode = modeBootOnly;
 }
 
-cCommandLineInterface::~cCommandLineInterface()
-{
-}
+cCommandLineInterface::~cCommandLineInterface() = default;
 
 void cCommandLineInterface::ReadCLI()
 {
@@ -350,6 +360,9 @@ void cCommandLineInterface::ReadCLI()
 	{
 		gPar->Set("anim_keyframe_dir", cliData.outputText);
 	}
+
+	// gpu
+	if (cliData.gpu) handleGpu();
 
 	// show opencl help only (requires previous handling of override parameters)
 	if (cliData.showOpenCLHelp) printOpenCLHelpAndExit();
@@ -462,15 +475,15 @@ void cCommandLineInterface::printExampleHelpAndExit()
 
 	out << cHeadless::colorize(QObject::tr("Voxel volume render"), cHeadless::ansiBlue) << "\n";
 	out << cHeadless::colorize(
-					 "mandelbulber2 --voxel -n path/to/voxel_fractal.fract"
+					 "mandelbulber2 --voxel ply -n path/to/voxel_fractal.fract"
 					 " -O 'voxel_custom_limit_enabled=1#voxel_limit_min=-1 -1 -1#voxel_limit_max=1 1 "
-					 "1#voxel_samples_x=10#voxel_samples_y=10#voxel_samples_z=10'",
+					 "1#voxel_samples_x=200'",
 					 cHeadless::ansiYellow)
 			<< "\n";
 	out << QObject::tr(
 					 "Renders the voxel volume in the bounding box of [x(-1 - 1); y(-1 - 1); z(-1 - 1)] "
-					 "with a resolution of 10x10x10.\nThis will produce 10 slices (z) with a resolution "
-					 "of 10(x) times 10(y) and save as black and white images to working folder/slices.")
+					 "with a resolution of 200x200x200 in the ply format "
+					 "and saves as working folder/slices/output.ply.")
 			<< "\n\n";
 
 	out << cHeadless::colorize(QObject::tr("Queue render"), cHeadless::ansiBlue) << "\n";
@@ -566,7 +579,10 @@ void cCommandLineInterface::printOpenCLHelpAndExit()
 	for (int i = 0; i < devices.size(); i++)
 	{
 		cOpenClDevice::sDeviceInformation device = devices[i];
-		out << (gOpenCl->openClHardware->getSelectedDeviceIndex() == i ? "> " : "  ");
+		if (gOpenCl->openClHardware->getSelectedDevicesIndices().contains(i))
+			out << "> ";
+		else
+			out << "  ";
 		out << "index: " << i << " | hash: " << device.hash.toHex() << " | name: " << device.deviceName
 				<< "\n";
 	}
@@ -594,9 +610,8 @@ void cCommandLineInterface::printParametersAndExit()
 	out << cHeadless::colorize(
 		"\nList of main parameters:\n", cHeadless::ansiYellow, cHeadless::noExplicitColor, true);
 	out << "KEY=VALUE\n";
-	for (int i = 0; i < listOfParameters.size(); i++)
+	for (auto &parameterName : listOfParameters)
 	{
-		const QString parameterName = listOfParameters.at(i);
 		const QString defaultValue = gPar->GetDefault<QString>(parameterName);
 		out << parameterName + "=" + defaultValue + "\n";
 	}
@@ -605,9 +620,8 @@ void cCommandLineInterface::printParametersAndExit()
 	out << cHeadless::colorize(QObject::tr("\nList of fractal parameters:\n"), cHeadless::ansiYellow,
 		cHeadless::noExplicitColor, true);
 
-	for (int i = 0; i < listOfFractalParameters.size(); i++)
+	for (auto &parameterName : listOfFractalParameters)
 	{
-		const QString parameterName = listOfFractalParameters.at(i);
 		const QString defaultValue = gParFractal->at(0).GetDefault<QString>(parameterName);
 		out << parameterName + "=" + defaultValue + "\n";
 	}
@@ -678,12 +692,12 @@ void cCommandLineInterface::runBenchmarksAndExit()
 		}
 
 		// Add Timestamp to exampleOutputPath directory path
-		time_t rawtime;
-		char timebuffer[80];
-		time(&rawtime);
-		struct tm *timeinfo = localtime(&rawtime);
-		strftime(timebuffer, sizeof(timebuffer), "%Y-%m-%d-%H-%M-%S", timeinfo);
-		QString timestamp(timebuffer);
+		time_t rawTime;
+		char timeBuffer[80];
+		time(&rawTime);
+		struct tm *timeInfo = localtime(&rawTime);
+		strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d-%H-%M-%S", timeInfo);
+		QString timestamp(timeBuffer);
 		exampleOutputPath += "/" + timestamp;
 
 		// Create the timestamped folder for rendering the examples
@@ -823,6 +837,7 @@ void cCommandLineInterface::handleArgs()
 			}
 			if (QFile::exists(filename))
 			{
+				// hint: do not use auto loading of v1 files in batch mode
 				parSettings.LoadFromFile(filename);
 				parSettings.Decode(gPar, gParFractal, gAnimFrames, gKeyframes);
 				settingsSpecified = true;
@@ -975,6 +990,13 @@ void cCommandLineInterface::handleImageFileFormat()
 																 + allowedImageFileFormat.join(", "),
 			cErrorMessage::errorMessage);
 		parser.showHelp(cliErrorImageFileFormatInvalid);
+	}
+	else
+	{
+		const ImageFileSave::enumImageFileType fileType =
+			ImageFileSave::ImageFileType(cliData.imageFileFormat);
+		gPar->Set("keyframe_animation_image_type", (int)fileType);
+		gPar->Set("flight_animation_image_type", (int)fileType);
 	}
 }
 
@@ -1145,4 +1167,34 @@ void cCommandLineInterface::handleVoxel()
 	cliOperationalMode = modeVoxel;
 	cliData.nogui = true;
 	systemData.noGui = true;
+}
+
+void cCommandLineInterface::handleGpu()
+{
+#ifdef USE_OPENCL
+	gPar->Set("opencl_enabled", true);
+
+	// print available platforms
+	const QList<cOpenClHardware::sPlatformInformation> platforms =
+		gOpenCl->openClHardware->getPlatformsInformation();
+	if (platforms.size() == 0)
+	{
+		cErrorMessage::showMessage(
+			QObject::tr("No opencl platforms found"), cErrorMessage::errorMessage);
+		parser.showHelp(cliErrorOpenClNoPlatform);
+	}
+	gPar->Set("opencl_platform", 0);
+
+	const QList<cOpenClDevice::sDeviceInformation> devices =
+		gOpenCl->openClHardware->getDevicesInformation();
+	if (devices.size() == 0)
+	{
+		cErrorMessage::showMessage(QObject::tr("No opencl devices found"), cErrorMessage::errorMessage);
+		parser.showHelp(cliErrorOpenClNoDevice);
+	}
+	gPar->Set("opencl_device_list", (QString)devices[0].hash.toHex());
+#else
+	cErrorMessage::showMessage(QObject::tr("Not compiled for opencl"), cErrorMessage::errorMessage);
+	parser.showHelp(cliErrorOpenClNotCompiled);
+#endif
 }

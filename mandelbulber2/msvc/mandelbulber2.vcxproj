@@ -99,7 +99,6 @@
     <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='AnalysisRelease|x64'">
-    <EnableExperimentalCppCoreCheck>true</EnableExperimentalCppCoreCheck>
     <EnableCppCoreCheck>true</EnableCppCoreCheck>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -148,6 +147,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -195,6 +195,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -242,6 +243,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -293,6 +295,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -320,7 +323,7 @@
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <EnablePREfast>true</EnablePREfast>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4127;26499;26412</DisableSpecificWarnings>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>$(PreProcs);%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -345,6 +348,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -392,6 +396,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -414,7 +419,6 @@
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
-      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ResourceCompile>
@@ -440,6 +444,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -487,6 +492,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -509,7 +515,6 @@
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
-      <DisableSpecificWarnings>4127</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ResourceCompile>
@@ -535,6 +540,7 @@
       <SubSystem>Console</SubSystem>
       <Version>
       </Version>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -550,10 +556,15 @@
     <ClInclude Include="$(SourceDir)build-win\*.h" />
     <ClInclude Include="$(SourceDir)mandelbulber2\src\*.h" />
     <ClInclude Include="$(SourceDir)mandelbulber2\src\*.hpp" />
+    <ClCompile Include="$(SourceDir)mandelbulber2\src\*.cpp" />
     <ClInclude Include="$(SourceDir)mandelbulber2\qt\*.h" />
     <ClInclude Include="$(SourceDir)mandelbulber2\qt\*.hpp" />
-    <ClCompile Include="$(SourceDir)mandelbulber2\src\*.cpp" />
     <ClCompile Include="$(SourceDir)mandelbulber2\qt\*.cpp" />
+    <ClInclude Include="$(SourceDir)mandelbulber2\opencl\*.h" />
+    <ClInclude Include="$(SourceDir)mandelbulber2\opencl\*.hpp" />
+    <ClCompile Include="$(SourceDir)mandelbulber2\opencl\*.cpp" />
+    <None Include="$(SourceDir)mandelbulber2\opencl\engines\*.cl" />
+    <None Include="$(SourceDir)mandelbulber2\formula\opencl\*.cl" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
@@ -579,353 +590,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)packages.config" />
-    <None Include="$(SourceDir)build-win\qrc_icons.cpp" />
-    <None Include="$(SourceDir)build-win\moc_anim_audio_view.cpp" />
-    <None Include="$(SourceDir)build-win\moc_animation_flight.cpp" />
-    <None Include="$(SourceDir)build-win\moc_animation_keyframes.cpp" />
-    <None Include="$(SourceDir)build-win\moc_audio_selector.cpp" />
-    <None Include="$(SourceDir)build-win\moc_audio_track.cpp" />
-    <None Include="$(SourceDir)build-win\moc_automated_widgets.cpp" />
-    <None Include="$(SourceDir)build-win\moc_color_palette_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_animation.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_effects.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_fractal.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_gamepad.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_image_adjustmnets.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_measurements.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_navigation.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_queue.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_rendering_engine.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dock_statistics.cpp" />
-    <None Include="$(SourceDir)build-win\moc_dof.cpp" />
-    <None Include="$(SourceDir)build-win\moc_error_message.cpp" />
-    <None Include="$(SourceDir)build-win\moc_fft_view.cpp" />
-    <None Include="$(SourceDir)build-win\moc_file_downloader.cpp" />
-    <None Include="$(SourceDir)build-win\moc_file_image.cpp" />
-    <None Include="$(SourceDir)build-win\moc_file_select_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_headless.cpp" />
-    <None Include="$(SourceDir)build-win\moc_image_save_dialog.cpp" />
-    <None Include="$(SourceDir)build-win\moc_lights.cpp" />
-    <None Include="$(SourceDir)build-win\moc_material_editor.cpp" />
-    <None Include="$(SourceDir)build-win\moc_material_item_model.cpp" />
-    <None Include="$(SourceDir)build-win\moc_material_item_view.cpp" />
-    <None Include="$(SourceDir)build-win\moc_material_manager_view.cpp" />
-    <None Include="$(SourceDir)build-win\moc_material_selector.cpp" />
-    <None Include="$(SourceDir)build-win\moc_material_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_mesh_export.cpp" />
-    <None Include="$(SourceDir)build-win\moc_mesh_export_dialog.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_check_box.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_color_button.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_double_spin_box.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_group_box.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_histogram_label.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_line_edit.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_log_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_progress_bar.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_scrolled_area.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_spin_box.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_tab_bar.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_tab_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_table_widget_anim.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_table_widget_keyframes.cpp" />
-    <None Include="$(SourceDir)build-win\moc_my_ui_loader.cpp" />
-    <None Include="$(SourceDir)build-win\moc_netrender.cpp" />
-    <None Include="$(SourceDir)build-win\moc_player_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_preferences_dialog.cpp" />
-    <None Include="$(SourceDir)build-win\moc_preview_file_dialog.cpp" />
-    <None Include="$(SourceDir)build-win\moc_pushbutton_anim_sound.cpp" />
-    <None Include="$(SourceDir)build-win\moc_queue.cpp" />
-    <None Include="$(SourceDir)build-win\moc_render_image.cpp" />
-    <None Include="$(SourceDir)build-win\moc_render_job.cpp" />
-    <None Include="$(SourceDir)build-win\moc_render_queue.cpp" />
-    <None Include="$(SourceDir)build-win\moc_render_ssao.cpp" />
-    <None Include="$(SourceDir)build-win\moc_render_window.cpp" />
-    <None Include="$(SourceDir)build-win\moc_render_worker.cpp" />
-    <None Include="$(SourceDir)build-win\moc_rendered_image_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_ssao_worker.cpp" />
-    <None Include="$(SourceDir)build-win\moc_system_tray.cpp" />
-    <None Include="$(SourceDir)build-win\moc_tab_fractal.cpp" />
-    <None Include="$(SourceDir)build-win\moc_test.cpp" />
-    <None Include="$(SourceDir)build-win\moc_thumbnail_widget.cpp" />
-    <None Include="$(SourceDir)build-win\moc_time_ruler.cpp" />
-    <None Include="$(SourceDir)build-win\moc_voxel_export.cpp" />
-    <None Include="$(SourceDir)build-win\moc_voxel_export_dialog.cpp" />
-    <None Include="$(SourceDir)build-win\moc_wave_form_view.cpp" />
-    <None Include="$(SourceDir)build-win\ui_audio_selector.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_animation.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_effects.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_fractal.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_gamepad.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_image_adjustments.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_measurements.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_navigation.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_queue.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_rendering_engine.h" />
-    <None Include="$(SourceDir)build-win\ui_dock_statistics.h" />
-    <None Include="$(SourceDir)build-win\ui_image_save_dialog.h" />
-    <None Include="$(SourceDir)build-win\ui_material_editor.h" />
-    <None Include="$(SourceDir)build-win\ui_material_manager_view.h" />
-    <None Include="$(SourceDir)build-win\ui_mesh_export_dialog.h" />
-    <None Include="$(SourceDir)build-win\ui_preferences_dialog.h" />
-    <None Include="$(SourceDir)build-win\ui_render_window.h" />
-    <None Include="$(SourceDir)build-win\ui_tab_fractal.h" />
-    <None Include="$(SourceDir)build-win\ui_voxel_export_dialog.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\anim_audio_view.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\anim_audio_view.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\audio_selector.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\audio_selector.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\color_palette_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\color_palette_widget.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\common_my_widget_wrapper.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\common_my_widget_wrapper.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_animation.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_animation.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_effects.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_effects.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_fractal.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_fractal.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_gamepad.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_gamepad.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_image_adjustments.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_image_adjustments.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_measurements.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_measurements.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_navigation.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_navigation.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_queue.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_queue.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_rendering_engine.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_rendering_engine.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_statistics.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\dock_statistics.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\fft_view.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\fft_view.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\file_select_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\file_select_widget.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\icons.qrc" />
-    <None Include="$(SourceDir)mandelbulber2\qt\image_save_dialog.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\image_save_dialog.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_editor.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_editor.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_manager_view.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_manager_view.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_selector.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_selector.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\material_widget.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\mesh_export_dialog.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\mesh_export_dialog.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_check_box.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_check_box.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_color_button.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_color_button.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_double_spin_box.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_double_spin_box.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_group_box.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_group_box.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_histogram_label.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_histogram_label.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_line_edit.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_line_edit.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_log_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_log_widget.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_progress_bar.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_progress_bar.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_scrolled_area.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_spin_box.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_spin_box.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_tab_bar.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_tab_bar.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_tab_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_tab_widget.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_table_widget_anim.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_table_widget_anim.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_table_widget_keyframes.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\my_table_widget_keyframes.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\player_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\player_widget.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\preferences_dialog.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\preferences_dialog.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\preview_file_dialog.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\preview_file_dialog.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\pushbutton_anim_sound.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\pushbutton_anim_sound.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\system_tray.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\system_tray.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\tab_fractal.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\tab_fractal.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\thumbnail_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\thumbnail_widget.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\time_ruler.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\time_ruler.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\voxel_export_dialog.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\voxel_export_dialog.h" />
-    <None Include="$(SourceDir)mandelbulber2\qt\wave_form_view.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\qt\wave_form_view.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\algebra.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\algebra.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\animation_flight.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\animation_flight.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\animation_frames.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\animation_frames.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\animation_keyframes.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\animation_keyframes.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\ao_modes.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\audio_fft_data.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\audio_fft_data.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\audio_track.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\audio_track.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\audio_track_collection.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\audio_track_collection.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\automated_widgets.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\automated_widgets.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\calculate_distance.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\calculate_distance.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\calculation_mode.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\camera_target.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\camera_target.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\cimage.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\cimage.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\color_palette.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\color_palette.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\color_structures.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\command_line_interface.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\command_line_interface.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\common_math.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\common_math.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\commonparams.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\compute_fractal.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\compute_fractal.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\displacement_map.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\displacement_map.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\dof.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\dof.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\error_message.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\error_message.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\file_downloader.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\file_downloader.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\file_image.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\file_image.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\files.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\files.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_coloring.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_container.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_container.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_enums.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_formulas.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_formulas.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_list.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractal_list.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractparams.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\fractparams.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\global_data.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\global_data.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\headless.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\headless.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\histogram.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\histogram.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\image_adjustments.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\image_scale.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\image_scale.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\initparameters.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\initparameters.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\interface.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\interface.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\keyframes.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\keyframes.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\lights.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\lights.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\main.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\main.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\marchingcubes.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\marchingcubes.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\material.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\material.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\material_item_model.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\material_item_model.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\material_item_view.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\material_item_view.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\mesh_export.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\mesh_export.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\morph.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\morph.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\multi_val.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\multi_val.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\my_ui_loader.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\my_ui_loader.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\netrender.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\netrender.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\nine_fractals.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\nine_fractals.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\object_data.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\object_types.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\old_settings.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\old_settings.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\one_parameter.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\one_parameter.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\parameters.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\parameters.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\primitives.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\primitives.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\progress_text.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\progress_text.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\projection_3d.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\projection_3d.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\queue.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\queue.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\random.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\random.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\region.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_data.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_image.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_image.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_job.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_job.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_queue.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_queue.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_ssao.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_ssao.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_window.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_window.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_window_buttons.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_window_menu.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_window_slots.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_worker.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\render_worker.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\rendered_image_widget.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\rendered_image_widget.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\rendering_configuration.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\rendering_configuration.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\scheduler.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\scheduler.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\settings.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\settings.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\shaders.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\ssao_worker.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\ssao_worker.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\statistics.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\statistics.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\stereo.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\stereo.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\synchronize_interface.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\synchronize_interface.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\system.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\system.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\test.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\test.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\texture.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\texture.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\texture_enums.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\texture_mapping.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\texture_mapping.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\thumbnail.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\thumbnail.hpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\undo.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\undo.h" />
-    <None Include="$(SourceDir)mandelbulber2\src\voxel_export.cpp" />
-    <None Include="$(SourceDir)mandelbulber2\src\voxel_export.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="mandelbulber2_autogen.vcxproj">
@@ -942,12 +606,12 @@
     <IncludePath>$(SourceDir)build-win;$(SourceDir)packages;$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <!-- <PropertyGroup>
+  <PropertyGroup>
     <CAExcludePath>$(SourceDir)build-win;$(SourceDir)packages;$(WindowsSDK_IncludePath);$(CAExcludePath)</CAExcludePath>
-  </PropertyGroup> -->
+  </PropertyGroup>
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\..\packages\bulbqt-msvc14-x64.5.7.0.10783\build\native\bulbqt-msvc14-x64.targets" Condition="Exists('..\..\packages\bulbqt-msvc14-x64.5.7.0.10783\build\native\bulbqt-msvc14-x64.targets')" />
-    <Import Project="..\..\packages\bulbqt-msvc14-x86.5.7.0.10783\build\native\bulbqt-msvc14-x86.targets" Condition="Exists('..\..\packages\bulbqt-msvc14-x86.5.7.0.10783\build\native\bulbqt-msvc14-x86.targets')" />
+    <Import Project="..\..\packages\bulbqt-msvc-x64.5.9.4.10785\build\native\bulbqt-msvc-x64.targets" Condition="Exists('..\..\packages\bulbqt-msvc-x64.5.9.4.10785\build\native\bulbqt-msvc-x64.targets')" />
+    <Import Project="..\..\packages\bulbqt-msvc-x86.5.9.4.10785\build\native\bulbqt-msvc-x86.targets" Condition="Exists('..\..\packages\bulbqt-msvc-x86.5.9.4.10785\build\native\bulbqt-msvc-x86.targets')" />
     <Import Project="..\..\packages\flac-msvc-x64.1.3.2.8787\build\native\flac-msvc-x64.targets" Condition="Exists('..\..\packages\flac-msvc-x64.1.3.2.8787\build\native\flac-msvc-x64.targets')" />
     <Import Project="..\..\packages\flac-msvc-x86.1.3.2.8787\build\native\flac-msvc-x86.targets" Condition="Exists('..\..\packages\flac-msvc-x86.1.3.2.8787\build\native\flac-msvc-x86.targets')" />
     <Import Project="..\..\packages\gsl-msvc-x64.2.4.0.8788\build\native\gsl-msvc-x64.targets" Condition="Exists('..\..\packages\gsl-msvc-x64.2.4.0.8788\build\native\gsl-msvc-x64.targets')" />
@@ -957,18 +621,18 @@
     <Import Project="..\..\packages\libjpeg-msvc-x86.9.1.0.8807\build\native\libjpeg-msvc-x86.targets" Condition="Exists('..\..\packages\libjpeg-msvc-x86.9.1.0.8807\build\native\libjpeg-msvc-x86.targets')" />
     <Import Project="..\..\packages\libpng-msvc-x64.1.6.33.8807\build\native\libpng-msvc-x64.targets" Condition="Exists('..\..\packages\libpng-msvc-x64.1.6.33.8807\build\native\libpng-msvc-x64.targets')" />
     <Import Project="..\..\packages\libpng-msvc-x86.1.6.33.8807\build\native\libpng-msvc-x86.targets" Condition="Exists('..\..\packages\libpng-msvc-x86.1.6.33.8807\build\native\libpng-msvc-x86.targets')" />
-    <Import Project="..\..\packages\libsndfile-msvc-x64.1.0.27.8788\build\native\libsndfile-msvc-x64.targets" Condition="Exists('..\..\packages\libsndfile-msvc-x64.1.0.27.8788\build\native\libsndfile-msvc-x64.targets')" />
-    <Import Project="..\..\packages\libsndfile-msvc-x86.1.0.27.8788\build\native\libsndfile-msvc-x86.targets" Condition="Exists('..\..\packages\libsndfile-msvc-x86.1.0.27.8788\build\native\libsndfile-msvc-x86.targets')" />
-    <Import Project="..\..\packages\libtiff-msvc-x64.4.0.7.8807\build\native\libtiff-msvc-x64.targets" Condition="Exists('..\..\packages\libtiff-msvc-x64.4.0.7.8807\build\native\libtiff-msvc-x64.targets')" />
-    <Import Project="..\..\packages\libtiff-msvc-x86.4.0.7.8807\build\native\libtiff-msvc-x86.targets" Condition="Exists('..\..\packages\libtiff-msvc-x86.4.0.7.8807\build\native\libtiff-msvc-x86.targets')" />
+    <Import Project="..\..\packages\libsndfile-msvc-x64.1.0.27.9902\build\native\libsndfile-msvc-x64.targets" Condition="Exists('..\..\packages\libsndfile-msvc-x64.1.0.27.9902\build\native\libsndfile-msvc-x64.targets')" />
+    <Import Project="..\..\packages\libsndfile-msvc-x86.1.0.27.9902\build\native\libsndfile-msvc-x86.targets" Condition="Exists('..\..\packages\libsndfile-msvc-x86.1.0.27.9902\build\native\libsndfile-msvc-x86.targets')" />
+    <Import Project="..\..\packages\libtiff-msvc-x64.4.0.7.8808\build\native\libtiff-msvc-x64.targets" Condition="Exists('..\..\packages\libtiff-msvc-x64.4.0.7.8808\build\native\libtiff-msvc-x64.targets')" />
+    <Import Project="..\..\packages\libtiff-msvc-x86.4.0.7.8808\build\native\libtiff-msvc-x86.targets" Condition="Exists('..\..\packages\libtiff-msvc-x86.4.0.7.8808\build\native\libtiff-msvc-x86.targets')" />
     <Import Project="..\..\packages\lzo-msvc-x64.2.10.0.8807\build\native\lzo-msvc-x64.targets" Condition="Exists('..\..\packages\lzo-msvc-x64.2.10.0.8807\build\native\lzo-msvc-x64.targets')" />
     <Import Project="..\..\packages\lzo-msvc-x86.2.10.0.8807\build\native\lzo-msvc-x86.targets" Condition="Exists('..\..\packages\lzo-msvc-x86.2.10.0.8807\build\native\lzo-msvc-x86.targets')" />
     <Import Project="..\..\packages\Microsoft.Gsl.0.1.2.1\build\native\Microsoft.Gsl.targets" Condition="Exists('..\..\packages\Microsoft.Gsl.0.1.2.1\build\native\Microsoft.Gsl.targets')" />
     <Import Project="..\..\packages\ogg-msvc-x64.1.3.2.8787\build\native\ogg-msvc-x64.targets" Condition="Exists('..\..\packages\ogg-msvc-x64.1.3.2.8787\build\native\ogg-msvc-x64.targets')" />
     <Import Project="..\..\packages\ogg-msvc-x86.1.3.2.8787\build\native\ogg-msvc-x86.targets" Condition="Exists('..\..\packages\ogg-msvc-x86.1.3.2.8787\build\native\ogg-msvc-x86.targets')" />
     <Import Project="..\..\packages\opencl-nug.0.777.12\build\native\opencl-nug.targets" Condition="Exists('..\..\packages\opencl-nug.0.777.12\build\native\opencl-nug.targets')" />
-    <Import Project="..\..\packages\openexr-msvc-x64.2.2.0.8787\build\native\OpenEXR-msvc-x64.targets" Condition="Exists('..\..\packages\openexr-msvc-x64.2.2.0.8787\build\native\OpenEXR-msvc-x64.targets')" />
-    <Import Project="..\..\packages\openexr-msvc-x86.2.2.0.8787\build\native\OpenEXR-msvc-x86.targets" Condition="Exists('..\..\packages\openexr-msvc-x86.2.2.0.8787\build\native\OpenEXR-msvc-x86.targets')" />
+    <Import Project="..\..\packages\openexr-msvc-x64.2.3.0.8788\build\native\OpenEXR-msvc-x64.targets" Condition="Exists('..\..\packages\openexr-msvc-x64.2.3.0.8788\build\native\OpenEXR-msvc-x64.targets')" />
+    <Import Project="..\..\packages\openexr-msvc-x86.2.3.0.8788\build\native\OpenEXR-msvc-x86.targets" Condition="Exists('..\..\packages\openexr-msvc-x86.2.3.0.8788\build\native\OpenEXR-msvc-x86.targets')" />
     <Import Project="..\..\packages\vorbis-msvc-x64.1.3.5.8787\build\native\vorbis-msvc-x64.targets" Condition="Exists('..\..\packages\vorbis-msvc-x64.1.3.5.8787\build\native\vorbis-msvc-x64.targets')" />
     <Import Project="..\..\packages\vorbis-msvc-x86.1.3.5.8787\build\native\vorbis-msvc-x86.targets" Condition="Exists('..\..\packages\vorbis-msvc-x86.1.3.5.8787\build\native\vorbis-msvc-x86.targets')" />
     <Import Project="..\..\packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets" Condition="Exists('..\..\packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets')" />
@@ -978,8 +642,8 @@
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\..\packages\bulbqt-msvc14-x64.5.7.0.10783\build\native\bulbqt-msvc14-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\bulbqt-msvc14-x64.5.7.0.10783\build\native\bulbqt-msvc14-x64.targets'))" />
-    <Error Condition="!Exists('..\..\packages\bulbqt-msvc14-x86.5.7.0.10783\build\native\bulbqt-msvc14-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\bulbqt-msvc14-x86.5.7.0.10783\build\native\bulbqt-msvc14-x86.targets'))" />
+    <Error Condition="!Exists('..\..\packages\bulbqt-msvc-x64.5.9.4.10785\build\native\bulbqt-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\bulbqt-msvc-x64.5.9.4.10785\build\native\bulbqt-msvc-x64.targets'))" />
+    <Error Condition="!Exists('..\..\packages\bulbqt-msvc-x86.5.9.4.10785\build\native\bulbqt-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\bulbqt-msvc-x86.5.9.4.10785\build\native\bulbqt-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\flac-msvc-x64.1.3.2.8787\build\native\flac-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\flac-msvc-x64.1.3.2.8787\build\native\flac-msvc-x64.targets'))" />
     <Error Condition="!Exists('..\..\packages\flac-msvc-x86.1.3.2.8787\build\native\flac-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\flac-msvc-x86.1.3.2.8787\build\native\flac-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\gsl-msvc-x64.2.4.0.8788\build\native\gsl-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\gsl-msvc-x64.2.4.0.8788\build\native\gsl-msvc-x64.targets'))" />
@@ -989,18 +653,18 @@
     <Error Condition="!Exists('..\..\packages\libjpeg-msvc-x86.9.1.0.8807\build\native\libjpeg-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libjpeg-msvc-x86.9.1.0.8807\build\native\libjpeg-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\libpng-msvc-x64.1.6.33.8807\build\native\libpng-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libpng-msvc-x64.1.6.33.8807\build\native\libpng-msvc-x64.targets'))" />
     <Error Condition="!Exists('..\..\packages\libpng-msvc-x86.1.6.33.8807\build\native\libpng-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libpng-msvc-x86.1.6.33.8807\build\native\libpng-msvc-x86.targets'))" />
-    <Error Condition="!Exists('..\..\packages\libsndfile-msvc-x64.1.0.27.8788\build\native\libsndfile-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libsndfile-msvc-x64.1.0.27.8788\build\native\libsndfile-msvc-x64.targets'))" />
-    <Error Condition="!Exists('..\..\packages\libsndfile-msvc-x86.1.0.27.8788\build\native\libsndfile-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libsndfile-msvc-x86.1.0.27.8788\build\native\libsndfile-msvc-x86.targets'))" />
-    <Error Condition="!Exists('..\..\packages\libtiff-msvc-x64.4.0.7.8807\build\native\libtiff-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libtiff-msvc-x64.4.0.7.8807\build\native\libtiff-msvc-x64.targets'))" />
-    <Error Condition="!Exists('..\..\packages\libtiff-msvc-x86.4.0.7.8807\build\native\libtiff-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libtiff-msvc-x86.4.0.7.8807\build\native\libtiff-msvc-x86.targets'))" />
+    <Error Condition="!Exists('..\..\packages\libsndfile-msvc-x64.1.0.27.9902\build\native\libsndfile-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libsndfile-msvc-x64.1.0.27.9902\build\native\libsndfile-msvc-x64.targets'))" />
+    <Error Condition="!Exists('..\..\packages\libsndfile-msvc-x86.1.0.27.9902\build\native\libsndfile-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libsndfile-msvc-x86.1.0.27.9902\build\native\libsndfile-msvc-x86.targets'))" />
+    <Error Condition="!Exists('..\..\packages\libtiff-msvc-x64.4.0.7.8808\build\native\libtiff-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libtiff-msvc-x64.4.0.7.8808\build\native\libtiff-msvc-x64.targets'))" />
+    <Error Condition="!Exists('..\..\packages\libtiff-msvc-x86.4.0.7.8808\build\native\libtiff-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\libtiff-msvc-x86.4.0.7.8808\build\native\libtiff-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\lzo-msvc-x64.2.10.0.8807\build\native\lzo-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\lzo-msvc-x64.2.10.0.8807\build\native\lzo-msvc-x64.targets'))" />
     <Error Condition="!Exists('..\..\packages\lzo-msvc-x86.2.10.0.8807\build\native\lzo-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\lzo-msvc-x86.2.10.0.8807\build\native\lzo-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\Microsoft.Gsl.0.1.2.1\build\native\Microsoft.Gsl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\Microsoft.Gsl.0.1.2.1\build\native\Microsoft.Gsl.targets'))" />
     <Error Condition="!Exists('..\..\packages\ogg-msvc-x64.1.3.2.8787\build\native\ogg-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\ogg-msvc-x64.1.3.2.8787\build\native\ogg-msvc-x64.targets'))" />
     <Error Condition="!Exists('..\..\packages\ogg-msvc-x86.1.3.2.8787\build\native\ogg-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\ogg-msvc-x86.1.3.2.8787\build\native\ogg-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\opencl-nug.0.777.12\build\native\opencl-nug.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\opencl-nug.0.777.12\build\native\opencl-nug.targets'))" />
-    <Error Condition="!Exists('..\..\packages\openexr-msvc-x64.2.2.0.8787\build\native\OpenEXR-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\openexr-msvc-x64.2.2.0.8787\build\native\OpenEXR-msvc-x64.targets'))" />
-    <Error Condition="!Exists('..\..\packages\openexr-msvc-x86.2.2.0.8787\build\native\OpenEXR-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\openexr-msvc-x86.2.2.0.8787\build\native\OpenEXR-msvc-x86.targets'))" />
+    <Error Condition="!Exists('..\..\packages\openexr-msvc-x64.2.3.0.8788\build\native\OpenEXR-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\openexr-msvc-x64.2.3.0.8788\build\native\OpenEXR-msvc-x64.targets'))" />
+    <Error Condition="!Exists('..\..\packages\openexr-msvc-x86.2.3.0.8788\build\native\OpenEXR-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\openexr-msvc-x86.2.3.0.8788\build\native\OpenEXR-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\vorbis-msvc-x64.1.3.5.8787\build\native\vorbis-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\vorbis-msvc-x64.1.3.5.8787\build\native\vorbis-msvc-x64.targets'))" />
     <Error Condition="!Exists('..\..\packages\vorbis-msvc-x86.1.3.5.8787\build\native\vorbis-msvc-x86.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\vorbis-msvc-x86.1.3.5.8787\build\native\vorbis-msvc-x86.targets'))" />
     <Error Condition="!Exists('..\..\packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\zlib-msvc-x64.1.2.11.8900\build\native\zlib-msvc-x64.targets'))" />

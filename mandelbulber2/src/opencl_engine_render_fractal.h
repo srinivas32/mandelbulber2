@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -44,11 +44,13 @@
 // custom includes
 #ifdef USE_OPENCL
 #include "opencl/input_data_structures.h"
+#include "opencl/mesh_export_data_cl.h"
 #endif // USE_OPENCL
 
 class cImage;
 class cFractalContainer;
 class cOpenClDynamicData;
+class cOpenClTexturesData;
 struct sParamRender;
 class cNineFractals;
 struct sRenderData;
@@ -67,19 +69,28 @@ public:
 	};
 
 	cOpenClEngineRenderFractal(cOpenClHardware *hardware);
-	~cOpenClEngineRenderFractal();
+	~cOpenClEngineRenderFractal() override;
 
 #ifdef USE_OPENCL
 	bool LoadSourcesAndCompile(const cParameterContainer *params) override;
 	void SetParameters(const cParameterContainer *paramContainer,
 		const cFractalContainer *fractalContainer, sParamRender *paramRender, cNineFractals *fractals,
-		sRenderData *renderData);
+		sRenderData *renderData, bool meshExportModeEnable);
+	void RegisterInputOutputBuffers(const cParameterContainer *params) override;
 	bool PreAllocateBuffers(const cParameterContainer *params) override;
-	bool AssignParametersToKernel();
+	bool PrepareBufferForBackground(sRenderData *renderData);
+	bool AssignParametersToKernelAdditional(int argIterator) override;
 	bool WriteBuffersToQueue();
 	bool ProcessQueue(size_t jobX, size_t jobY, size_t pixelsLeftX, size_t pixelsLeftY);
 	bool ReadBuffersFromQueue();
+
+	// render 3D fractal
 	bool Render(cImage *image, bool *stopRequest, sRenderData *renderData);
+
+	// render 2D slice with fractal
+	bool Render(double *distances, double *colors, int sliceIndex, bool *stopRequest,
+		sRenderData *renderData, size_t dataOffset);
+
 	QList<QPoint> calculateOptimalTileSequence(int gridWidth, int gridHeight);
 	static bool sortByCenterDistanceAsc(
 		const QPoint &v1, const QPoint &v2, int gridWidth, int gridHeight);
@@ -87,31 +98,48 @@ public:
 	void MarkCurrentPendingTile(cImage *image, QRect corners);
 	void ReleaseMemory();
 	size_t CalcNeededMemory() override;
+	void SetMeshExportParameters(const sClMeshExport *meshParams);
 
 private:
+	const int outputIndex = 0;
+	const int outputMeshDistancesIndex = 0;
+	const int outputMeshColorsIndex = 1;
+
 	QString GetKernelName() override;
 
 	static QString toCamelCase(const QString &s);
 
-	sClInConstants *constantInBuffer;
-	cl::Buffer *inCLConstBuffer;
+	QScopedPointer<sClInConstants> constantInBuffer;
+	QScopedPointer<cl::Buffer> inCLConstBuffer;
+
+	QScopedPointer<sClMeshExport> constantInMeshExportBuffer;
+	QScopedPointer<cl::Buffer> inCLConstMeshExportBuffer;
 
 	QByteArray inBuffer;
-	cl::Buffer *inCLBuffer;
+	QScopedPointer<cl::Buffer> inCLBuffer;
 
-	sClPixel *rgbBuffer;
-	cl::Buffer *outCL;
+	QByteArray inTextureBuffer;
+	QScopedPointer<cl::Buffer> inCLTextureBuffer;
 
-	cOpenClDynamicData *dynamicData;
+	QScopedPointer<cl::Image2D> backgroundImage2D;
+	QScopedArrayPointer<cl_uchar4> backgroungImageBuffer;
+
+	QScopedPointer<cOpenClDynamicData> dynamicData;
+	QScopedPointer<cOpenClTexturesData> texturesData;
 
 	QStringList listOfUsedFormulas;
+
+	enumClRenderEngineMode renderEngineMode;
+
 	bool autoRefreshMode;
 	bool monteCarlo;
+	bool meshExportMode;
 
 #endif
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);
+	void updateImage();
 	void updateStatistics(cStatistics);
 };
 

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -36,7 +36,9 @@
 #define MANDELBULBER2_OPENCL_MATERIAL_CL_H_
 
 #ifndef OPENCL_KERNEL_CODE
+#include "fractal_coloring_cl.hpp"
 #include "opencl_algebra.h"
+#include "texture_enums_cl.h"
 
 #include "src/material.h"
 #endif /* OPENCL_KERNEL_CODE */
@@ -44,10 +46,14 @@
 typedef struct
 {
 	cl_int id;
+	cl_int textureFractalizeStartIteration;
 
 	cl_float shading;
 	cl_float specular;
 	cl_float specularWidth;
+	cl_float specularMetallic;
+	cl_float specularMetallicRoughness;
+	cl_float specularMetallicWidth;
 	cl_float reflectance;
 	cl_float luminosity;
 	cl_float transparencyIndexOfRefraction;
@@ -60,19 +66,14 @@ typedef struct
 	cl_float luminosityTextureIntensity;
 	cl_float displacementTextureHeight;
 	cl_float normalMapTextureHeight;
+	cl_float iridescenceIntensity;
+	cl_float iridescenceSubsurfaceThickness;
+	cl_float textureFractalizeCubeSize;
 
 	cl_float3 color;
 	cl_float3 luminosityColor;
 	cl_float3 transparencyInteriorColor;
 	cl_float3 specularColor;
-
-	// cColorPalette palette;
-
-	// cTexture colorTexture;
-	// cTexture diffusionTexture;
-	// cTexture luminosityTexture;
-	// cTexture displacementTexture;
-	// cTexture normalMapTexture;
 
 	cl_float3 textureCenter;
 	cl_float3 textureRotation;
@@ -80,9 +81,11 @@ typedef struct
 
 	matrix33 rotMatrix;
 
-	// texture::enumTextureMapping textureMappingType;
+	enumTextureMappingCl textureMappingType;
 	cl_int fresnelReflectance;
 	cl_int useColorsFromPalette;
+	cl_int specularPlasticEnable;
+	cl_int metallic;
 
 	cl_int useColorTexture;
 	cl_int useDiffusionTexture;
@@ -90,6 +93,17 @@ typedef struct
 	cl_int useDisplacementTexture;
 	cl_int useNormalMapTexture;
 	cl_int normalMapTextureFromBumpmap;
+	cl_int normalMapTextureInvertGreen;
+	cl_int iridescenceEnabled;
+	cl_int textureFractalize;
+
+	cl_int colorTextureIndex;
+	cl_int diffusionTextureIndex;
+	cl_int luminosityTextureIndex;
+	cl_int displacementTextureIndex;
+	cl_int normalMapTextureIndex;
+
+	sFractalColoringCl fractalColoring;
 } sMaterialCl;
 
 #ifndef OPENCL_KERNEL_CODE
@@ -98,10 +112,13 @@ sMaterialCl clCopySMaterialCl(const cMaterial &source)
 	sMaterialCl target;
 
 	target.id = source.id;
-
+	target.textureFractalizeStartIteration = source.textureFractalizeStartIteration;
 	target.shading = source.shading;
 	target.specular = source.specular;
 	target.specularWidth = source.specularWidth;
+	target.specularMetallic = source.specularMetallic;
+	target.specularMetallicRoughness = source.specularMetallicRoughness;
+	target.specularMetallicWidth = source.specularMetallicWidth;
 	target.reflectance = source.reflectance;
 	target.luminosity = source.luminosity;
 	target.transparencyIndexOfRefraction = source.transparencyIndexOfRefraction;
@@ -114,6 +131,9 @@ sMaterialCl clCopySMaterialCl(const cMaterial &source)
 	target.luminosityTextureIntensity = source.luminosityTextureIntensity;
 	target.displacementTextureHeight = source.displacementTextureHeight;
 	target.normalMapTextureHeight = source.normalMapTextureHeight;
+	target.iridescenceIntensity = source.iridescenceIntensity;
+	target.iridescenceSubsurfaceThickness = source.iridescenceSubsurfaceThickness;
+	target.textureFractalizeCubeSize = source.textureFractalizeCubeSize;
 
 	target.color = toClFloat3(source.color);
 	target.luminosityColor = toClFloat3(source.luminosityColor);
@@ -124,8 +144,13 @@ sMaterialCl clCopySMaterialCl(const cMaterial &source)
 	target.textureRotation = toClFloat3(source.textureRotation);
 	target.textureScale = toClFloat3(source.textureScale);
 
+	target.rotMatrix = toClMatrix33(source.rotMatrix);
+
+	target.textureMappingType = static_cast<enumTextureMappingCl>(source.textureMappingType);
 	target.fresnelReflectance = source.fresnelReflectance;
 	target.useColorsFromPalette = source.useColorsFromPalette;
+	target.specularPlasticEnable = source.specularPlasticEnable;
+	target.metallic = source.metallic;
 
 	target.useColorTexture = source.useColorTexture;
 	target.useDiffusionTexture = source.useDiffusionTexture;
@@ -133,6 +158,11 @@ sMaterialCl clCopySMaterialCl(const cMaterial &source)
 	target.useDisplacementTexture = source.useDisplacementTexture;
 	target.useNormalMapTexture = source.useNormalMapTexture;
 	target.normalMapTextureFromBumpmap = source.normalMapTextureFromBumpmap;
+	target.normalMapTextureInvertGreen = source.normalMapTextureInvertGreen;
+	target.iridescenceEnabled = source.iridescenceEnabled;
+	target.textureFractalize = source.textureFractalize;
+
+	target.fractalColoring = clCopySFractalColoringCl(source.fractalColoring);
 
 	return target;
 }

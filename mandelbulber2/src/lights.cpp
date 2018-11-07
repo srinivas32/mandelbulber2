@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -128,7 +128,6 @@ void cLights::Set(const cParameterContainer *_params, const cFractalContainer *_
 			double distance = 0;
 			CVector3 position;
 
-			gApplication->processEvents();
 			// try random positioning of light, until distance to surface satisfies
 			while (distance <= 0
 						 || distance >= params->auxLightRandomMaxDistanceFromFractal * radiusMultiplier)
@@ -148,12 +147,20 @@ void cLights::Set(const cParameterContainer *_params, const cFractalContainer *_
 				if (trialNumber > 100000) break;
 			}
 
-			sRGB colour(random.Random(20000, 100000, 1), random.Random(20000, 100000, 1),
-				random.Random(20000, 100000, 1));
-			double convertColorRatio = 65536.0 / dMax(colour.R, colour.G, colour.B);
-			colour.R *= convertColorRatio;
-			colour.G *= convertColorRatio;
-			colour.B *= convertColorRatio;
+			sRGB colour;
+			if (params->auxLightRandomInOneColor)
+			{
+				colour = params->auxLightRandomColor;
+			}
+			else
+			{
+				colour = sRGB(random.Random(20000, 100000, 1), random.Random(20000, 100000, 1),
+					random.Random(20000, 100000, 1));
+				double convertColorRatio = 65536.0 / dMax(colour.R, colour.G, colour.B);
+				colour.R *= convertColorRatio;
+				colour.G *= convertColorRatio;
+				colour.B *= convertColorRatio;
+			}
 
 			double distanceLimited = max(0.1 * params->auxLightRandomMaxDistanceFromFractal, distance);
 			double intensity = params->auxLightRandomIntensity * distanceLimited * distanceLimited;

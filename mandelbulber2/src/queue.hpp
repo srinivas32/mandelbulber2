@@ -35,6 +35,8 @@
 #ifndef MANDELBULBER2_SRC_QUEUE_HPP_
 #define MANDELBULBER2_SRC_QUEUE_HPP_
 
+#include <utility>
+
 #include <QtCore>
 
 // forward declarations
@@ -65,7 +67,7 @@ public:
 	struct structQueueItem
 	{
 		structQueueItem(QString _filename, enumRenderType _renderType)
-				: filename(_filename), renderType(_renderType)
+				: filename(std::move(_filename)), renderType(_renderType)
 		{
 		}
 		bool operator==(const structQueueItem &other) const
@@ -79,7 +81,7 @@ public:
 	// initializes queue and create necessary files and folders
 	cQueue(cInterface *_interface, const QString &_queueListFileName, const QString &_queueFolder,
 		QObject *parent = nullptr);
-	~cQueue();
+	~cQueue() override;
 
 	// add settings to queue
 	void Append(const QString &filename, enumRenderType renderType = queue_STILL);

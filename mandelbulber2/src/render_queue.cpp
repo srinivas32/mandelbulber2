@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -221,7 +221,7 @@ bool cRenderQueue::RenderStill(const cQueue::structQueueItem &queueItem)
 	ImageFileSave::enumImageFileType imageFormat =
 		ImageFileSave::enumImageFileType(gPar->Get<int>("queue_image_format"));
 	QString extension = ImageFileSave::ImageFileExtension(imageFormat);
-	QString saveFilename = QFileInfo(queueItem.filename).baseName() + extension;
+	QString saveFilename = QFileInfo(queueItem.filename).baseName() + "." + extension;
 
 	// setup of rendering engine
 	cRenderJob *renderJob =
@@ -231,6 +231,7 @@ bool cRenderQueue::RenderStill(const cQueue::structQueueItem &queueItem)
 		this, SIGNAL(updateProgressAndStatus(const QString &, const QString &, double)));
 	connect(
 		renderJob, SIGNAL(updateStatistics(cStatistics)), this, SIGNAL(updateStatistics(cStatistics)));
+	connect(renderJob, SIGNAL(updateImage()), this, SIGNAL(updateImage()));
 
 	cRenderingConfiguration config;
 	if (systemData.noGui)

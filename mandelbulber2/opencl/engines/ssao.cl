@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -33,7 +33,8 @@
  */
 
 //------------------ MAIN RENDER FUNCTION --------------------
-kernel void SSAO(__global float *zBuffer, __global float *out, sParamsSSAO p)
+kernel void SSAO(
+	__global float *zBuffer, __global float *sineCosineBuffer, __global float *out, sParamsSSAO p)
 {
 	const unsigned int i = get_global_id(0);
 	const int2 scr = (int2){i % p.width, i / p.width};
@@ -56,12 +57,36 @@ kernel void SSAO(__global float *zBuffer, __global float *out, sParamsSSAO p)
 		scr2 *= z * p.fov;
 
 		float ambient = 0.0f;
-		for (float angle = 0.0f; angle < quality; angle += 1.0f)
+		float angleStep = M_PI_F * 2.0f / quality;
+		int maxRandom = 62831 / quality;
+		int randomSeed = i;
+
+		// randomizing random seed
+		if (p.random_mode)
 		{
-			float2 dir = (float2){cos(angle), sin(angle)};
+			for (int i = 0; i < 3; i++)
+				randomSeed = RandomInt(&randomSeed);
+		}
+
+		float rRandom = 1.0f;
+		if (p.random_mode) rRandom = 0.5f + Random(65536, &randomSeed) / 65536.0f;
+
+		for (int angleIndex = 0; angleIndex < quality; angleIndex++)
+		{
+			float angle = angleIndex;
+			float2 dir;
+			if (p.random_mode)
+			{
+				angle = angleStep * angleIndex + Random(maxRandom, &randomSeed) / 10000.0f;
+				dir = (float2){cos(angle), sin(angle)};
+			}
+			else
+			{
+				dir = (float2){sineCosineBuffer[(int)angle + p.quality], sineCosineBuffer[(int)angle]};
+			}
 			float maxDiff = -1e10f;
 
-			for (float r = 1.0f; r < quality; r += 1.0f)
+			for (float r = 1.0f; r < quality; r += rRandom)
 			{
 				float rr = r * r * scaleFactor;
 				float2 v = scr_f + rr * dir;

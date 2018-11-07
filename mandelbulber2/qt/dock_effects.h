@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -52,7 +52,7 @@ class cDockEffects : public QWidget
 	Q_OBJECT
 public:
 	explicit cDockEffects(QWidget *parent = nullptr);
-	~cDockEffects();
+	~cDockEffects() override;
 
 	void SynchronizeInterfaceBasicFogEnabled(cParameterContainer *par) const;
 	void SynchronizeInterfaceDOFEnabled(cParameterContainer *par) const;
@@ -68,7 +68,6 @@ private slots:
 	static void slotPressedButtonAutoFog();
 	void slotChangedComboAmbientOcclusionMode(int index) const;
 	static void slotEditedLineEditManualLightPlacementDistance(const QString &text);
-	void slotSliderMovedEditManualLightPlacementDistance(int value) const;
 	static void slotPressedButtonSetDOFByMouse();
 	static void slotPressedButtonSetFogByMouse();
 	void slotPressedButtonSetLight1ByMouse() const;
@@ -78,6 +77,7 @@ private slots:
 	static void slotPressedButtonUpdatePostEffects();
 	static void slotPressedButtonPlaceRandomLightsByMouse();
 	void slotChangedPlaceLightBehindObjects(int state);
+	void slotChangedEnableMCDOF(bool state);
 
 private:
 	void ConnectSignals() const;

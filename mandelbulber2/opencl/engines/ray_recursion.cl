@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -54,7 +54,8 @@ typedef struct
 	int count;
 } sRayMarchingOut;
 
-typedef enum {
+typedef enum
+{
 	rayBranchReflection = 0,
 	rayBranchRefraction = 1,
 	rayBranchDone = 2,
@@ -94,21 +95,6 @@ typedef struct
 	bool goDeeper;
 } sRayStack;
 
-typedef struct
-{
-	float3 lightVector;
-	float3 viewVectorNotRotated;
-	__global sMaterialCl *material;
-	__global float4 *palette;
-	__global sVectorsAroundCl *AOVectors;
-	__global sLightCl *lights;
-	int reflectionsMax;
-	int paletteSize;
-	int numberOfLights;
-	int AOVectorsCount;
-
-} sRenderData;
-
 #if defined(USE_REFRACTION) || defined(USE_REFLECTANCE)
 float3 ReflectionVector(const float3 normal, const float3 incident)
 {
@@ -142,8 +128,8 @@ float Reflectance(const float3 normal, const float3 incident, float n1, float n2
 }
 #endif
 
-void RayMarching(
-	sRayMarchingIn in, sRayMarchingOut *out, __constant sClInConstants *consts, int *randomSeed)
+void RayMarching(sRayMarchingIn in, sRayMarchingOut *out, __constant sClInConstants *consts,
+	sRenderData *renderData, int *randomSeed)
 {
 	bool found = false;
 	int count;
@@ -156,6 +142,7 @@ void RayMarching(
 	sClCalcParams calcParam;
 	calcParam.N = consts->params.N;
 	calcParam.normalCalculationMode = false;
+	calcParam.iterThreshMode = consts->params.iterThreshMode;
 	float distThresh = 1e-6f;
 
 	formulaOut outF;
@@ -171,8 +158,9 @@ void RayMarching(
 		distThresh = CalcDistThresh(point, consts);
 		calcParam.distThresh = distThresh;
 		calcParam.detailSize = distThresh;
-		outF = CalculateDistance(consts, point, &calcParam);
+		outF = CalculateDistance(consts, point, &calcParam, renderData);
 		distance = outF.distance;
+		out->objectId = outF.objectId;
 
 #ifdef USE_REFRACTION
 		if (in.invertMode)
@@ -224,8 +212,9 @@ void RayMarching(
 					point = in.start + in.direction * scan;
 				}
 			}
-			outF = CalculateDistance(consts, point, &calcParam);
+			outF = CalculateDistance(consts, point, &calcParam, renderData);
 			distance = outF.distance;
+			out->objectId = outF.objectId;
 
 			//#ifdef USE_REFRACTION
 			if (in.invertMode)
@@ -247,8 +236,8 @@ void RayMarching(
 	out->count = count;
 }
 
-sRayRecursionOut RayRecursion(
-	sRayRecursionIn in, sRenderData *renderData, __constant sClInConstants *consts, int *randomSeed)
+sRayRecursionOut RayRecursion(sRayRecursionIn in, sRenderData *renderData,
+	__constant sClInConstants *consts, image2d_t image2dBackground, int *randomSeed)
 {
 	int rayIndex = 0; // level of recursion
 
@@ -278,7 +267,8 @@ sRayRecursionOut RayRecursion(
 		{
 
 			sRayMarchingOut rayMarchingOut;
-			RayMarching(rayStack[rayIndex].in.rayMarchingIn, &rayMarchingOut, consts, randomSeed);
+			RayMarching(
+				rayStack[rayIndex].in.rayMarchingIn, &rayMarchingOut, consts, renderData, randomSeed);
 			float3 point = rayMarchingOut.point;
 
 			bool found = rayMarchingOut.found;
@@ -289,10 +279,11 @@ sRayRecursionOut RayRecursion(
 			sClCalcParams calcParam;
 			calcParam.N = consts->params.N;
 			calcParam.normalCalculationMode = false;
+			calcParam.iterThreshMode = consts->params.iterThreshMode;
 
 			sShaderInputDataCl shaderInputData;
 			shaderInputData.distThresh = distThresh;
-			shaderInputData.delta = distThresh;
+			shaderInputData.delta = CalcDelta(point, consts);
 			shaderInputData.lightVect = renderData->lightVector;
 			shaderInputData.point = point;
 			shaderInputData.viewVector = rayStack[rayIndex].in.rayMarchingIn.direction;
@@ -300,13 +291,15 @@ sRayRecursionOut RayRecursion(
 			shaderInputData.lastDist = rayMarchingOut.lastDist;
 			shaderInputData.depth = rayMarchingOut.depth;
 			shaderInputData.invertMode = rayStack[rayIndex].in.calcInside;
-			shaderInputData.material = renderData->material;
-			shaderInputData.palette = renderData->palette;
-			shaderInputData.paletteSize = renderData->paletteSize;
-			shaderInputData.AOVectors = renderData->AOVectors;
-			shaderInputData.AOVectorsCount = renderData->AOVectorsCount;
-			shaderInputData.lights = renderData->lights;
-			shaderInputData.numberOfLights = renderData->numberOfLights;
+#if (defined(BOOLEAN_OPERATORS) || defined(USE_PRIMITIVES))
+			shaderInputData.objectId = rayMarchingOut.objectId;
+#else
+			shaderInputData.objectId = 0;
+#endif
+			__global sObjectDataCl *objectData = &renderData->objectsData[shaderInputData.objectId];
+			shaderInputData.material = renderData->materials[objectData->materialId];
+			shaderInputData.palette = renderData->palettes[objectData->materialId];
+			shaderInputData.paletteSize = renderData->paletteLengths[objectData->materialId];
 			shaderInputData.stepCount = rayMarchingOut.count;
 			shaderInputData.randomSeed = *randomSeed;
 
@@ -321,28 +314,46 @@ sRayRecursionOut RayRecursion(
 				sClCalcParams calcParam;
 				calcParam.N = consts->params.N;
 				calcParam.normalCalculationMode = false;
+				calcParam.iterThreshMode = consts->params.iterThreshMode;
 				calcParam.distThresh = shaderInputData.distThresh;
 				calcParam.detailSize = shaderInputData.delta;
 
-				float3 normal = NormalVector(consts, shaderInputData.point, shaderInputData.lastDist,
-					shaderInputData.distThresh, shaderInputData.invertMode, &calcParam);
+				float3 normal =
+					NormalVector(consts, renderData, shaderInputData.point, shaderInputData.lastDist,
+						shaderInputData.distThresh, shaderInputData.invertMode, &calcParam);
 				shaderInputData.normal = normal;
+
+#ifdef USE_TEXTURES
+#ifdef USE_NORMAL_MAP_TEXTURE
+				normal = NormalMapShader(&shaderInputData, renderData, objectData,
+					shaderInputData.material->normalMapTextureIndex);
+				shaderInputData.normal = normal;
+#endif
+#endif
 
 				rayStack[rayIndex].out.normal = normal;
 
 #if defined(USE_REFRACTION) || defined(USE_REFLECTANCE)
 				// prepare refraction values
 				float n1, n2;
+
+#ifdef CHROMATIC_ABERRATION
+				float aberrationStrength = consts->params.DOFMonteCarloCADispersionGain * 0.01f;
+				float hueEffect = 1.0f - aberrationStrength + aberrationStrength * renderData->hue / 180.0f;
+#else
+				float hueEffect = 1.0f;
+#endif
+
 				if (rayStack[rayIndex].in.calcInside) // if trace is inside the object
 				{
-					n1 =
-						shaderInputData.material->transparencyIndexOfRefraction; // reverse refractive indices
+					n1 = shaderInputData.material->transparencyIndexOfRefraction
+							 / hueEffect; // reverse refractive indices
 					n2 = 1.0f;
 				}
 				else
 				{
 					n1 = 1.0f;
-					n2 = shaderInputData.material->transparencyIndexOfRefraction;
+					n2 = shaderInputData.material->transparencyIndexOfRefraction / hueEffect;
 				}
 
 				if (rayIndex < renderData->reflectionsMax)
@@ -490,7 +501,7 @@ sRayRecursionOut RayRecursion(
 
 			sShaderInputDataCl shaderInputData;
 			shaderInputData.distThresh = distThresh;
-			shaderInputData.delta = distThresh;
+			shaderInputData.delta = CalcDelta(point, consts);
 			shaderInputData.lightVect = renderData->lightVector;
 			shaderInputData.point = point;
 			shaderInputData.viewVector = rayStack[rayIndex].in.rayMarchingIn.direction;
@@ -498,21 +509,24 @@ sRayRecursionOut RayRecursion(
 			shaderInputData.lastDist = rayMarchingOut.lastDist;
 			shaderInputData.depth = rayMarchingOut.depth;
 			shaderInputData.invertMode = rayStack[rayIndex].in.calcInside;
-			shaderInputData.material = renderData->material;
-			shaderInputData.palette = renderData->palette;
-			shaderInputData.paletteSize = renderData->paletteSize;
-			shaderInputData.AOVectors = renderData->AOVectors;
-			shaderInputData.AOVectorsCount = renderData->AOVectorsCount;
-			shaderInputData.lights = renderData->lights;
-			shaderInputData.numberOfLights = renderData->numberOfLights;
+#if (defined(BOOLEAN_OPERATORS) || defined(USE_PRIMITIVES))
+			shaderInputData.objectId = rayMarchingOut.objectId;
+#else
+			shaderInputData.objectId = 0;
+#endif
+			__global sObjectDataCl *objectData = &renderData->objectsData[shaderInputData.objectId];
+			shaderInputData.material = renderData->materials[objectData->materialId];
+			shaderInputData.palette = renderData->palettes[objectData->materialId];
+			shaderInputData.paletteSize = renderData->paletteLengths[objectData->materialId];
 			shaderInputData.stepCount = rayMarchingOut.count;
 			shaderInputData.randomSeed = *randomSeed;
 
 			sClCalcParams calcParam;
 			calcParam.N = consts->params.N;
 			calcParam.normalCalculationMode = false;
+			calcParam.iterThreshMode = consts->params.iterThreshMode;
 			calcParam.distThresh = shaderInputData.distThresh;
-			calcParam.detailSize = shaderInputData.distThresh;
+			calcParam.detailSize = shaderInputData.delta;
 			calcParam.randomSeed = *randomSeed;
 
 #ifdef USE_REFLECTANCE
@@ -536,15 +550,42 @@ sRayRecursionOut RayRecursion(
 			float3 backgroundShader;
 			float3 volumetricShader;
 			float3 specular;
+			float3 iridescence;
 
 			shaderInputData.normal = recursionOut.normal;
 
 			if (rayMarchingOut.found)
 			{
-				specular = 0.0f;
-				objectShader = ObjectShader(consts, &shaderInputData, &calcParam, &objectColour, &specular);
 
-// calculate reflectance according to Fresnel equations
+// color texture
+#ifdef USE_TEXTURES
+#ifdef USE_COLOR_TEXTURE
+				shaderInputData.texColor = TextureShader(consts, &calcParam, &shaderInputData, renderData,
+					objectData, shaderInputData.material->colorTextureIndex, 1.0f);
+#endif
+
+#ifdef USE_DIFFUSION_TEXTURE
+				shaderInputData.texDiffuse = TextureShader(consts, &calcParam, &shaderInputData, renderData,
+					objectData, shaderInputData.material->diffusionTextureIndex, 1.0f);
+#endif
+
+#ifdef USE_LUMINOSITY_TEXTURE
+				shaderInputData.texLuminosity = TextureShader(consts, &calcParam, &shaderInputData,
+					renderData, objectData, shaderInputData.material->luminosityTextureIndex, 0.0f);
+#endif
+#endif
+
+				specular = 0.0f;
+				objectShader = ObjectShader(
+					consts, renderData, &shaderInputData, &calcParam, &objectColour, &specular, &iridescence);
+
+#ifdef MONTE_CARLO_DOF_GLOBAL_ILLUMINATION
+				float3 globalIllumination = GlobalIlumination(
+					consts, renderData, &shaderInputData, &calcParam, image2dBackground, objectColour);
+				objectShader += globalIllumination;
+#endif // MONTE_CARLO_DOF_GLOBAL_ILLUMINATION
+
+				// calculate reflectance according to Fresnel equations
 
 #if defined(USE_REFRACTION) || defined(USE_REFLECTANCE)
 				// prepare refraction values
@@ -586,23 +627,43 @@ sRayRecursionOut RayRecursion(
 #if defined(USE_REFRACTION) || defined(USE_REFLECTANCE)
 				if (renderData->reflectionsMax > 0)
 				{
+#ifdef USE_DIFFUSION_TEXTURE
+					float diffusionIntensity = shaderInputData.material->diffusionTextureIntensity;
+					float diffusionIntensityN = 1.0f - diffusionIntensity;
+
+					float3 reflectDiffused = reflect * shaderInputData.texDiffuse * diffusionIntensity
+																	 + reflect * diffusionIntensityN;
+
+#else // not USE_DIFFUSION_TEXTURE
+#ifdef USE_REFLECTANCE
+					float3 reflectDiffused = reflect;
+#else
+					float3 reflectDiffused = 0.0f;
+#endif // USE_REFLECTANCE
+#endif // USE_DIFFUSION_TEXTURE
+
+					reflectDiffused *= iridescence;
+
 #ifdef USE_REFRACTION
 					resultShader = transparentShader * transparent * reflectanceN
 												 + (1.0f - transparent * reflectanceN) * resultShader;
-#endif
+#endif // USE_REFRACTION
 
 #ifdef USE_REFLECTANCE
-					resultShader =
-						reflectShader * reflect * reflectance + (1.0f - reflect * reflectance) * resultShader;
-#endif
+					float4 reflectDiffused4 =
+						(float4){reflectDiffused.s0, reflectDiffused.s1, reflectDiffused.s2, 1.0};
+					resultShader = reflectShader * reflectDiffused4 * reflectance
+												 + (1.0f - reflectDiffused4 * reflectance) * resultShader;
+#endif // USE_REFLECTANCE
 				}
-#endif
+#endif // USE_REFRACTION || USE_REFLECTANCE
 				resultShader = max(resultShader, 0.0f);
 				resultShader.w = 1.0f;
 			}
 			else
 			{
-				backgroundShader = BackgroundShader(consts, &shaderInputData);
+				backgroundShader =
+					BackgroundShader(consts, renderData, image2dBackground, &shaderInputData);
 				resultShader.xyz = backgroundShader;
 				resultShader.w = 0.0f;
 				rayMarchingOut.depth = 1e20f;
@@ -613,11 +674,8 @@ sRayRecursionOut RayRecursion(
 
 #ifdef USE_REFRACTION
 			float step = rayMarchingOut.depth / shaderInputData.stepCount;
-			if (rayStack[rayIndex]
-						.in.calcInside) // if the object interior is traced, then the absorption of light has
-														// to
-														// be
-														// calculated
+			if (rayStack[rayIndex].in.calcInside) // if the object interior is traced, then the absorption
+																						// of light has to be calculated
 			{
 				for (int index = shaderInputData.stepCount - 1; index > 0; index--)
 				{
@@ -631,8 +689,8 @@ sRayRecursionOut RayRecursion(
 			else
 #endif
 			{
-				resultShader =
-					VolumetricShader(consts, &shaderInputData, &calcParam, resultShader, &opacityOut);
+				resultShader = VolumetricShader(
+					consts, renderData, &shaderInputData, &calcParam, resultShader, &opacityOut);
 			}
 
 			recursionOut.point = point;

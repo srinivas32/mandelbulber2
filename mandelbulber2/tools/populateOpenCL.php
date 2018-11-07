@@ -3,6 +3,7 @@
 # this file autogenerates misc files from cpp to opencl
 #
 # requires clang-format and php (apt-get install clang-format php5-cli)
+# clang-format is required in version 3.8.1, get executable from here: http://releases.llvm.org/download.html
 #
 # on default this script runs dry,
 # it will try to generate the needed files and show which files would be modified
@@ -16,17 +17,19 @@ require_once(dirname(__FILE__) . '/common.inc.php');
 
 printStart();
 
-$copyFiles['fractal_h']['path'] = PROJECT_PATH . 'src/fractal.h';
-$copyFiles['fractal_h']['pathTarget'] = PROJECT_PATH . 'opencl/fractal_cl.h';
-$copyFiles['fractparams_h']['path'] = PROJECT_PATH . 'src/fractparams.hpp';
-$copyFiles['fractparams_h']['pathTarget'] = PROJECT_PATH . 'opencl/fractparams_cl.hpp';
-$copyFiles['image_adjustments_h']['path'] = PROJECT_PATH . 'src/image_adjustments.h';
-$copyFiles['image_adjustments_h']['pathTarget'] = PROJECT_PATH . 'opencl/image_adjustments_cl.h';
-$copyFiles['common_params_hpp']['path'] = PROJECT_PATH . 'src/common_params.hpp';
-$copyFiles['common_params_hpp']['pathTarget'] = PROJECT_PATH . 'opencl/common_params_cl.hpp';
+$copyFiles = array();
+/*$copyFiles[] = array('src' => 'fractal.h', 'opencl' => 'fractal_cl.h');
+$copyFiles[] = array('src' => 'fractparams.hpp', 'opencl' => 'fractparams_cl.hpp');
+$copyFiles[] = array('src' => 'image_adjustments.h', 'opencl' => 'image_adjustments_cl.h');
+$copyFiles[] = array('src' => 'common_params.hpp', 'opencl' => 'common_params_cl.hpp');
+$copyFiles[] = array('src' => 'fractal_coloring.hpp', 'opencl' => 'fractal_coloring_cl.hpp');
+$copyFiles[] = array('src' => 'texture_enums.hpp', 'opencl' => 'texture_enums_cl.h');*/
+$copyFiles[] = array('src' => 'object_types.hpp', 'opencl' => 'object_type_cl.h');
 
 printStartGroup('RUNNING OPENCL AUTOGENERATION');
 foreach ($copyFiles as $type => $copyFile) {
+	$copyFile['path'] = PROJECT_PATH . 'src/' . $copyFile['src'];
+	$copyFile['pathTarget'] = PROJECT_PATH . 'opencl/' . $copyFile['opencl'];
 	$status = array();
 	$success = autogenOpenCLFile($copyFile, $status);
 	printResultLine(basename($copyFile['pathTarget']), $success, $status);
@@ -46,7 +49,7 @@ exit;
 
 function defineCollect($defineFile, &$status)
 {
-    // $oldContent = file_get_contents($defineFile);
+	// $oldContent = file_get_contents($defineFile);
 	$status[] = warningString('TODO');
 	return true;
 }
@@ -76,7 +79,7 @@ function autogenOpenCLFile($copyFile, &$status)
 	$noChangeComment[] = 'from the file ' . str_replace(PROJECT_PATH, '', $copyFile['path']);
 	$noChangeComment[] = 'D O    N O T    E D I T    T H I S    F I L E !';
 	$fileHeader = str_replace('*/', '* ' . implode(PHP_EOL . ' * ', $noChangeComment) . PHP_EOL . ' */', $fileHeader);
-
+	
 	$content = $fileHeader . $fileSourceCode;
 
 	// replace opencl specific tokens (and replace all matches)
@@ -104,6 +107,7 @@ function autogenOpenCLFile($copyFile, &$status)
 		array('find' => '/(\s)float(\s)/', 'replace' => '$1cl_float$2'),
 		array('find' => '/(\s)sRGB(\s)/', 'replace' => '$1cl_float3$2'),
 		array('find' => '/(\s)CVector3(\s)/', 'replace' => '$1cl_float3$2'),
+		array('find' => '/(\s)CVector3/', 'replace' => '$1cl_float3'),
 		array('find' => '/(\s)CVector4(\s)/', 'replace' => '$1cl_float4$2'),
 		array('find' => '/(\s)[a-zA-Z0-9_]+::[a-zA-Z0-9_]+(\s)/', 'replace' => '$1cl_int$2'), // enums with outer scope (::) get cast to int
 
@@ -115,16 +119,20 @@ function autogenOpenCLFile($copyFile, &$status)
 		array('find' => '/(\s)CRotationMatrix44(\s)/', 'replace' => '$1matrix44$2'),
 
 		array('find' => '/class\s([a-zA-Z0-9_]+);/', 'replace' => ""), // remove forward declaration
+		array('find' => '/struct\s([a-zA-Z0-9_]+);/', 'replace' => ""), // remove forward declaration
+
 		array('find' => '/\/\/\sforward declarations/', 'replace' => ""), // remove comment "forward declaration"
 		array('find' => '/MANDELBULBER2_SRC_(.*)_HPP_/', 'replace' => "MANDELBULBER2_OPENCL_$1_CL_HPP_"), // include guard 1
 		array('find' => '/MANDELBULBER2_SRC_(.*)_H_/', 'replace' => "MANDELBULBER2_OPENCL_$1_CL_H_"), // include guard
 
 		// TODO rework these regexes
-		array('find' => '/namespace[\s\S]*?\n}\n/', 'replace' => ""), // no namespace support -> TODO fix files with namespaces
+		array('find' => '/using namespace[\s\S]*?\n}\n/', 'replace' => ""), // no namespace support -> TODO fix files with namespaces
+		array('find' => '/\nnamespace[\s\S]*?{([\s\S]*?\n)}\n/', 'replace' => "\n$1"), // no namespace support -> TODO fix files with namespaces
 		array('find' => '/sParamRenderCl\([\s\S]*?\);/', 'replace' => ""), // remove constructor
 		array('find' => '/sFractalCl\([\s\S]*?\);/', 'replace' => ""), // remove constructor
 		array('find' => '/sImageAdjustmentsCl\([\s\S]*?}/', 'replace' => ""), // remove constructor
 		array('find' => '/void RecalculateFractalParams\([\s\S]*?\);/', 'replace' => ""), // remove method
+		array('find' => '/cl_float CalculateColorIndex\([\s\S]*?\);/', 'replace' => ""), // remove method
 
 		array('find' => '/.*::.*/', 'replace' => ""), // no namespace scopes allowed?
 		array('find' => '/.*cPrimitives.*/', 'replace' => ""), // need to include file...
@@ -132,6 +140,17 @@ function autogenOpenCLFile($copyFile, &$status)
 		array('find' => '/sImageAdjustments /', 'replace' => "sImageAdjustmentsCl "), // TODO autogen replace over all files
 
 		array('find' => '/matrix44 /', 'replace' => "// matrix44 "), // TODO
+
+		array('find' => "/ &([a-zA-Z0-9_]+)/", 'replace' => ' *$1'), // no passing by reference
+		array('find' => "/const sExtendedAux \*extendedAux/", 'replace' => 'const sExtendedAuxCl *extendedAux'), // rewrite
+		array('find' => "/const sFractal \*defaultFractal/", 'replace' => 'const sFractalCl *defaultFractal'), // rewrite
+		array('find' => "/const sFractalColoring \*fractalColoring/", 'replace' => 'const sFractalColoringCl *fractalColoring'), // rewrite
+
+		array('find' => "/extendedAux\./", 'replace' => 'extendedAux->'), // pointer dereference
+		array('find' => "/fractalColoring\./", 'replace' => 'fractalColoring->'), // pointer dereference
+
+
+		array('find' => '/([a-zA-Z0-9_]+\(\));/', 'replace' => ""), // remove constructor declaration
 	);
 	foreach ($openCLReplaceLookup as $item) {
 		$content = preg_replace($item['find'], $item['replace'], $content);
@@ -140,6 +159,7 @@ function autogenOpenCLFile($copyFile, &$status)
 	// add c++ side includes
 	$cppIncludes = '#ifndef OPENCL_KERNEL_CODE' . PHP_EOL;
 	if (basename($copyFile['pathTarget']) != 'common_params_cl.hpp') $cppIncludes .= '#include "common_params_cl.hpp"' . PHP_EOL;
+	if (basename($copyFile['pathTarget']) != 'fractal_cl.h') $cppIncludes .= '#include "fractal_cl.h"' . PHP_EOL;
 	if (basename($copyFile['pathTarget']) != 'image_adjustments_cl.h') $cppIncludes .= '#include "image_adjustments_cl.h"' . PHP_EOL;
 	if (basename($copyFile['pathTarget']) != 'opencl_algebra.h') $cppIncludes .= '#include "opencl_algebra.h"' . PHP_EOL;
 	$cppIncludes .= PHP_EOL;
@@ -153,7 +173,8 @@ function autogenOpenCLFile($copyFile, &$status)
 	$content = preg_replace('/(#define MANDELBULBER2_OPENCL_.*)/', '$1' . PHP_EOL . PHP_EOL . $cppIncludes, $content);
 
 	// create copy methods for structs
-	preg_match_all('/typedef struct\n{([\s\S]*?)}\s([0-9a-zA-Z_]+);/', $content, $structMatches);
+	preg_match_all('/typedef struct\n{([\s\S]*?\n)}\s([0-9a-zA-Z_]+);/', $content, $structMatches);
+
 	$copyStructs = array();
 	foreach ($structMatches[1] as $key => $match) {
 		$props = array();
@@ -183,10 +204,12 @@ function autogenOpenCLFile($copyFile, &$status)
 		}
 		$copyStructs[] = getCopyStruct($structName, $props);
 	}
-	$content = preg_replace('/(#endif \/\* MANDELBULBER2_OPENCL.*)/',
-		PHP_EOL . '#ifndef OPENCL_KERNEL_CODE' . PHP_EOL
-		. implode(PHP_EOL, $copyStructs) . '#endif /* OPENCL_KERNEL_CODE */' . PHP_EOL . PHP_EOL . '$1', $content);
-
+	if(count($copyStructs) > 0){
+        $content = preg_replace('/(#endif \/\* MANDELBULBER2_OPENCL.*)/',
+            PHP_EOL . '#ifndef OPENCL_KERNEL_CODE' . PHP_EOL
+            . implode(PHP_EOL, $copyStructs) . '#endif /* OPENCL_KERNEL_CODE */' . PHP_EOL . PHP_EOL . '$1', $content);
+	}
+	
 	// clang-format
 	$filepathTemp = PROJECT_PATH . '/tools/.tmp.c';
 	file_put_contents($filepathTemp, $content);
@@ -216,7 +239,7 @@ function patchModificationDate($filePath, &$content)
 function getCopyStruct($structName, $properties)
 {
 	$structNameSource = substr($structName, 0, -2);
-	$out = 'inline ' . $structName . ' clCopy' . ucfirst($structName) . '(' . $structNameSource . '& source){' . PHP_EOL;
+	$out = 'inline ' . $structName . ' clCopy' . ucfirst($structName) . '(const ' . $structNameSource . '& source){' . PHP_EOL;
 	$out .= '	' . $structName . ' target;' . PHP_EOL;
 	foreach ($properties as $property) {
 		$copyLine = '';
@@ -258,7 +281,9 @@ function getCopyStruct($structName, $properties)
 		}
 
 		// close open for loops
-		$copyLine .= str_repeat("}", count(@$property['array']));
+		if (array_key_exists('array', $property) && !empty($property['array'])) {
+			$copyLine .= str_repeat("}", count($property['array']));
+		}
 		$out .= '	' . $copyLine . PHP_EOL;
 	}
 

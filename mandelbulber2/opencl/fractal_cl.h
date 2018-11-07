@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -57,9 +57,15 @@
 #include "src/image_adjustments.h"
 #endif /* OPENCL_KERNEL_CODE */
 
+#ifndef M_PI_180
+#define M_PI_180 0.01745329251994329576923690768489
+#endif
+
 #define IFS_VECTOR_COUNTCl 9
 #define HYBRID_COUNTCl 5
 #define MANDELBOX_FOLDSCl 2
+
+typedef enum { ocl_DECalculated = 0, ocl_deltaDE = 1, ocl_noDE = 2 } enumOCLDEModeCl;
 
 typedef enum {
 	generalizedFoldBoxTypeCl_foldTet = 0,
@@ -82,7 +88,6 @@ typedef struct
 	cl_float pos_neg;
 	cl_float cw;
 
-	cl_float r_dz;
 	cl_float r;
 	cl_float DE;
 	cl_float pseudoKleinianDE;
@@ -93,10 +98,8 @@ typedef struct
 
 	cl_float color;
 	cl_float colorHybrid;
-	cl_float foldFactor;
-	cl_float minRFactor;
-	cl_float scaleFactor;
-	cl_float oldHybridFactor;
+
+	// temp for trial
 	cl_float temp100;
 	cl_float addDist;
 } sExtendedAuxCl;
@@ -104,39 +107,26 @@ typedef struct
 typedef struct
 {
 	cl_float3 factor;
+
 	cl_float4 factor4D;
 	cl_float factorR;
 	cl_float factorSp1;
 	cl_float factorSp2;
-	cl_float colorMin;
-	cl_float compFold0;
-	cl_float compFold;
-	cl_float compMinR;
-	cl_float compScale;
-	cl_float oldScale1;
-	cl_float parabScale0;
-	cl_float newScale0;
-	cl_float limitMin0;
-	cl_float limitMax9999;
 	cl_float scaleA0;
 	cl_float scaleB0;
-	cl_float scaleC0;
 	cl_float scaleD0;
-	cl_float scaleE0;
 	cl_float scaleF0;
-	cl_float scaleG0;
 	cl_float scaleA1;
 	cl_float scaleB1;
 	cl_float scaleC1;
-	cl_float period1;
-	cl_float trigAdd1;
 
 	cl_int intAx0;
 	cl_int intAy0;
 	cl_int intAz0;
-	cl_int parabEnabledFalse;
-	cl_int cosEnabledFalse;
+
+	cl_int auxColorEnabled;
 	cl_int auxColorEnabledFalse;
+
 	cl_int distanceEnabledFalse;
 } sFoldColorCl;
 
@@ -324,6 +314,19 @@ typedef struct
 	enumMulti_orderOfFoldsCl orderOfFolds5;
 } sFractalSurfFoldsCl;
 
+// asurf mod2
+typedef enum {
+	multi_orderOf3FoldsCl_type1,
+	multi_orderOf3FoldsCl_type2,
+	multi_orderOf3FoldsCl_type3
+} enumMulti_orderOf3FoldsCl;
+typedef struct
+{
+	enumMulti_orderOf3FoldsCl orderOf3Folds1;
+	enumMulti_orderOf3FoldsCl orderOf3Folds2;
+	enumMulti_orderOf3FoldsCl orderOf3Folds3;
+} sFractalASurf3FoldsCl;
+
 // benesi mag transforms
 typedef enum {
 	multi_orderOfTransfCl_typeT1,
@@ -415,21 +418,23 @@ typedef struct
 
 typedef struct
 {
+	cl_int enabled;
 	cl_int enabledFalse;
-	cl_int enabledAuxR2False;
+	// cl_int enabledAuxR2False; // only used once. Remove
 	cl_float scale1;
 	cl_float tweak005;
 	cl_float offset0;
 	cl_float offset1;
 	cl_float offset2;
-	cl_float factor2;
-	cl_float scaleLin;
-	cl_float offsetLin;
+	// cl_float factor2;
+	// cl_float scaleLin; // out of date name, only 4 uses. Remove
+	// cl_float offsetLin; // out of date name, only 4 uses. Remove
 } sFractalAnalyticDECl;
 
 // common parameters for transforming formulas
 typedef struct
 {
+	cl_float angle0;
 	cl_float alphaAngleOffset;
 	cl_float betaAngleOffset;
 	cl_float foldingValue;
@@ -446,7 +451,6 @@ typedef struct
 	cl_float offset2;
 	cl_float offset4;
 	cl_float multiplication;
-	cl_float minRNeg1;
 	cl_float minR0;
 	cl_float minR05;
 	cl_float minR06;
@@ -488,6 +492,7 @@ typedef struct
 	cl_int startIterations;
 	cl_int startIterations250;
 	cl_int stopIterations;
+	cl_int stopIterations15;
 	cl_int startIterationsA;
 	cl_int stopIterationsA;
 	cl_int startIterationsB;
@@ -502,6 +507,10 @@ typedef struct
 	cl_int stopIterationsE;
 	cl_int startIterationsF;
 	cl_int stopIterationsF;
+	cl_int startIterationsG;
+	cl_int stopIterationsG;
+	cl_int startIterationsH;
+	cl_int stopIterationsH;
 	cl_int startIterationsM;
 	cl_int stopIterationsM;
 	cl_int startIterationsP;
@@ -527,6 +536,7 @@ typedef struct
 	cl_int intA;
 	cl_int intB;
 	cl_int int1;
+	cl_int int6;
 	cl_int int8X;
 	cl_int int8Y;
 	cl_int int8Z;
@@ -572,6 +582,7 @@ typedef struct
 
 	cl_float3 rotation; // vec3s
 	cl_float3 rotation2;
+	cl_float3 rotationVary;
 	cl_float3 rotation44a; //.........................
 	cl_float3 rotation44b; //..........................
 
@@ -595,8 +606,8 @@ typedef struct
 
 	matrix33 rotationMatrix;
 	matrix33 rotationMatrix2;
+	matrix33 rotationMatrixVary;
 	// matrix44 rotationMatrix44; //....................
-	matrix33 tempRotMatrix;
 
 	cl_int addCpixelEnabled;
 	cl_int addCpixelEnabledFalse;
@@ -647,6 +658,7 @@ typedef struct
 	cl_int functionEnabledXFalse;
 	cl_int juliaMode;
 	cl_int rotationEnabled;
+	cl_int rotation2EnabledFalse;
 } sFractalTransformCommonCl;
 
 typedef struct
@@ -673,6 +685,7 @@ typedef struct
 	sFractalMagTransformsCl magTransf;
 	sFractalCparaCl Cpara;
 	sFractalComboCl combo;
+	sFractalASurf3FoldsCl aSurf3Folds;
 
 #ifdef USE_OPENCL
 //	cl_float customParameters[15];
@@ -683,7 +696,7 @@ typedef struct
 } sFractalCl;
 
 #ifndef OPENCL_KERNEL_CODE
-inline sExtendedAuxCl clCopySExtendedAuxCl(sExtendedAux &source)
+inline sExtendedAuxCl clCopySExtendedAuxCl(const sExtendedAux &source)
 {
 	sExtendedAuxCl target;
 	target.i = source.i;
@@ -693,7 +706,6 @@ inline sExtendedAuxCl clCopySExtendedAuxCl(sExtendedAux &source)
 	target.sum_z = toClFloat4(source.sum_z);
 	target.pos_neg = source.pos_neg;
 	target.cw = source.cw;
-	target.r_dz = source.r_dz;
 	target.r = source.r;
 	target.DE = source.DE;
 	target.pseudoKleinianDE = source.pseudoKleinianDE;
@@ -702,16 +714,12 @@ inline sExtendedAuxCl clCopySExtendedAuxCl(sExtendedAux &source)
 	target.actualScaleA = source.actualScaleA;
 	target.color = source.color;
 	target.colorHybrid = source.colorHybrid;
-	target.foldFactor = source.foldFactor;
-	target.minRFactor = source.minRFactor;
-	target.scaleFactor = source.scaleFactor;
-	target.oldHybridFactor = source.oldHybridFactor;
 	target.temp100 = source.temp100;
 	target.addDist = source.addDist;
 	return target;
 }
 
-inline sFoldColorCl clCopySFoldColorCl(sFoldColor &source)
+inline sFoldColorCl clCopySFoldColorCl(const sFoldColor &source)
 {
 	sFoldColorCl target;
 	target.factor = toClFloat3(source.factor);
@@ -719,40 +727,24 @@ inline sFoldColorCl clCopySFoldColorCl(sFoldColor &source)
 	target.factorR = source.factorR;
 	target.factorSp1 = source.factorSp1;
 	target.factorSp2 = source.factorSp2;
-	target.colorMin = source.colorMin;
-	target.compFold0 = source.compFold0;
-	target.compFold = source.compFold;
-	target.compMinR = source.compMinR;
-	target.compScale = source.compScale;
-	target.oldScale1 = source.oldScale1;
-	target.parabScale0 = source.parabScale0;
-	target.newScale0 = source.newScale0;
-	target.limitMin0 = source.limitMin0;
-	target.limitMax9999 = source.limitMax9999;
 	target.scaleA0 = source.scaleA0;
 	target.scaleB0 = source.scaleB0;
-	target.scaleC0 = source.scaleC0;
 	target.scaleD0 = source.scaleD0;
-	target.scaleE0 = source.scaleE0;
 	target.scaleF0 = source.scaleF0;
-	target.scaleG0 = source.scaleG0;
 	target.scaleA1 = source.scaleA1;
 	target.scaleB1 = source.scaleB1;
 	target.scaleC1 = source.scaleC1;
-	target.period1 = source.period1;
-	target.trigAdd1 = source.trigAdd1;
 	target.intAx0 = source.intAx0;
 	target.intAy0 = source.intAy0;
 	target.intAz0 = source.intAz0;
-	target.parabEnabledFalse = source.parabEnabledFalse;
-	target.cosEnabledFalse = source.cosEnabledFalse;
+	target.auxColorEnabled = source.auxColorEnabled;
 	target.auxColorEnabledFalse = source.auxColorEnabledFalse;
 	target.distanceEnabledFalse = source.distanceEnabledFalse;
 	return target;
 }
 
 inline sFractalGeneralizedFoldBoxCl clCopySFractalGeneralizedFoldBoxCl(
-	sFractalGeneralizedFoldBox &source)
+	const sFractalGeneralizedFoldBox &source)
 {
 	sFractalGeneralizedFoldBoxCl target;
 	target.type = enumGeneralizedFoldBoxTypeCl(source.type);
@@ -799,7 +791,7 @@ inline sFractalGeneralizedFoldBoxCl clCopySFractalGeneralizedFoldBoxCl(
 	return target;
 }
 
-inline sFractalIFSCl clCopySFractalIFSCl(sFractalIFS &source)
+inline sFractalIFSCl clCopySFractalIFSCl(const sFractalIFS &source)
 {
 	sFractalIFSCl target;
 	target.absX = source.absX;
@@ -840,7 +832,8 @@ inline sFractalIFSCl clCopySFractalIFSCl(sFractalIFS &source)
 	return target;
 }
 
-inline sFractalMandelboxVary4DCl clCopySFractalMandelboxVary4DCl(sFractalMandelboxVary4D &source)
+inline sFractalMandelboxVary4DCl clCopySFractalMandelboxVary4DCl(
+	const sFractalMandelboxVary4D &source)
 {
 	sFractalMandelboxVary4DCl target;
 	target.fold = source.fold;
@@ -851,7 +844,7 @@ inline sFractalMandelboxVary4DCl clCopySFractalMandelboxVary4DCl(sFractalMandelb
 	return target;
 }
 
-inline sFractalMandelboxCl clCopySFractalMandelboxCl(sFractalMandelbox &source)
+inline sFractalMandelboxCl clCopySFractalMandelboxCl(const sFractalMandelbox &source)
 {
 	sFractalMandelboxCl target;
 	target.rotationMain = toClFloat3(source.rotationMain);
@@ -895,7 +888,8 @@ inline sFractalMandelboxCl clCopySFractalMandelboxCl(sFractalMandelbox &source)
 	return target;
 }
 
-inline sFractalBoxFoldBulbPow2Cl clCopySFractalBoxFoldBulbPow2Cl(sFractalBoxFoldBulbPow2 &source)
+inline sFractalBoxFoldBulbPow2Cl clCopySFractalBoxFoldBulbPow2Cl(
+	const sFractalBoxFoldBulbPow2 &source)
 {
 	sFractalBoxFoldBulbPow2Cl target;
 	target.zFactor = source.zFactor;
@@ -903,7 +897,7 @@ inline sFractalBoxFoldBulbPow2Cl clCopySFractalBoxFoldBulbPow2Cl(sFractalBoxFold
 	return target;
 }
 
-inline sFractalMandelbulbCl clCopySFractalMandelbulbCl(sFractalMandelbulb &source)
+inline sFractalMandelbulbCl clCopySFractalMandelbulbCl(const sFractalMandelbulb &source)
 {
 	sFractalMandelbulbCl target;
 	target.power = source.power;
@@ -913,14 +907,14 @@ inline sFractalMandelbulbCl clCopySFractalMandelbulbCl(sFractalMandelbulb &sourc
 	return target;
 }
 
-inline sFractalAexionCl clCopySFractalAexionCl(sFractalAexion &source)
+inline sFractalAexionCl clCopySFractalAexionCl(const sFractalAexion &source)
 {
 	sFractalAexionCl target;
 	target.cadd = source.cadd;
 	return target;
 }
 
-inline sFractalBuffaloCl clCopySFractalBuffaloCl(sFractalBuffalo &source)
+inline sFractalBuffaloCl clCopySFractalBuffaloCl(const sFractalBuffalo &source)
 {
 	sFractalBuffaloCl target;
 	target.preabsx = source.preabsx;
@@ -933,7 +927,7 @@ inline sFractalBuffaloCl clCopySFractalBuffaloCl(sFractalBuffalo &source)
 	return target;
 }
 
-inline sFractalDonutCl clCopySFractalDonutCl(sFractalDonut &source)
+inline sFractalDonutCl clCopySFractalDonutCl(const sFractalDonut &source)
 {
 	sFractalDonutCl target;
 	target.ringRadius = source.ringRadius;
@@ -943,7 +937,7 @@ inline sFractalDonutCl clCopySFractalDonutCl(sFractalDonut &source)
 	return target;
 }
 
-inline sFractalPlatonicSolidCl clCopySFractalPlatonicSolidCl(sFractalPlatonicSolid &source)
+inline sFractalPlatonicSolidCl clCopySFractalPlatonicSolidCl(const sFractalPlatonicSolid &source)
 {
 	sFractalPlatonicSolidCl target;
 	target.frequency = source.frequency;
@@ -952,7 +946,8 @@ inline sFractalPlatonicSolidCl clCopySFractalPlatonicSolidCl(sFractalPlatonicSol
 	return target;
 }
 
-inline sFractalMandelbulbMultiCl clCopySFractalMandelbulbMultiCl(sFractalMandelbulbMulti &source)
+inline sFractalMandelbulbMultiCl clCopySFractalMandelbulbMultiCl(
+	const sFractalMandelbulbMulti &source)
 {
 	sFractalMandelbulbMultiCl target;
 	target.acosOrAsin = enumMulti_acosOrAsinCl(source.acosOrAsin);
@@ -965,7 +960,7 @@ inline sFractalMandelbulbMultiCl clCopySFractalMandelbulbMultiCl(sFractalMandelb
 	return target;
 }
 
-inline sFractalSinTan2TrigCl clCopySFractalSinTan2TrigCl(sFractalSinTan2Trig &source)
+inline sFractalSinTan2TrigCl clCopySFractalSinTan2TrigCl(const sFractalSinTan2Trig &source)
 {
 	sFractalSinTan2TrigCl target;
 	target.asinOrAcos = enumMulti_asinOrAcosCl(source.asinOrAcos);
@@ -974,7 +969,7 @@ inline sFractalSinTan2TrigCl clCopySFractalSinTan2TrigCl(sFractalSinTan2Trig &so
 	return target;
 }
 
-inline sFractalSurfFoldsCl clCopySFractalSurfFoldsCl(sFractalSurfFolds &source)
+inline sFractalSurfFoldsCl clCopySFractalSurfFoldsCl(const sFractalSurfFolds &source)
 {
 	sFractalSurfFoldsCl target;
 	target.orderOfFolds1 = enumMulti_orderOfFoldsCl(source.orderOfFolds1);
@@ -985,7 +980,16 @@ inline sFractalSurfFoldsCl clCopySFractalSurfFoldsCl(sFractalSurfFolds &source)
 	return target;
 }
 
-inline sFractalMagTransformsCl clCopySFractalMagTransformsCl(sFractalMagTransforms &source)
+inline sFractalASurf3FoldsCl clCopySFractalASurf3FoldsCl(const sFractalASurf3Folds &source)
+{
+	sFractalASurf3FoldsCl target;
+	target.orderOf3Folds1 = enumMulti_orderOf3FoldsCl(source.orderOf3Folds1);
+	target.orderOf3Folds2 = enumMulti_orderOf3FoldsCl(source.orderOf3Folds2);
+	target.orderOf3Folds3 = enumMulti_orderOf3FoldsCl(source.orderOf3Folds3);
+	return target;
+}
+
+inline sFractalMagTransformsCl clCopySFractalMagTransformsCl(const sFractalMagTransforms &source)
 {
 	sFractalMagTransformsCl target;
 	target.orderOfTransf1 = enumMulti_orderOfTransfCl(source.orderOfTransf1);
@@ -996,14 +1000,14 @@ inline sFractalMagTransformsCl clCopySFractalMagTransformsCl(sFractalMagTransfor
 	return target;
 }
 
-inline sFractalComboCl clCopySFractalComboCl(sFractalCombo &source)
+inline sFractalComboCl clCopySFractalComboCl(const sFractalCombo &source)
 {
 	sFractalComboCl target;
 	target.modeA = enumComboCl(source.modeA);
 	return target;
 }
 
-inline sFractalSurfBoxCl clCopySFractalSurfBoxCl(sFractalSurfBox &source)
+inline sFractalSurfBoxCl clCopySFractalSurfBoxCl(const sFractalSurfBox &source)
 {
 	sFractalSurfBoxCl target;
 	target.enabledX1 = source.enabledX1;
@@ -1033,7 +1037,7 @@ inline sFractalSurfBoxCl clCopySFractalSurfBoxCl(sFractalSurfBox &source)
 	return target;
 }
 
-inline sFractalCparaCl clCopySFractalCparaCl(sFractalCpara &source)
+inline sFractalCparaCl clCopySFractalCparaCl(const sFractalCpara &source)
 {
 	sFractalCparaCl target;
 	target.enabledLinear = source.enabledLinear;
@@ -1058,25 +1062,24 @@ inline sFractalCparaCl clCopySFractalCparaCl(sFractalCpara &source)
 	return target;
 }
 
-inline sFractalAnalyticDECl clCopySFractalAnalyticDECl(sFractalAnalyticDE &source)
+inline sFractalAnalyticDECl clCopySFractalAnalyticDECl(const sFractalAnalyticDE &source)
 {
 	sFractalAnalyticDECl target;
+	target.enabled = source.enabled;
 	target.enabledFalse = source.enabledFalse;
-	target.enabledAuxR2False = source.enabledAuxR2False;
 	target.scale1 = source.scale1;
 	target.tweak005 = source.tweak005;
 	target.offset0 = source.offset0;
 	target.offset1 = source.offset1;
 	target.offset2 = source.offset2;
-	target.factor2 = source.factor2;
-	target.scaleLin = source.scaleLin;
-	target.offsetLin = source.offsetLin;
 	return target;
 }
 
-inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransformCommon &source)
+inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(
+	const sFractalTransformCommon &source)
 {
 	sFractalTransformCommonCl target;
+	target.angle0 = source.angle0;
 	target.alphaAngleOffset = source.alphaAngleOffset;
 	target.betaAngleOffset = source.betaAngleOffset;
 	target.foldingValue = source.foldingValue;
@@ -1093,7 +1096,6 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.offset2 = source.offset2;
 	target.offset4 = source.offset4;
 	target.multiplication = source.multiplication;
-	target.minRNeg1 = source.minRNeg1;
 	target.minR0 = source.minR0;
 	target.minR05 = source.minR05;
 	target.minR06 = source.minR06;
@@ -1132,6 +1134,7 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.startIterations = source.startIterations;
 	target.startIterations250 = source.startIterations250;
 	target.stopIterations = source.stopIterations;
+	target.stopIterations15 = source.stopIterations15;
 	target.startIterationsA = source.startIterationsA;
 	target.stopIterationsA = source.stopIterationsA;
 	target.startIterationsB = source.startIterationsB;
@@ -1146,6 +1149,10 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.stopIterationsE = source.stopIterationsE;
 	target.startIterationsF = source.startIterationsF;
 	target.stopIterationsF = source.stopIterationsF;
+	target.startIterationsG = source.startIterationsG;
+	target.stopIterationsG = source.stopIterationsG;
+	target.startIterationsH = source.startIterationsH;
+	target.stopIterationsH = source.stopIterationsH;
 	target.startIterationsM = source.startIterationsM;
 	target.stopIterationsM = source.stopIterationsM;
 	target.startIterationsP = source.startIterationsP;
@@ -1169,6 +1176,7 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.intA = source.intA;
 	target.intB = source.intB;
 	target.int1 = source.int1;
+	target.int6 = source.int6;
 	target.int8X = source.int8X;
 	target.int8Y = source.int8Y;
 	target.int8Z = source.int8Z;
@@ -1212,6 +1220,7 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.power8 = toClFloat4(source.power8);
 	target.rotation = toClFloat3(source.rotation);
 	target.rotation2 = toClFloat3(source.rotation2);
+	target.rotationVary = toClFloat3(source.rotationVary);
 	target.rotation44a = toClFloat3(source.rotation44a);
 	target.rotation44b = toClFloat3(source.rotation44b);
 	target.scaleP222 = toClFloat4(source.scaleP222);
@@ -1232,7 +1241,7 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.constantMultiplier1220 = toClFloat4(source.constantMultiplier1220);
 	target.rotationMatrix = toClMatrix33(source.rotationMatrix);
 	target.rotationMatrix2 = toClMatrix33(source.rotationMatrix2);
-	target.tempRotMatrix = toClMatrix33(source.tempRotMatrix);
+	target.rotationMatrixVary = toClMatrix33(source.rotationMatrixVary);
 	target.addCpixelEnabled = source.addCpixelEnabled;
 	target.addCpixelEnabledFalse = source.addCpixelEnabledFalse;
 	target.alternateEnabledFalse = source.alternateEnabledFalse;
@@ -1282,10 +1291,11 @@ inline sFractalTransformCommonCl clCopySFractalTransformCommonCl(sFractalTransfo
 	target.functionEnabledXFalse = source.functionEnabledXFalse;
 	target.juliaMode = source.juliaMode;
 	target.rotationEnabled = source.rotationEnabled;
+	target.rotation2EnabledFalse = source.rotation2EnabledFalse;
 	return target;
 }
 
-inline sFractalCl clCopySFractalCl(sFractal &source)
+inline sFractalCl clCopySFractalCl(const sFractal &source)
 {
 	sFractalCl target;
 	target.formula = source.formula;
@@ -1309,6 +1319,7 @@ inline sFractalCl clCopySFractalCl(sFractal &source)
 	target.magTransf = clCopySFractalMagTransformsCl(source.magTransf);
 	target.Cpara = clCopySFractalCparaCl(source.Cpara);
 	target.combo = clCopySFractalComboCl(source.combo);
+	target.aSurf3Folds = clCopySFractalASurf3FoldsCl(source.aSurf3Folds);
 	return target;
 }
 #endif /* OPENCL_KERNEL_CODE */

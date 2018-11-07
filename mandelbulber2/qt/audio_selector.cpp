@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -55,7 +55,6 @@ cAudioSelector::cAudioSelector(QWidget *parent) : QWidget(parent), ui(new Ui::cA
 	playStream = nullptr;
 
 	ConnectSignals();
-	audio = nullptr;
 	animationFrames = nullptr;
 	setAttribute(Qt::WA_DeleteOnClose, true);
 	SetStartStopButtonsPlayingStatus(QAudio::IdleState);
@@ -100,7 +99,7 @@ void cAudioSelector::slotLoadAudioFile()
 		slotPlaybackStop();
 		SetStartStopButtonsPlayingStatus(QAudio::IdleState);
 
-		connect(audio, SIGNAL(loadingFinished()), this, SLOT(slotAudioLoaded()));
+		connect(audio.data(), SIGNAL(loadingFinished()), this, SLOT(slotAudioLoaded()));
 		audio->LoadAudio(filename);
 	}
 }
@@ -295,8 +294,8 @@ void cAudioSelector::AssignAnimation(cAnimationFrames *_animationFrames)
 	if (animationFrames && !parameterName.isEmpty())
 	{
 		audio = animationFrames->GetAudioPtr(parameterName);
-		connect(audio, SIGNAL(loadingProgress(QString)), this, SIGNAL(loadingProgress(QString)));
-		connect(audio, SIGNAL(loadingFailed()), ui->waveForm, SLOT(slotLoadingFailed()));
+		connect(audio.data(), SIGNAL(loadingProgress(QString)), this, SIGNAL(loadingProgress(QString)));
+		connect(audio.data(), SIGNAL(loadingFailed()), ui->waveForm, SLOT(slotLoadingFailed()));
 
 		if (audio->isLoaded())
 		{

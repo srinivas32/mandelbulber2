@@ -1,12 +1,12 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
  * see also COPYING file in this folder.    ~+{i%+++
  *
- * Reciprocal3  based on Darkbeam's code from M3D,
+ * Reciprocal3  based on DarkBeam's code from M3D,
  * @reference
  * http://www.fractalforums.com/mandelbulb-3d/custom-formulas-and-transforms-release-t17106/
 
@@ -114,7 +114,6 @@ REAL4 TransfReciprocal3Iteration(REAL4 z, __constant sFractalCl *fractal, sExten
 		tempZ.z += fabs(z.z) * fractal->transformCommon.offset000.z;
 		z.z = sign(z.z) * tempZ.z;
 	}
-	// aux->DE = aux->DE * l/L;
 	aux->DE *= fractal->analyticDE.scale1; // DE tweak
 	return z;
 }

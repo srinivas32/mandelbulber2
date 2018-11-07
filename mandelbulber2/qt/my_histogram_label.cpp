@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -72,55 +72,64 @@ void MyHistogramLabel::RedrawHistogram(QPainter &painter) const
 	int size = histData.GetSize();
 
 	// calculate statistics
-	long long sum = 0;
+	long long totalSum = 0;
 	for (int i = 0; i <= size; i++)
 	{
-		if (histData.GetHist(i) > maxH)
-		{
-			maxH = histData.GetHist(i);
-			extremeIndex = i;
-		}
-		sum += histData.GetHist(i);
-		double prob = double(sum) / histData.GetCount();
-		if (prob < 0.0062) minIndex = i + 1;
-		if (prob < 0.9938) maxIndex = i + 1;
+		totalSum += histData.GetHist(i);
 	}
-	double average = double(histData.GetSum()) / histData.GetCount();
 
-	if (histData.GetCount() > 0)
+	if (totalSum > 0)
 	{
-		int legendWidthP1 = legendWidth + 1;
-		int legendHeightP1 = legendHeight + 1;
-
-		int drawWidth = width() - legendWidthP1;
-		int drawHeight = height() - legendHeightP1;
-
-		// draw background
-		painter.setPen(QPen(backgroundColor));
-		painter.setBrush(QBrush(backgroundColor));
-		painter.drawRect(QRect(legendWidthP1, 0, drawWidth, drawHeight));
-
-		painter.setPen(QPen(barColor));
-		painter.setBrush(QBrush(barColor));
-
-		// draw each column bar
-		for (int i = 0; i < size; i++)
+		long long sum = 0;
+		for (int i = 0; i <= size; i++)
 		{
-			int height = double(drawHeight) * max(0L, histData.GetHist(i)) / maxH;
-
-			painter.drawRect(QRect(legendWidthP1 + i * drawWidth / size, drawHeight - height,
-				floor(1.0 * drawWidth / size), height));
+			if (histData.GetHist(i) > maxH)
+			{
+				maxH = histData.GetHist(i);
+				extremeIndex = i;
+			}
+			sum += histData.GetHist(i);
+			double prob = double(sum) / totalSum;
+			if (prob < 0.003) minIndex = i + 1;
+			if (prob < 0.997) maxIndex = i + 1;
 		}
+		double average = double(histData.GetSum()) / totalSum;
 
-		// draw max description
-		painter.setPen(QPen(maxColor));
-		painter.setBrush(QBrush(maxColor));
+		if (histData.GetCount() > 0)
+		{
+			int legendWidthP1 = legendWidth + 1;
+			int legendHeightP1 = legendHeight + 1;
 
-		painter.drawText(fmin(legendWidthP1 + (extremeIndex * drawWidth / size) + 20, width() - 100),
-			20, QString("min: ") + GetShortNumberDisplay(minIndex) + QString(", mode: ")
-						+ GetShortNumberDisplay(extremeIndex) + QString(", max: ")
-						+ GetShortNumberDisplay(maxIndex) + QString(", avg: ") + QString::number(average));
-	}
+			int drawWidth = width() - legendWidthP1;
+			int drawHeight = height() - legendHeightP1;
+
+			// draw background
+			painter.setPen(QPen(backgroundColor));
+			painter.setBrush(QBrush(backgroundColor));
+			painter.drawRect(QRect(legendWidthP1, 0, drawWidth, drawHeight));
+
+			painter.setPen(QPen(barColor));
+			painter.setBrush(QBrush(barColor));
+
+			// draw each column bar
+			for (int i = 0; i < size; i++)
+			{
+				int height = double(drawHeight) * max(0L, histData.GetHist(i)) / maxH;
+
+				painter.drawRect(QRect(legendWidthP1 + i * drawWidth / size, drawHeight - height,
+					floor(1.0 * drawWidth / size), height));
+			}
+
+			// draw max description
+			painter.setPen(QPen(maxColor));
+			painter.setBrush(QBrush(maxColor));
+
+			painter.drawText(10, legendWidthP1 + 5,
+				QString("min: ") + GetShortNumberDisplay(minIndex) + QString(", mode: ")
+					+ GetShortNumberDisplay(extremeIndex) + QString(", max: ")
+					+ GetShortNumberDisplay(maxIndex) + QString(", avg: ") + QString::number(average));
+		}
+	} // totalSum > 0
 }
 
 QString MyHistogramLabel::GetShortNumberDisplay(int val) const

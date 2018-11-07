@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -35,6 +35,8 @@
 #ifndef MANDELBULBER2_SRC_PRIMITIVES_H_
 #define MANDELBULBER2_SRC_PRIMITIVES_H_
 
+#include <utility>
+
 #include "QtCore"
 #include "algebra.hpp"
 #include "color_structures.hpp"
@@ -48,7 +50,7 @@ struct sRenderData;
 struct sPrimitiveItem
 {
 	sPrimitiveItem(fractal::enumObjectType _type, int _id, QString _name)
-			: type(_type), id(_id), name(_name)
+			: type(_type), id(_id), name(std::move(_name))
 	{
 	}
 
@@ -61,7 +63,7 @@ struct sPrimitiveBasic : cObjectData
 {
 	bool enable;
 	int objectId;
-	virtual ~sPrimitiveBasic() {}
+	virtual ~sPrimitiveBasic() = default;
 	virtual double PrimitiveDistance(CVector3 _point) const = 0;
 };
 
@@ -90,12 +92,15 @@ struct sPrimitiveSphere : sPrimitiveBasic
 struct sPrimitiveWater : sPrimitiveBasic
 {
 	bool empty;
-	double amplitude;
+	bool waveFromObjectsEnable;
+	double relativeAmplitude;
 	double animSpeed;
 	double length;
+	double waveFromObjectsRelativeAmplitude;
 	int iterations;
 	int animFrame;
 	double PrimitiveDistance(CVector3 _point) const override;
+	double PrimitiveDistanceWater(CVector3 _point, double distanceFromAnother) const;
 };
 
 struct sPrimitiveCone : sPrimitiveBasic
@@ -123,9 +128,9 @@ struct sPrimitiveTorus : sPrimitiveBasic
 {
 	bool empty;
 	double radius;
-	double radius_lpow;
-	double tube_radius;
-	double tube_radius_lpow;
+	double radiusLPow;
+	double tubeRadius;
+	double tubeRadiusLPow;
 	CVector3 repeat;
 	double PrimitiveDistance(CVector3 _point) const override;
 };
@@ -157,6 +162,11 @@ public:
 	~cPrimitives();
 	double TotalDistance(
 		CVector3 point, double fractalDistance, int *closestObjectId, sRenderData *data) const;
+	const QList<sPrimitiveBasic *> *GetListOfPrimitives() const { return &allPrimitives; }
+
+	CVector3 allPrimitivesPosition;
+	CVector3 allPrimitivesRotation;
+	CRotationMatrix mRotAllPrimitivesRotation;
 
 private:
 	QList<sPrimitiveBasic *> allPrimitives;
@@ -165,10 +175,6 @@ private:
 	{
 		return (normal.Dot(point - position));
 	}
-
-	CVector3 allPrimitivesPosition;
-	CVector3 allPrimitivesRotation;
-	CRotationMatrix mRotAllPrimitivesRotation;
 	bool isAnyPrimitive;
 };
 

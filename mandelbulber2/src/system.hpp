@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -35,8 +35,8 @@
 #ifndef MANDELBULBER2_SRC_SYSTEM_HPP_
 #define MANDELBULBER2_SRC_SYSTEM_HPP_
 
-#define MANDELBULBER_VERSION 2.12
-#define MANDELBULBER_VERSION_STRING "2.12-alpha7"
+#define MANDELBULBER_VERSION 2.15
+#define MANDELBULBER_VERSION_STRING "2.15-dev-alpha2"
 #define TO_STRING(a) #a
 
 #ifdef _WIN32 /* WINDOWS */
@@ -63,10 +63,16 @@
 #endif
 
 #include <qapplication.h>
-#include <stdio.h>
-#include <stdlib.h>
+
+#include <cstdio>
+#include <cstdlib>
 
 #include <QtCore>
+
+// compatibility with qt version < 5.5
+#ifndef qInfo
+#define qInfo qDebug
+#endif
 
 enum enumRenderingThreadPriority
 {
@@ -85,7 +91,7 @@ private:
 	QString dataDirectoryHidden;
 
 public:
-	bool IsUpgraded() const { return QFileInfo(dataDirectoryPublic + "settings").exists(); }
+	bool IsUpgraded() const { return QFileInfo::exists(dataDirectoryPublic + "settings"); }
 	void Upgrade() const
 	{
 		QStringList moveFolders = {GetSettingsFolder(), GetImagesFolder(), GetSlicesFolder(),
@@ -95,7 +101,7 @@ public:
 			QString folderSource = moveFolders.at(i);
 			QString folderTarget = folderSource;
 			folderTarget.replace(dataDirectoryHidden, dataDirectoryPublic);
-			if (QFileInfo(folderTarget).exists())
+			if (QFileInfo::exists(folderTarget))
 			{
 				qCritical() << QString("target folder %1 already exists, won't move!").arg(folderTarget);
 			}
@@ -127,8 +133,9 @@ public:
 	QString GetQueueFractlistFile() const { return dataDirectoryHidden + "queue.fractlist"; }
 	QString GetThumbnailsFolder() const { return dataDirectoryHidden + "thumbnails"; }
 	QString GetAutosaveFile() const { return dataDirectoryHidden + ".autosave.fract"; }
-	QString GetIniFile() const { return dataDirectoryHidden + "mandelbulber.ini"; }
+	QString GetIniFile() const;
 	QString GetRecentFilesListFile() const { return dataDirectoryHidden + "files.recent"; }
+	QString GetResolutionPresetsFile() const { return dataDirectoryHidden + "resolutionPresets.ini"; }
 
 	QString GetImageFileNameSuggestion()
 	{
@@ -146,18 +153,21 @@ public:
 	}
 
 	int GetPreferredFontSize() const { return preferredFontSize; }
-	void SetPreferredFontSize(int preferredFontSize) { this->preferredFontSize = preferredFontSize; }
-	int GetPreferredThumbnailSize() const { return preferredThumbnailSize; }
-	void SetPreferredThumbnailSize(int preferredThumbnailSize)
+	void SetPreferredFontSize(int preferredFontSizeInput)
 	{
-		this->preferredThumbnailSize = preferredThumbnailSize;
+		preferredFontSize = preferredFontSizeInput;
+	}
+	int GetPreferredThumbnailSize() const { return preferredThumbnailSize; }
+	void SetPreferredThumbnailSize(int preferredThumbnailSizeInput)
+	{
+		preferredThumbnailSize = preferredThumbnailSizeInput;
 	}
 	int GetPreferredFontPointSize() const { return preferredFontPointSize; }
-	void SetPreferredFontPointSize(int preferredFontPointSize)
+	void SetPreferredFontPointSize(int preferredFontPointSizeInput)
 	{
-		this->preferredFontPointSize = preferredFontPointSize;
+		preferredFontPointSize = preferredFontPointSizeInput;
 	}
-	void SetLogfileName(QString logfileName) { this->logfileName = logfileName; }
+	void SetLogfileName(QString logfileNameInput) { logfileName = logfileNameInput; }
 
 	QString homeDir;
 	QString sharedDir;
@@ -183,6 +193,7 @@ public:
 	int preferredFontSize;
 	int preferredFontPointSize;
 	int preferredThumbnailSize;
+	bool isOutputTty;
 };
 
 struct sActualFileNames
@@ -219,5 +230,6 @@ void RetrieveToolbarPresets(bool force);
 void RetrieveExampleMaterials(bool force);
 QThread::Priority GetQThreadPriority(enumRenderingThreadPriority priority);
 void CalcPreferredFontSize(bool noGui);
+bool IsOutputTty();
 
 #endif /* MANDELBULBER2_SRC_SYSTEM_HPP_ */

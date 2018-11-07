@@ -1,6 +1,6 @@
 /**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______
- * Copyright (C) 2017 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) 2018 Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/
@@ -18,7 +18,7 @@
 REAL4 MsltoeSym3Mod3Iteration(REAL4 z, __constant sFractalCl *fractal, sExtendedAuxCl *aux)
 {
 	REAL4 c = aux->const_c;
-	aux->r_dz = aux->r_dz * 2.0f * aux->r;
+	aux->DE = aux->DE * 2.0f * aux->r;
 	REAL4 z1 = z;
 	REAL psi = mad(2.0f, M_PI_F, atan2(z.z, z.y));
 	REAL psi2 = 0;
@@ -60,21 +60,21 @@ REAL4 MsltoeSym3Mod3Iteration(REAL4 z, __constant sFractalCl *fractal, sExtended
 		z.y += sign(z.y) * tempFAB.y;
 		z.z += sign(z.z) * tempFAB.z;
 	}
-	REAL lengthTempZ = length(-z); // spherical offset
+	REAL lengthTempZ = -length(z); // spherical offset
 	// if (lengthTempZ > -1e-21f)
 	//	lengthTempZ = -1e-21f;   //  z is neg.)
 	z *= 1.0f + native_divide(fractal->transformCommon.offset, lengthTempZ);
 	z *= fractal->transformCommon.scale1;
-	aux->r_dz *= fabs(fractal->transformCommon.scale1);
+	aux->DE *= fabs(fractal->transformCommon.scale1);
 
 	if (fractal->transformCommon.functionEnabledFalse // quaternion fold
 			&& aux->i >= fractal->transformCommon.startIterationsA
 			&& aux->i < fractal->transformCommon.stopIterationsA)
 	{
 		aux->r = length(z);
-		aux->r_dz = aux->r_dz * 2.0f * aux->r;
+		aux->DE = aux->DE * 2.0f * aux->r;
 		z = (REAL4){z.x * z.x - z.y * z.y - z.z * z.z, z.x * z.y, z.x * z.z, z.w};
-		if (fractal->transformCommon.functionEnabledAxFalse)
+		if (fractal->analyticDE.enabledFalse)
 		{
 			REAL4 temp = z;
 			REAL tempL = length(temp);
@@ -82,7 +82,7 @@ REAL4 MsltoeSym3Mod3Iteration(REAL4 z, __constant sFractalCl *fractal, sExtended
 			// if (tempL < 1e-21f)
 			//	tempL = 1e-21f;
 			REAL avgScale = native_divide(length(z), tempL);
-			aux->r_dz *= avgScale;
+			aux->DE *= avgScale;
 		}
 		else
 		{

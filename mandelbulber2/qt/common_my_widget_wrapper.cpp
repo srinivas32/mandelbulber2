@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -95,7 +95,7 @@ void CommonMyWidgetWrapper::contextMenuEvent(QContextMenuEvent *event, QMenu *ex
 			actionRemoveFromKeyframeAnimation->setIcon(iconDelete);
 		}
 
-		QAction *selectedItem = menu->exec(event->globalPos());
+		const QAction *selectedItem = menu->exec(event->globalPos());
 		if (selectedItem)
 		{
 			if (selectedItem == actionResetToDefault)
@@ -141,11 +141,11 @@ void CommonMyWidgetWrapper::setToolTipText()
 {
 	QString toolTipText = widget->toolTip();
 	toolTipText +=
-		"\n"
-		+ QCoreApplication::translate("CommonMyWidgetWrapper", "Parameter name: %1").arg(parameterName)
-		+ "<br>";
-	toolTipText += QCoreApplication::translate("CommonMyWidgetWrapper", "Default value: %1")
-									 .arg(getDefaultAsString());
+		QString("<table style='margin-top: 5px;'>") + "<tr><td>"
+		+ QCoreApplication::translate("CommonMyWidgetWrapper", "Parameter&nbsp;name:&nbsp;")
+		+ "</td><td><b>" + getFullParameterName() + "</b></td></tr>" + "<tr><td>"
+		+ QCoreApplication::translate("CommonMyWidgetWrapper", "Default&nbsp;value:&nbsp;")
+		+ "</td><td><b>" + getDefaultAsString() + "</b></td></tr>" + "</table>";
 	widget->setToolTip(toolTipText);
 }
 

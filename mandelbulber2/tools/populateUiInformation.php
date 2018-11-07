@@ -6,6 +6,7 @@
 # - generates formula thumbnails
 #
 # requires packages: highlight, clang-format, git and php (apt-get install highlight clang-format git php5-cli)
+# clang-format is required in version 3.8.1, get executable from here: http://releases.llvm.org/download.html
 #
 # on default this script runs dry,
 # it will try to parse all formulas and show which ui files would be modified
@@ -24,17 +25,18 @@ $formulaExampleUsage = getFormulaExampleUsage();
 
 printStartGroup('RUNNING FORMULA CHECKS');
 foreach ($formulas as $index => $formula) {
-    @$i++;
+	@$i++;
 	$success = true;
 	$status = array();
 	if ($success) $success = updateInfoBoxes($index, $formula, $status);
 	if ($success) $success = generateFormulaOpenCLFiles($formula, $status);
 	if ($success) $success = generateFormulaIcons($formula, $status);
+	if ($success) $success = generateDefinition($index, $formula, $status);
 	if ($success && argumentContains('checkCl')) $success = checkOpenCLCompile($formula, $status);
-	printResultLine($formula['name'], $success, $status, $i / count($formulas));
+	printResultLine($formula['nameInComboBox'], $success, $status, $i / count($formulas));
 }
 printEndGroup();
-
+writeFormulaCSV($formulas);
 printFinish();
 exit;
 
@@ -55,37 +57,44 @@ function getFormulasData()
 
 	foreach ($formula_matches[0] as $key => $formulaMatch) {
 		if ($key == 0) continue; // skip formula "none"
-
 		// read index and name from fractal_list
-		preg_match('/"([a-zA-Z0-9 _\'-\^]+)"[\s\S]*?"([a-zA-Z0-9 _-]+)"[\s\S]*?([a-zA-Z0-9 _-]+)[\s\S]*?([a-zA-Z0-9 _-]+)/', $formulaMatch, $matches);
-		if (count($matches) < 4) die('could not read index for formula : ' . $formulaMatch);
-		$name = trim($matches[1]);
-		$internalName = trim($matches[2]);
-		$index = trim($matches[3]);
-		$functionName = trim($matches[4]);;
+		preg_match('/sFractalDescription\(([\s\S]*?)\)\);/', $formulaMatch, $matches);
+		$elements = explode(',', $matches[1]);
+		if (count($elements) != 10) die('could not read index for formula : ' . $formulaMatch);
+		$f = array();
+		$f['nameInComboBox'] = trim(str_replace('"', '', $elements[0]));
+		$f['internalName'] = trim(str_replace('"', '', $elements[1]));
+		$index = trim(str_replace('"', '', $elements[2]));
+		$f['functionName'] = trim(str_replace('"', '', $elements[3]));
+		$f['deType'] = trim(str_replace('"', '', $elements[4]));
+		$f['deFunctionType'] = trim(str_replace('"', '', $elements[5]));
+		$f['pixelAddition'] = trim(str_replace('"', '', $elements[6]));
+		$f['defaultBailout'] = trim(str_replace('"', '', $elements[7]));
+		$f['analyticFunction'] = trim(str_replace('"', '', $elements[8]));
+		$f['coloringFunction'] = trim(str_replace('"', '', $elements[9]));
 
 		$internalNameNew = from_camel_case($index);
 		$functionNameNew = ucfirst($index) . 'Iteration';
 
 		// check for automatic renaming to fit naming convention
-		if ($internalNameNew != $internalName) {
+		if ($internalNameNew != $f['internalName']) {
 			if (!isDryRun()) {
-				upgradeInternalName($internalName, $internalNameNew);
+				upgradeInternalName($f['internalName'], $internalNameNew);
 			}
-			echo noticeString('internal name upgrade from ' . $internalName . ' to ' . $internalNameNew) . PHP_EOL;
-			$internalName = $internalNameNew;
+			echo noticeString('internal name upgrade from ' . $f['internalName'] . ' to ' . $internalNameNew) . PHP_EOL;
+			$f['internalName'] = $internalNameNew;
 			if (!isDryRun()) die('Changes have been written, check changes and run script again for more changes.');
 		}
-		if ($functionName != $functionNameNew) {
+		if ($f['functionName'] != $functionNameNew) {
 			if (!isDryRun()) {
-				upgradeFunctionName($functionName, $functionNameNew);
+				upgradeFunctionName($f['functionName'], $functionNameNew);
 			}
-			echo noticeString('function name upgrade from ' . $functionName . ' to ' . $functionNameNew) . PHP_EOL;
+			echo noticeString('function name upgrade from ' . $f['functionName'] . ' to ' . $functionNameNew) . PHP_EOL;
 			if (!isDryRun()) die('Changes have been written, check changes and run script again for more changes.');
 		}
 
 		// read function contents
-		$functionContentMatchString = '/(\/\*\*[\s\S]+?\*\/)[\s\S]*(void ' . $functionName . '\([\s\S]*)/';
+		$functionContentMatchString = '/(\/\*\*[\s\S]+?\*\/)[\s\S]*(void ' . $f['functionName'] . '\([\s\S]*)/';
 		$functionContentFound = false;
 		$code = false;
 		$comment = false;
@@ -105,23 +114,95 @@ function getFormulasData()
 			// die('could not read code for index: ' . $index);
 		}
 
-		$formulas[$index] = array(
-			'uiFile' => PROJECT_PATH . 'formula/ui/fractal_' . $internalName . '.ui',
-			'name' => $name,
-			'internalName' => $internalName,
-			'functionName' => $functionName,
+		$formulas[$index] = array_merge($f, array(
+			'uiFile' => PROJECT_PATH . 'formula/ui/' . $f['internalName'] . '.ui',
 			'code' => $code,
 			'comment' => $comment,
 			'rawComment' => $rawComment,
 			'id' => $indexIdLookup[$index],
-			'openclFile' => PROJECT_PATH . 'formula/opencl/' . $internalName . '.cl',
+			'openclFile' => PROJECT_PATH . 'formula/opencl/' . $f['internalName'] . '.cl',
+			'definitionFile' => PROJECT_PATH . 'formula/definition/' . $f['internalName'] . '.h',
 			'openclCode' => parseToOpenCL($code),
-			// 'openclCodeDouble' => parseToOpenCL($code, 'double'),
-			'type' => (strpos($internalName, 'transf_') !== false ? 'transf' : 'formula'),
-		);
+			'type' => (strpos($f['internalName'], 'transf_') !== false ? 'transf' : 'formula'),
+		));
 		// print_r($formulas);
 	}
 	return $formulas;
+}
+
+function generateDefinition($index, $formula, &$status)
+{
+	$modInterval = getModificationInterval($formula['definitionFile'], true);
+	$fileHeader = '/**
+ * Mandelbulber v2, a 3D fractal generator  _%}}i*<.         ______
+ * Copyright (C) ' . $modInterval . ' Mandelbulber Team   _>]|=||i=i<,      / ____/ __    __
+ *                                        \><||i|=>>%)     / /   __/ /___/ /_
+ * This file is part of Mandelbulber.     )<=i=]=|=i<>    / /__ /_  __/_  __/
+ * The project is licensed under GPLv3,   -<>>=|><|||`    \____/ /_/   /_/
+ * see also COPYING file in this folder.    ~+{i%+++
+ *
+ ' . trim(str_replace(array('/**', '*/'), '', $formula['rawComment'])) . '
+ */' . PHP_EOL;
+
+	$openclContent = @file_get_contents($formula['definitionFile']);
+	$newOpenCLContent = $fileHeader . PHP_EOL;
+	$defineHeaderGuard = 'MANDELBULBER2_FORMULA_DEFINITION_FRACTAL_' . strtoupper($formula['internalName']) . '_H_';
+	$className = 'cFractal' . ucfirst($index);
+
+	$newOpenCLContent .= '#ifndef ' . $defineHeaderGuard . '
+#define ' . $defineHeaderGuard . '
+
+#include "abstract_fractal.h"
+
+namespace fractal
+{
+
+class ' . $className . ' : public cAbstractFractal
+{
+public:
+        ~' . $className . '();
+        ' . $className . '()
+        {
+								nameInComboBox = "' . $formula['nameInComboBox'] . '";
+								internalName = "' . $formula['internalName'] . '";
+								internalID = ' . $formula['id'] . ';
+                DEType = ' . $formula['deType'] . ';
+                DEFunctionType = ' . $formula['deFunctionType'] . ';
+                cpixelAddition = ' . $formula['pixelAddition'] . ';
+								defaultBailout = ' . number_format($formula['defaultBailout'], 1) . ';
+                DEAnalyticFunction = ' . $formula['analyticFunction'] . ';
+                coloringFunction = ' . $formula['coloringFunction'] . ';
+        }
+
+        void FormulaCode(CVector4 &z, const sFractal *fractal, sExtendedAux &aux) override
+        {
+               ' . trim(substr(trim($formula['code']), strpos($formula['code'], '{') + 1, -1)) . '
+        }
+};
+
+} /* namespace fractal */
+
+#endif /* ' . $defineHeaderGuard . ' */' . PHP_EOL;
+
+	// clang-format
+	$filepathTemp = PROJECT_PATH . '/tools/.tmp.c';
+	file_put_contents($filepathTemp, $newOpenCLContent);
+	shell_exec(CLANG_FORMAT_EXEC_PATH . ' -i --style=file ' . escapeshellarg($filepathTemp));
+	$newOpenCLContent = file_get_contents($filepathTemp);
+	unlink($filepathTemp); // nothing to see here :)
+
+	$newOpenCLContentWithoutDateLine = preg_replace('/Copyright\s\(C\)\s\d+/', '', $newOpenCLContent);
+	$openclContentWithoutDateLine = preg_replace('/Copyright\s\(C\)\s\d+/', '', $openclContent);
+
+	if ($newOpenCLContentWithoutDateLine == $openclContentWithoutDateLine) {
+		return true;
+	}
+	if (!isDryRun()) {
+		file_put_contents($formula['definitionFile'], $newOpenCLContent);
+		// file_put_contents($formula['definitionFile'] . '.orig', $formula['code']);
+	}
+	$status[] = noticeString('definition file changed'); // (' . basename($formula['definitionFile']) . ')
+	return true;
 }
 
 // update information boxes in the ui
@@ -143,7 +224,7 @@ function updateInfoBoxes($index, $formula, &$status)
 		$informationText = '<p>' . implode('<br>', $comment['description']) . '</p>';
 	}
 	$informationText .= "<table>" . PHP_EOL;
-	// $informationText .= "<tr><th>Name</th><td>" . $formula['name'] . "</td></tr>" . PHP_EOL;
+	// $informationText .= "<tr><th>Name</th><td>" . $formula['nameInComboBox'] . "</td></tr>" . PHP_EOL;
 
 	if (!empty($comment['reference'])) {
 		$informationText .= '<tr><th>Reference</th><td>';
@@ -170,12 +251,12 @@ function updateInfoBoxes($index, $formula, &$status)
 		$informationText .= implode('<br>', $exampleFilenames);
 	} else {
 		if (isWarning()) {
-			$status[] = warningString('formula ' . $formula['name'] . ' is not used in any examples yet.');
+			$status[] = warningString('formula ' . $formula['nameInComboBox'] . ' is not used in any examples yet.');
 		}
 	}
 
 	$informationText .= "<h3>Code</h3>" . PHP_EOL;
-	
+
 	$uiFileContent = file_get_contents($formula['uiFile']);
 	$regexInformation = '/(<widget class="MyGroupBox" name="groupCheck_info">[\s\S]+?)<item>[\s\S]+?<\/layout>/';
 
@@ -231,7 +312,7 @@ function updateInfoBoxes($index, $formula, &$status)
 		array('find' => '/\>\s*([^<]+?)\s*<\/string>/', 'replace' => '>$1</string>'), // whitespace fix 1
 		array('find' => '/\>\s*([^<]+?)\s*:\s*<\/string>/', 'replace' => '>$1:</string>'), // whitespace fix 2
 		array('find' => '/<string>(.*?)\s+(\s.*?)<\/string>/', 'replace' => '<string>$1$2</string>'), // whitespace fix 3, stop those whitespaces! :)
-		array('find' => '/<string>fabs\s*\(\s*(.*?)\s*\)\s*<\/string>/', 'replace' => '<string>fabs($1)</string>'),
+		array('find' => '/<string>fabs\s*\(\s*(.*?)\s*\)\s*<\/string>/', 'replace' => '<string>abs($1)</string>'),
 		array('find' => '/<string>abs\s*\(\s*(.*?)\s*\)\s*<\/string>/', 'replace' => '<string>abs($1)</string>'),
 		array('find' => '/<string>(.*?)::(.*?)<\/string>/', 'replace' => '<string>$1:$2</string>'),
 		array('find' => '/<string>Menger Scale<\/string>/', 'replace' => '<string>Menger Scale:</string>'),
@@ -245,16 +326,6 @@ function updateInfoBoxes($index, $formula, &$status)
 		array('find' => '/>DE Tweak<\/string>/', 'replace' => '>DE Tweak:</string>'),
 		array('find' => '/>Post_scale<\/string>/', 'replace' => '>Post Scale:</string>'),
 		array('find' => '/>Pre_scale<\/string>/', 'replace' => '>Pre Scale:</string>'),
-
-        // temporary code to find iteration replacement 250 -> 999
-		// array('find' => '/(<widget class=".*" name=".*stop_iterations">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*start_iterations">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*stop_iterations">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="minimum">\n\s+<number>.*<\/number>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*start_iterations">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="minimum">\n\s+<number>.*<\/number>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*iter.*">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*iter.*">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*iter.*">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="minimum">\n\s+<number>.*<\/number>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
-		// array('find' => '/(<widget class=".*" name=".*iter.*">\n\s+<property name="sizePolicy">\n\s+<sizepolicy hsizetype=".*" vsizetype=".*">\n\s+<horstretch>0<\/horstretch>\n\s+<verstretch>0<\/verstretch>\n\s+<\/sizepolicy>\n\s+<\/property>\n\s+<property name="minimum">\n\s+<number>.*<\/number>\n\s+<\/property>\n\s+<property name="maximum">\n\s+<number)>250/', 'replace' => '$1>999'),
 	);
 	foreach ($replaceFormulaLookup as $item) {
 		$newUiFileContent = preg_replace($item['find'], $item['replace'], $newUiFileContent);
@@ -304,10 +375,10 @@ function updateInfoBoxes($index, $formula, &$status)
 function generateFormulaOpenCLFiles($formula, &$status)
 {
 	// TODO add primitives
-
+	$modInterval = getModificationInterval($formula['openclFile'], true);
 	$fileHeader = '/**
  * Mandelbulber v2, a 3D fractal generator  _%}}i*<.        ____                _______    
- * Copyright (C) ' . getModificationInterval($formula['openclFile']) . ' Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
+ * Copyright (C) ' . $modInterval . ' Mandelbulber Team   _>]|=||i=i<,     / __ \___  ___ ___  / ___/ /
  *                                        \><||i|=>>%)    / /_/ / _ \/ -_) _ \/ /__/ /__
  * This file is part of Mandelbulber.     )<=i=]=|=i<>    \____/ .__/\__/_//_/\___/____/
  * The project is licensed under GPLv3,   -<>>=|><|||`        /_/                       
@@ -321,8 +392,6 @@ function generateFormulaOpenCLFiles($formula, &$status)
 	$openclContent = @file_get_contents($formula['openclFile']);
 	$newOpenCLContent = $fileHeader . PHP_EOL;
 	$newOpenCLContent .= $formula['openclCode'];
-	// $newOpenCLContent .= '#ifndef DOUBLE_PRECISION' . PHP_EOL . $formula['openclCode'] . PHP_EOL;
-	// $newOpenCLContent .= '#else' . PHP_EOL . $formula['openclCodeDouble'] . PHP_EOL . '#endif' . PHP_EOL;
 
 	// clang-format
 	$filepathTemp = PROJECT_PATH . '/tools/.tmp.c';
@@ -370,15 +439,15 @@ function generateFormulaIcons($formula, &$status)
 
 function checkOpenCLCompile($formula, &$status)
 {
-    $checkOpenCLCompileCmd = 'clang -c -S -emit-llvm -o test.ll -w -include clc/clc.h -Dcl_clang_storage_class_specifiers -x cl';
+	$checkOpenCLCompileCmd = 'clang -c -S -emit-llvm -o test.ll -w -include clc/clc.h -Dcl_clang_storage_class_specifiers -x cl';
 	$checkOpenCLCompileCmd .= '  -include ' . PROJECT_PATH . 'opencl/cl_kernel_include_headers.h';
 	$checkOpenCLCompileCmd .= '  -o /dev/null'; // -S -emit-llvm
 	$checkOpenCLCompileCmd .= ' -DOPENCL_KERNEL_CODE -I' . PROJECT_PATH . 'opencl/';
 	$checkOpenCLCompileCmd .= ' ' . $formula['openclFile'] . ' 2>&1';
-	exec ($checkOpenCLCompileCmd, $output, $ret);
-	if($ret != 0){
-	    $status[] = errorString('formula opencl file broken! ' . (!isVerbose() ? 'see error with verbose mode' : ''));
-		if(isVerbose()) $status[] = print_r($output);
+	exec($checkOpenCLCompileCmd, $output, $ret);
+	if ($ret != 0) {
+		$status[] = errorString('formula opencl file broken! ' . (!isVerbose() ? 'see error with verbose mode' : ''));
+		if (isVerbose()) $status[] = print_r($output);
 		return false;
 	}
 	return true;
@@ -462,17 +531,17 @@ function parseToOpenCL($code, $mode = 'single')
 {
 	// $fod = $mode == 'single' ? 'float' : 'double';
 	$fod = 'REAL';
-	$var = '-?[A-Za-z_][A-Za-z0-9\.\-\>_\[\]]*'; // regex for a var name
+	$var = '[A-Za-z_][A-Za-z0-9\.\-\>_\[\]]*'; // regex for a var name
 	$functionName = '[A-Za-z_][A-Za-z0-9\.\-\>_]*'; // regex for a function name
 	$double = '(?:-?\d+\.?\d*(?:[eE][+-]?\d+)?|-?\d*\.?\d+(?:[eE][+-]?\d+)?)'; // regex for a double value
 	$float = $double . 'f'; // regex for a float value
 	$nb = "[^()]*"; // matches everything but braces
-	$br = "(?:$functionName)?\($nb\)"; // regex for a simply braced expression with optional function invocation
+	$br = "-?(?:$functionName)?\($nb\)"; // regex for a simply braced expression with optional function invocation
 	$br1_1 = "\($nb$br$nb\)"; // regex for a double braced expression (one inner brace)
 	$br1_2 = "\($nb$br$nb$br$nb\)"; // regex for a double braced expression (two inner braces)
 	$s = '[\n\r\s]+'; // any whitespace including new lines
 	$all = '[\S\s]+?'; // anything including new lines as few as possible (mark end with next operator)
-	$rval = "$br1_2|$br1_1|$br|$float|$var"; // any of those types can be an "assignable expression"
+	$rval = "$br1_2|$br1_1|$br|$float|-?$var"; // any of those types can be an "assignable expression"
 	$preF = "\s|\(|\{|-"; // these chars can occur befire a function
 	$multChain = "(?:(?:$rval)$s\*$s)*(?:$rval)"; // a chain of multiplicated expressions
 	// see here for all possible: https://www.khronos.org/registry/cl/sdk/1.0/docs/man/xhtml/mathFunctions.html
@@ -488,7 +557,7 @@ function parseToOpenCL($code, $mode = 'single')
 		array('find' => "/CVector3\(($all)\);/", 'replace' => '(' . $fod . '3) {$1};'),  // CVector3 to built in float3
 		array('find' => "/CVector3(\s)/", 'replace' => $fod . '3$1'),               // CVector3 to built in float3
 		array('find' => "/CVector4\(\)/", 'replace' => '(' . $fod . '4) {0, 0, 0, 0}'),  // CVector3 default constructor to built in float3
-		array('find' => "/CVector4\(($multChain),($s$multChain)\)/", 'replace' => '(' . $fod . '4) {$1.xyz,$2}'),  // CVector4 construct by CVector3 and float to built in construct
+		array('find' => "/CVector4\(($multChain),($s$multChain)\)/", 'replace' => '(' . $fod . '4) {$1.x,$1.y,$1.z,$2}'),  // CVector4 construct by CVector3 and float to built in construct
 		array('find' => "/CVector4\(($multChain,$s$multChain,$s$multChain,$s$multChain)\)/", 'replace' => '(' . $fod . '4) {$1}'),  // CVector4 to built in float4
 		array('find' => "/CVector4\(($all)\);/", 'replace' => '(' . $fod . '4) {$1};'),  // CVector4 to built in float4
 		array('find' => "/CVector4(\s)/", 'replace' => $fod . '4$1'),               // CVector4 to built in float4
@@ -501,7 +570,7 @@ function parseToOpenCL($code, $mode = 'single')
 		array('find' => "/($var)\.RotateZ\(/", 'replace' => '$1 = RotateZ($1, '), // CRotationMatrix33 to custom rotation function
 		array('find' => "/($var)\.RotateAroundVectorByAngle\(/", 'replace' => 'RotateAroundVectorByAngle4($1, '), // CVector3 to custom rotation function
 		array('find' => "/($var)\.GetXYZ\(\)/", 'replace' => '$1.xyz'), // CVector4 getxyz to native accessor of float4
-		array('find' => "/CRotationMatrix /", 'replace' => 'matrix33 '), // CRotationMatrix33 to matrix33
+		array('find' => "/CRotationMatrix$s($var);/", 'replace' => 'matrix33 $1;' . PHP_EOL . '$1.m1 = (float3){1.0f, 0.0f, 0.0f};' . PHP_EOL . '$1.m2 = (float3){0.0f, 1.0f, 0.0f};' . PHP_EOL . '$1.m3 = (float3){0.0f, 0.0f, 1.0f};'), // CRotationMatrix33 to matrix33
 		array('find' => "/swap\(($var),\s($var)\);/", 'replace' => '{ ' . $fod . ' temp = $1; $1 = $2; $2 = temp; }'),// swap vals
 		array('find' => "/($s|\()(-?\d+)f($s|;|\))/", 'replace' => '$1$2$3'),          // int vals should not have a "f" at the end
 		// array('find' => "/sign\(($rval)\)$s\*$s($multChain)/", 'replace' => 'copysign($2, $1)'),// sign(x) * y => copysign(y, x) (this is wrong! probably copysign not usable at all)
@@ -532,7 +601,8 @@ function parseToOpenCL($code, $mode = 'single')
 		array('find' => "/sExtendedAux &aux/", 'replace' => 'sExtendedAuxCl *aux'), // no passing by reference
 		array('find' => "/const sFractal \*fractal/", 'replace' => '__constant sFractalCl *fractal'), // no passing by reference
 		array('find' => "/aux\./", 'replace' => 'aux->'),
-		array('find' => "/const(\s)/", 'replace' => '__constant$1'), // constant function parameter
+		array('find' => "/const(\s\w+\s\*)/", 'replace' => '__constant$1'), // const modifier allowed for pointers (vars from outside)
+		array('find' => "/const(\s)/", 'replace' => '$1'), // const modifier not allowed for local vars
 		//array('find' => "/(\s)z\s=/", 'replace' => '$1*z ='), // z to pointer
 		//array('find' => "/(\s)z\s(.)=/", 'replace' => '$1*z $2='), // z to pointer
 		//array('find' => "/([\s\(-])z([,\);\s}])/", 'replace' => '$1*z$2'), // z to pointer
@@ -547,6 +617,7 @@ function parseToOpenCL($code, $mode = 'single')
 		array('find' => "/($s)(enum[a-zA-Z0-9_]+?[^l])($s)/", 'replace' => '$1$2Cl$3'), // replace enum definitions with cl version
 		array('find' => "/M_PI([\s\)\};,])/", 'replace' => ($mode == 'single' ? 'M_PI_F$1' : 'M_PI$1')), // replace Math constant
 		array('find' => "/1e-061f/", 'replace' => ($mode == 'single' ? '1e-030f' : '1e-061')), // replace minimal double constant
+		array('find' => "/reinterpret_cast<(.*?)>\((.*?)\)/", 'replace' => '($1)$2'), // replace reinterpret_cast with simple cast
 		// TODO more replacements
 	);
 
@@ -636,8 +707,8 @@ transf_scale_2 1,079812;';
 		file_put_contents($tempFractPath, $settings);
 	}
 	if (!file_exists(MANDELBULBER_EXEC_PATH)) return false;
-	$cmd = MANDELBULBER_EXEC_PATH . " -n -f png16alpha -o '" . $imgPath . "' '" . $tempFractPath . "'";
-	// echo PHP_EOL . $cmd . PHP_EOL;
+        $cmd = MANDELBULBER_EXEC_PATH . " -n -f png16alpha -O 'opencl_enabled=0' -o '" . $imgPath . "' '" . $tempFractPath . "'";
+        // echo PHP_EOL . $cmd . PHP_EOL;
 	shell_exec($cmd);
 	shell_exec("convert '" . $imgPath . "' -depth 8 '" . $imgPath . "'"); // save disk space with 8-bit png
 	return true;
@@ -646,8 +717,8 @@ transf_scale_2 1,079812;';
 function upgradeInternalName($internalName, $internalNameNew)
 {
 	shell_exec('git mv'
-		. ' \'' . PROJECT_PATH . 'formula/ui/fractal_' . $internalName . '.ui\''
-		. ' \'' . PROJECT_PATH . 'formula/ui/fractal_' . $internalNameNew . '.ui\''
+		. ' \'' . PROJECT_PATH . 'formula/ui/' . $internalName . '.ui\''
+		. ' \'' . PROJECT_PATH . 'formula/ui/' . $internalNameNew . '.ui\''
 	);
 	shell_exec('git mv'
 		. ' \'' . PROJECT_PATH . 'formula/img/' . $internalName . '.png\''
@@ -687,6 +758,37 @@ function from_camel_case($input)
 		$match = $match == strtoupper($match) ? strtolower($match) : lcfirst($match);
 	}
 	return implode('_', $ret);
+}
+
+function writeFormulaCSV($formulas){
+	$file = fopen(PROJECT_PATH . 'deploy/formulaData.csv', 'w');
+	fputcsv($file,
+    array(
+        'index',
+        'name',
+        'deType',
+        'deFunctionType',
+        'pixelAddition',
+        'defaultBailout',
+        'analyticFunction',
+        'coloringFunction',
+    ));
+	foreach ($formulas as $index => $formula) {
+	    $data = array(
+			$index,
+			$formula['nameInComboBox'],
+			// $formula['internalName'],
+			// $formula['functionName'],
+			$formula['deType'],
+			$formula['deFunctionType'],
+			$formula['pixelAddition'],
+			$formula['defaultBailout'],
+			$formula['analyticFunction'],
+			$formula['coloringFunction'],
+        );
+    	fputcsv($file, $data);
+	}
+	fclose($file);
 }
 
 ?>

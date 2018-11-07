@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -56,7 +56,7 @@ class cRenderQueue : public QObject
 	Q_OBJECT
 public:
 	cRenderQueue(cImage *_image, RenderedImage *widget = nullptr);
-	~cRenderQueue();
+	~cRenderQueue() override;
 	bool RenderStill(const cQueue::structQueueItem &queueItem);
 	bool RenderFlight(const cQueue::structQueueItem &queueItem) const;
 	bool RenderKeyframe(const cQueue::structQueueItem &queueItem) const;
@@ -66,6 +66,7 @@ public slots:
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress,
 		cProgressText::enumProgressType progressType = cProgressText::progress_IMAGE);
+	void updateImage();
 	void updateStatistics(cStatistics stats);
 	void updateProgressHide(
 		cProgressText::enumProgressType progressType = cProgressText::progress_ANIMATION);

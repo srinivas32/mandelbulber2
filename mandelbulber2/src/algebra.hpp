@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -80,9 +80,16 @@ public:
 	}
 	inline CVector3(const double vector[3])
 	{
-		x = vector[0];
-		y = vector[1];
-		z = vector[2];
+		if (vector)
+		{
+			x = vector[0];
+			y = vector[1];
+			z = vector[2];
+		}
+		else
+		{
+			qFatal("Assigned nullptr to CVector3 as initialization!");
+		}
 	}
 	inline CVector3 operator+(const CVector3 &vector) const
 	{
@@ -114,13 +121,7 @@ public:
 	{
 		return CVector3(x / scalar, y / scalar, z / scalar);
 	}
-	inline CVector3 &operator=(const CVector3 &vector)
-	{
-		x = vector.x;
-		y = vector.y;
-		z = vector.z;
-		return *this;
-	}
+	inline CVector3 &operator=(const CVector3 &vector) = default;
 	inline CVector3 &operator+=(const CVector3 &vector)
 	{
 		x += vector.x;
@@ -327,14 +328,7 @@ public:
 	}
 
 	inline CVector4 operator/(const double &s) const { return CVector4(x / s, y / s, z / s, w / s); }
-	inline CVector4 &operator=(const CVector4 &v)
-	{
-		x = v.x;
-		y = v.y;
-		z = v.z;
-		w = v.w;
-		return *this;
-	}
+	inline CVector4 &operator=(const CVector4 &v) = default;
 	inline CVector4 &operator+=(const CVector4 &v)
 	{
 		x += v.x;
@@ -398,12 +392,12 @@ public:
 		c.w = fabs(w);
 		return c;
 	}
-	inline void GetXYZWInto(CVector3 &v, double &w) const
+	inline void GetXYZWInto(CVector3 &v, double &wOutput) const
 	{
 		v.x = x;
 		v.y = y;
 		v.z = z;
-		w = this->w;
+		wOutput = w;
 	}
 	inline CVector3 GetXYZ() const { return CVector3(x, y, z); }
 

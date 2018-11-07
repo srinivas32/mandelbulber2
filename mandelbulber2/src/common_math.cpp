@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -191,4 +191,58 @@ CVector3 wrap(CVector3 x, CVector3 a, CVector3 s)
 	CVector3 out(x.x - a.x * floor(x.x / a.x) + s.x, x.y - a.y * floor(x.y / a.y) + s.y,
 		x.z - a.z * floor(x.z / a.z) + s.z);
 	return out;
+}
+
+double MagicRound(double val, double maxError)
+{
+	if (val != 0)
+	{
+		double multiplier = pow(10.0, -int(log10(fabs(val))));
+		double rounded = val * multiplier;
+		for (int i = 0; i < 10; i++)
+		{
+			rounded = round(val * multiplier);
+			double error = fabs(rounded / multiplier - val) / fabs(val);
+			if (error < maxError) break;
+
+			double rounded5 = rounded + 0.5;
+			error = fabs(rounded5 / multiplier - val) / fabs(val);
+			if (error < maxError)
+			{
+				rounded = rounded5;
+				break;
+			}
+
+			rounded5 = rounded - 0.5;
+			error = fabs(rounded5 / multiplier - val) / fabs(val);
+			if (error < maxError)
+			{
+				rounded = rounded5;
+				break;
+			}
+
+			rounded5 = rounded + 0.25;
+			error = fabs(rounded5 / multiplier - val) / fabs(val);
+			if (error < maxError)
+			{
+				rounded = rounded5;
+				break;
+			}
+
+			rounded5 = rounded - 0.25;
+			error = fabs(rounded5 / multiplier - val) / fabs(val);
+			if (error < maxError)
+			{
+				rounded = rounded5;
+				break;
+			}
+
+			multiplier *= 10.0;
+		}
+		return rounded / multiplier;
+	}
+	else
+	{
+		return val;
+	}
 }

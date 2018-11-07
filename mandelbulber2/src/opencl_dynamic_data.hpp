@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -38,39 +38,34 @@
 #include <QtCore>
 
 #include "include_header_wrapper.hpp"
+#include "opencl_abstract_dynamic_data.h"
 
 class cMaterial;
 struct sVectorsAround;
 class cLights;
+class cPrimitives;
+class cObjectData;
 
 #ifdef USE_OPENCL
-class cOpenClDynamicData
+class cOpenClDynamicData : public cOpenClAbstractDynamicData
 {
 public:
 	cOpenClDynamicData();
 	~cOpenClDynamicData();
 
-	void Clear();
-	static int PutDummyToAlign(int dataLength, int alignmentSize, QByteArray *array);
-	void BuildMaterialsData(const QMap<int, cMaterial> &materials);
+	int BuildMaterialsData(const QMap<int, cMaterial> &materials,
+		const QMap<QString, int> &textureIndexes); // returns array size
 	void BuildAOVectorsData(const sVectorsAround *AOVectors, int verctorsCount);
 	void BuildLightsData(const cLights *lights);
-	void ReserveHeader();
-	void FillHeader();
-	QByteArray &GetData(void);
+	QString BuildPrimitivesData(const cPrimitives *primitives); // return definesCollector;
+	void BuildObjectsData(const QVector<cObjectData> *objectData);
 
 private:
-	QByteArray data;
-	cl_int totalDataOffset;
-
-	cl_int materialsOffset;
-	int materialsOffsetAddress;
-
-	cl_int AOVectorsOffset;
-	int AOVectorsOffsetAddress;
-
-	cl_int lightsOffset;
-	int lightsOffsetAddress;
+	const int materialsItemIndex = 0;
+	const int AOVectorsItemIndex = 1;
+	const int lightsItemIndex = 2;
+	const int primitivesItemIndex = 3;
+	const int objectsItemIndex = 4;
 };
 
 #endif // USE_OPENCL

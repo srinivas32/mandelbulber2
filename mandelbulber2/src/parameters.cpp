@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -462,12 +462,11 @@ QList<QString> cParameterContainer::GetListOfParameters() const
 void cParameterContainer::PrintListOfParameters() const
 {
 	QString parametersOutput = "Non-Default Parameters for Rendered Example Settings\n";
-	QList<QString> listOfParameters = this->GetListOfParameters();
-	for (int i = 0; i < listOfParameters.size(); i++)
+	QList<QString> listOfParameters = GetListOfParameters();
+	for (auto parameterName : listOfParameters)
 	{
-		const QString parameterName = listOfParameters.at(i);
-		const QString parameterValue = this->Get<QString>(parameterName);
-		const QString defaultValue = this->GetDefault<QString>(parameterName);
+		const QString parameterValue = Get<QString>(parameterName);
+		const QString defaultValue = GetDefault<QString>(parameterName);
 		if (parameterValue != defaultValue)
 			parametersOutput += parameterName + "=" + parameterValue + "\n";
 	}

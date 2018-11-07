@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -49,7 +49,7 @@ class cRenderSSAO : public QObject
 	Q_OBJECT
 public:
 	cRenderSSAO(const sParamRender *_params, const sRenderData *_renderData, cImage *_image);
-	~cRenderSSAO();
+	~cRenderSSAO() override;
 
 	void SetRegion(const cRegion<int> &_region);
 	void RenderSSAO(QList<int> *list = nullptr);
@@ -69,6 +69,7 @@ private:
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);
+	void updateImage();
 };
 
 #endif /* MANDELBULBER2_SRC_RENDER_SSAO_H_ */

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -50,7 +50,7 @@ class cVoxelExport : public QObject
 
 public:
 	cVoxelExport(int w, int h, int l, CVector3 limitMin, CVector3 limitMax, QDir folder, int maxIter);
-	~cVoxelExport();
+	~cVoxelExport() override;
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress);
@@ -63,8 +63,8 @@ public slots:
 private:
 	bool StoreLayer(int z) const;
 
-	unsigned char *voxelLayer;
-	int w, h, l;
+	QScopedArrayPointer<unsigned char> voxelLayer;
+	long long w, h, l;
 	CVector3 limitMin;
 	CVector3 limitMax;
 	QDir folder;

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -88,25 +88,24 @@ void cRenderSSAO::RenderSSAO(QList<int> *list)
 	if (list)
 	{
 		lists = new QList<int>[numberOfThreads];
-		for (int i = 0; i < list->size(); i++)
+		for (int y : *list)
 		{
-			int y = list->at(i);
 			int mod = (y - startLine) % numberOfThreads;
 			lists[mod].append(y);
 		}
 	}
 
-	double qualityFactor;
+	double qualityFactorCalculated;
 	if (progressive > 0)
 	{
-		qualityFactor = sqrt(1.0 / (progressive * 2.0));
+		qualityFactorCalculated = sqrt(1.0 / (progressive * 2.0));
 	}
 	else
 	{
-		qualityFactor = 1.0;
+		qualityFactorCalculated = 1.0;
 	}
-	int quality =
-		int(params->ambientOcclusionQuality * params->ambientOcclusionQuality * qualityFactor);
+	int quality = int(
+		params->ambientOcclusionQuality * params->ambientOcclusionQuality * qualityFactorCalculated);
 	if (quality < 3) quality = 3;
 
 	for (int i = 0; i < numberOfThreads; i++)

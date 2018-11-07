@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2017 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2017-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -41,7 +41,7 @@
 #include "parameters.hpp"
 
 double traceBehindFractal(cParameterContainer *params, cFractalContainer *fractals, double maxDist,
-	CVector3 viewVector, double startingDepth, double resolution)
+	CVector3 viewVector, double startingDepth, double resolution, double distanceLimit)
 {
 	sParamRender *paramRender = new sParamRender(params);
 	cNineFractals *nineFractals = new cNineFractals(fractals, params);
@@ -63,9 +63,9 @@ double traceBehindFractal(cParameterContainer *params, cFractalContainer *fracta
 				|| paramRender->perspectiveType == params::perspFishEyeCut)
 			distThresh *= M_PI;
 
-		sDistanceIn in(point, 0, false);
+		const sDistanceIn in(point, 0, false);
 		sDistanceOut out;
-		double distance = CalculateDistance(*paramRender, *nineFractals, in, &out);
+		const double distance = CalculateDistance(*paramRender, *nineFractals, in, &out);
 
 		double step = distance;
 		if (step < distThresh)
@@ -83,6 +83,8 @@ double traceBehindFractal(cParameterContainer *params, cFractalContainer *fracta
 		distanceBehind += step;
 		point = paramRender->camera + viewVector * (startingDepth + distanceBehind);
 		// qDebug() << distanceBehind << totalDistanceBehind << distThresh << step << point.Debug();
+
+		if ((paramRender->camera - point).Length() > distanceLimit) break;
 	}
 	return distanceBehind;
 }

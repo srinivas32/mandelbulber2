@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -118,8 +118,12 @@ void RenderWindow::slotMouseClickOnImage(int x, int y, Qt::MouseButton button) c
 		case RenderedImage::clickPlacePrimitive:
 		case RenderedImage::clickPlaceRandomLightCenter:
 		case RenderedImage::clickGetPoint:
+		case RenderedImage::clickWrapLimitsAroundObject:
 		{
-			gMainInterface->SetByMouse(CVector2<double>(x, y), button, mode);
+			if (gMainInterface->renderedImage->GetEnableClickModes())
+			{
+				gMainInterface->SetByMouse(CVector2<double>(x, y), button, mode);
+			}
 			break;
 		}
 		case RenderedImage::clickDoNothing:
@@ -133,7 +137,7 @@ void RenderWindow::slotChangedComboMouseClickFunction(int index) const
 {
 	if (index >= 0) // if list is empty, then index = -1
 	{
-		QComboBox *comboBox = static_cast<QComboBox *>(this->sender());
+		QComboBox *comboBox = static_cast<QComboBox *>(sender());
 		QList<QVariant> item = comboBox->itemData(index).toList();
 		gMainInterface->renderedImage->setClickMode(item);
 	}
@@ -141,70 +145,187 @@ void RenderWindow::slotChangedComboMouseClickFunction(int index) const
 
 void RenderWindow::slotKeyPressOnImage(QKeyEvent *event)
 {
-
-	int key = event->key();
-	Qt::KeyboardModifiers modifiers = event->modifiers();
-	if (modifiers & Qt::ShiftModifier)
-	{ // Shift pressed
-		switch (key)
-		{
-			case Qt::Key_Up: gMainInterface->RotateCamera("bu_rotate_up"); break;
-			case Qt::Key_Down: gMainInterface->RotateCamera("bu_rotate_down"); break;
-			case Qt::Key_Left: gMainInterface->RotateCamera("bu_rotate_left"); break;
-			case Qt::Key_Right: gMainInterface->RotateCamera("bu_rotate_right"); break;
-			default: break;
-		}
-	}
-	else if (modifiers & Qt::ControlModifier)
-	{ // Ctrl pressed
-		switch (key)
-		{
-			case Qt::Key_Up: gMainInterface->MoveCamera("bu_move_up"); break;
-			case Qt::Key_Down: gMainInterface->MoveCamera("bu_move_down"); break;
-			case Qt::Key_Left: gMainInterface->RotateCamera("bu_rotate_roll_left"); break;
-			case Qt::Key_Right: gMainInterface->RotateCamera("bu_rotate_roll_right"); break;
-			default: break;
-		}
-	}
-	else
-	{
-		// No keyboard modifiers
-		switch (key)
-		{
-			case Qt::Key_W: gMainInterface->MoveCamera("bu_move_up"); break;
-			case Qt::Key_S: gMainInterface->MoveCamera("bu_move_down"); break;
-			case Qt::Key_A: gMainInterface->MoveCamera("bu_move_left"); break;
-			case Qt::Key_D: gMainInterface->MoveCamera("bu_move_right"); break;
-			case Qt::Key_Up: gMainInterface->MoveCamera("bu_move_forward"); break;
-			case Qt::Key_Down: gMainInterface->MoveCamera("bu_move_backward"); break;
-			case Qt::Key_Left: gMainInterface->MoveCamera("bu_move_left"); break;
-			case Qt::Key_Right: gMainInterface->MoveCamera("bu_move_right"); break;
-			default: break;
-		}
-	}
+	currentKeyEvents.append(event->key());
+	lastKeyEventModifiers = event->modifiers();
+	slotKeyHandle();
+	buttonPressTimer->start();
 }
 
 void RenderWindow::slotKeyReleaseOnImage(QKeyEvent *event)
 {
-	(void)event;
+	currentKeyEvents.removeOne(event->key());
+	lastKeyEventModifiers = event->modifiers();
+	slotKeyHandle();
+	buttonPressTimer->start();
 }
 
-void RenderWindow::slotMouseWheelRotatedOnImage(int delta) const
+void RenderWindow::slotButtonLongPress()
 {
-	int index = ui->comboBox_mouse_click_function->currentIndex();
-	QList<QVariant> mode = ui->comboBox_mouse_click_function->itemData(index).toList();
-	RenderedImage::enumClickMode clickMode = RenderedImage::enumClickMode(mode.at(0).toInt());
-	switch (clickMode)
+	slotKeyHandle();
+}
+
+void RenderWindow::slotKeyHandle()
+{
+	if (currentKeyEvents.size() == 0) return;
+
+	gMainInterface->SynchronizeInterface(gPar, gParFractal, qInterface::read);
+
+	bool render = false;
+
+	for (int i = 0; i < currentKeyEvents.size(); i++)
 	{
-		case RenderedImage::clickPlaceLight:
-		{
-			double deltaLog = exp(delta * 0.001);
-			double dist = ui->widgetEffects->GetAuxLightManualPlacementDistance();
-			dist *= deltaLog;
-			ui->widgetEffects->SetAuxLightManualPlacementDistance(dist);
-			break;
+		int key = currentKeyEvents.at(i);
+		Qt::KeyboardModifiers modifiers = lastKeyEventModifiers;
+		if (modifiers & Qt::ShiftModifier)
+		{ // Shift pressed
+			switch (key)
+			{
+				case Qt::Key_Up:
+					gMainInterface->MoveCamera("bu_move_forward");
+					render = true;
+					break;
+				case Qt::Key_Down:
+					gMainInterface->MoveCamera("bu_move_backward");
+					render = true;
+					break;
+				case Qt::Key_Left:
+					gMainInterface->MoveCamera("bu_move_left");
+					render = true;
+					break;
+				case Qt::Key_Right:
+					gMainInterface->MoveCamera("bu_move_right");
+					render = true;
+					break;
+				default: break;
+			}
 		}
-		default: break;
+		else if (modifiers & Qt::ControlModifier)
+		{ // Ctrl pressed
+			switch (key)
+			{
+				case Qt::Key_Up:
+					gMainInterface->MoveCamera("bu_move_forward");
+					render = true;
+					break;
+				case Qt::Key_Down:
+					gMainInterface->MoveCamera("bu_move_backward");
+					render = true;
+					break;
+				case Qt::Key_Left:
+					gMainInterface->RotateCamera("bu_rotate_roll_left");
+					render = true;
+					break;
+				case Qt::Key_Right:
+					gMainInterface->RotateCamera("bu_rotate_roll_right");
+					render = true;
+					break;
+				default: break;
+			}
+		}
+		else
+		{
+			// No keyboard modifiers
+			switch (key)
+			{
+				case Qt::Key_W:
+					gMainInterface->MoveCamera("bu_move_up");
+					render = true;
+					break;
+				case Qt::Key_S:
+					gMainInterface->MoveCamera("bu_move_down");
+					render = true;
+					break;
+				case Qt::Key_A:
+					gMainInterface->MoveCamera("bu_move_left");
+					render = true;
+					break;
+				case Qt::Key_D:
+					gMainInterface->MoveCamera("bu_move_right");
+					render = true;
+					break;
+				case Qt::Key_Q:
+					gMainInterface->MoveCamera("bu_move_forward");
+					render = true;
+					break;
+				case Qt::Key_Z:
+					gMainInterface->MoveCamera("bu_move_backward");
+					render = true;
+					break;
+				case Qt::Key_Up:
+					gMainInterface->RotateCamera("bu_rotate_up");
+					render = true;
+					break;
+				case Qt::Key_Down:
+					gMainInterface->RotateCamera("bu_rotate_down");
+					render = true;
+					break;
+				case Qt::Key_Left:
+					gMainInterface->RotateCamera("bu_rotate_left");
+					render = true;
+					break;
+				case Qt::Key_Right:
+					gMainInterface->RotateCamera("bu_rotate_right");
+					render = true;
+					break;
+
+				case Qt::Key_I:
+					currentKeyEvents.removeOne(key); // long press not allowed
+					gKeyframeAnimation->slotAddKeyframe();
+					break;
+				case Qt::Key_M:
+					currentKeyEvents.removeOne(key); // long press not allowed
+					gKeyframeAnimation->slotModifyKeyframe();
+					break;
+				/*case Qt::Key_D:
+				 *		currentKeyEvents.removeOne(key); // long press not allowed
+				 *		gKeyframeAnimation->slotDeleteKeyframe();
+				 * break;*/
+				case Qt::Key_N:
+					currentKeyEvents.removeOne(key); // long press not allowed
+					gKeyframeAnimation->slotIncreaseCurrentTableIndex();
+					break;
+				case Qt::Key_P:
+					currentKeyEvents.removeOne(key); // long press not allowed
+					gKeyframeAnimation->slotDecreaseCurrentTableIndex();
+					break;
+				default: break;
+			}
+		}
+	}
+	gMainInterface->SynchronizeInterface(gPar, gParFractal, qInterface::write);
+
+	if (render)
+	{
+		gMainInterface->StartRender();
+	}
+}
+
+void RenderWindow::slotMouseWheelRotatedWithCtrlOnImage(int x, int y, int delta) const
+{
+	if (gMainInterface->renderedImage->GetEnableClickModes())
+	{
+		int index = ui->comboBox_mouse_click_function->currentIndex();
+		QList<QVariant> mode = ui->comboBox_mouse_click_function->itemData(index).toList();
+		RenderedImage::enumClickMode clickMode = RenderedImage::enumClickMode(mode.at(0).toInt());
+		switch (clickMode)
+		{
+			case RenderedImage::clickPlaceLight:
+			{
+				double deltaLog = exp(delta * 0.001);
+				double dist = ui->widgetEffects->GetAuxLightManualPlacementDistance();
+				dist *= deltaLog;
+				ui->widgetEffects->SetAuxLightManualPlacementDistance(dist);
+				break;
+			}
+			case RenderedImage::clickMoveCamera:
+			{
+				Qt::MouseButton button = (delta > 0) ? Qt::LeftButton : Qt::RightButton;
+				mode.append(QVariant(delta));
+				gMainInterface->SetByMouse(CVector2<double>(x, y), button, mode);
+				break;
+			}
+			default: break;
+		}
 	}
 }
 
@@ -227,9 +348,12 @@ void RenderWindow::slotPopulateToolbar(bool completeRefresh)
 
 	QList<QAction *> actions = ui->toolBar->actions();
 	QStringList toolbarInActions;
-	for (int i = 0; i < actions.size(); i++)
+
+	QApplication::connect(
+		mapPresetsFromExamplesLoad, SIGNAL(mapped(QString)), this, SLOT(slotMenuLoadPreset(QString)));
+
+	for (auto action : actions)
 	{
-		QAction *action = actions.at(i);
 		if (action->objectName() == "actionAdd_Settings_to_Toolbar") continue;
 		if (!toolbarFiles.contains(action->objectName()) || completeRefresh)
 		{
@@ -312,8 +436,6 @@ void RenderWindow::slotPopulateToolbar(bool completeRefresh)
 		}
 		QApplication::processEvents();
 	}
-	QApplication::connect(
-		mapPresetsFromExamplesLoad, SIGNAL(mapped(QString)), this, SLOT(slotMenuLoadPreset(QString)));
 
 	QApplication::connect(mapPresetsFromExamplesRemove, SIGNAL(mapped(QString)), this,
 		SLOT(slotMenuRemovePreset(QString)));
@@ -335,6 +457,7 @@ void RenderWindow::slotPresetAddToToolbar()
 void RenderWindow::slotMenuLoadPreset(QString filename)
 {
 	cSettings parSettings(cSettings::formatFullText);
+	gMainInterface->DisablePeriodicRefresh();
 	parSettings.LoadFromFile(filename);
 	gInterfaceReadyForSynchronization = false;
 	parSettings.Decode(gPar, gParFractal, gAnimFrames, gKeyframes);
@@ -348,8 +471,9 @@ void RenderWindow::slotMenuLoadPreset(QString filename)
 
 	gFlightAnimation->RefreshTable();
 	gKeyframeAnimation->RefreshTable();
+	gMainInterface->ReEnablePeriodicRefresh();
 	showDescriptionPopup();
-	this->setWindowTitle(QString("Mandelbulber (") + systemData.lastSettingsFile + ")");
+	setWindowTitle(QString("Mandelbulber (") + systemData.lastSettingsFile + ")");
 }
 
 void RenderWindow::slotMenuRemovePreset(QString filename)
@@ -373,9 +497,8 @@ void RenderWindow::slotPopulateCustomWindowStates(bool completeRefresh)
 
 	QList<QAction *> actions = ui->menuSaved_window_layouts->actions();
 	QStringList customWindowActions;
-	for (int i = 0; i < actions.size(); i++)
+	for (auto action : actions)
 	{
-		QAction *action = actions.at(i);
 		if (!action->objectName().startsWith("window_")) continue;
 		if (!customWindowStateFiles.contains(action->objectName()) || completeRefresh)
 		{
@@ -478,8 +601,8 @@ void RenderWindow::slotMenuLoadCustomWindowState(QString filename)
 		qWarning() << "Could not open input files: " << filename << ".[geometry,state]";
 		return;
 	}
-	// this->restoreGeometry(fileGeometry.readAll());
-	this->restoreState(fileState.readAll());
+	// restoreGeometry(fileGeometry.readAll());
+	restoreState(fileState.readAll());
 }
 
 void RenderWindow::slotCustomWindowRemovePopup()
@@ -540,9 +663,8 @@ void RenderWindow::slotPopulateRecentSettings(bool completeRefresh)
 	QSignalMapper *mapRecentFileLoad = new QSignalMapper(this);
 	QList<QAction *> actions = ui->menuRecent_Settings_list->actions();
 	QStringList recentFileInActions;
-	for (int i = 0; i < actions.size(); i++)
+	for (auto action : actions)
 	{
-		QAction *action = actions.at(i);
 		if (!action->objectName().startsWith("recent_")) continue;
 		if (!recentFileInActions.contains(action->objectName()) || completeRefresh)
 		{
@@ -614,7 +736,7 @@ void RenderWindow::slotUpdateProgressAndStatus(const QString &text, const QStrin
 {
 	ui->statusbar->showMessage(text, 0);
 	MyProgressBar *progressBar = nullptr;
-	bool isQueue = this->sender() && this->sender()->objectName() == "Queue";
+	bool isQueue = sender() && sender()->objectName() == "Queue";
 	switch (progressType)
 	{
 		case cProgressText::progress_IMAGE:

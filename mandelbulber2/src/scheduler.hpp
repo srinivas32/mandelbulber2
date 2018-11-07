@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2014-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2014-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -41,6 +41,8 @@
 
 #include <qvector.h>
 
+#include <atomic>
+
 #include <QMutex>
 
 #include "region.hpp"
@@ -77,7 +79,7 @@ private:
 	int numberOfLines;
 	int startLine;
 	int endLine;
-	volatile bool stopRequest;
+	std::atomic<bool> stopRequest;
 	int progressiveStep;
 	int progressivePass;
 	bool progressiveEnabled;

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016 Mandelbulber Team        §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -37,7 +37,20 @@
 #include <QMenu>
 #include <QtWidgets/QtWidgets>
 
+#include "frame_slider_popup.h"
+
 #include "src/parameters.hpp"
+
+MySpinBox::MySpinBox(QWidget *parent) : QSpinBox(parent), CommonMyWidgetWrapper(this)
+{
+	defaultValue = 0;
+	slider = nullptr;
+}
+
+MySpinBox::~MySpinBox()
+{
+	if (slider) delete slider;
+}
 
 void MySpinBox::resetToDefault()
 {
@@ -78,4 +91,70 @@ int MySpinBox::GetDefault()
 		setToolTipText();
 	}
 	return defaultValue;
+}
+
+void MySpinBox::focusInEvent(QFocusEvent *event)
+{
+	QSpinBox::focusInEvent(event);
+
+	QString type = GetType(objectName());
+	if (type != "text")
+	{
+		if (!slider)
+		{
+			QWidget *topWidget = window();
+			slider = new cFrameSliderPopup(topWidget);
+			slider->setFocusPolicy(Qt::NoFocus);
+			slider->hide();
+		}
+		// update min and max
+		slider->SetIntegerMode(minimum(), maximum(), value());
+
+		QWidget *topWidget = window();
+		QPoint windowPoint = mapTo(topWidget, QPoint());
+		int width = this->width();
+		int hOffset = height();
+		slider->adjustSize();
+		slider->setFixedWidth(width);
+
+		if (windowPoint.y() + slider->height() + hOffset > topWidget->height())
+			hOffset = -slider->height();
+
+		slider->move(windowPoint.x(), windowPoint.y() + hOffset);
+		slider->show();
+
+		connect(slider, SIGNAL(resetPressed()), this, SLOT(slotResetToDefault()));
+		connect(slider, SIGNAL(halfPressed()), this, SLOT(slotHalfValue()));
+		connect(slider, SIGNAL(doublePressed()), this, SLOT(slotDoubleValue()));
+		connect(this, SIGNAL(valueChanged(int)), slider, SLOT(slotUpdateValue(int)));
+		connect(slider, SIGNAL(valueChanged(int)), this, SLOT(setValue(int)));
+	}
+}
+
+void MySpinBox::focusOutEvent(QFocusEvent *event)
+{
+	QSpinBox::focusOutEvent(event);
+
+	if (slider)
+	{
+		slider->disconnect();
+		slider->hide();
+		slider->deleteLater();
+		slider = nullptr;
+	}
+}
+
+void MySpinBox::slotResetToDefault()
+{
+	resetToDefault();
+}
+
+void MySpinBox::slotDoubleValue()
+{
+	setValue(value() * 2);
+}
+
+void MySpinBox::slotHalfValue()
+{
+	setValue(value() / 2);
 }

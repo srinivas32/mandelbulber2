@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -41,12 +41,15 @@
 
 #include "common_my_widget_wrapper.h"
 
+class cFrameSliderPopup;
+
 class MyLineEdit : public QLineEdit, public CommonMyWidgetWrapper
 {
 	Q_OBJECT
 
 public:
 	MyLineEdit(QWidget *parent = nullptr);
+	~MyLineEdit() override;
 
 private:
 	QAction *actionResetVectorToDefault;
@@ -63,14 +66,25 @@ private:
 	QString getDefaultAsString() override;
 	QString getFullParameterName() override;
 
+	cFrameSliderPopup *slider;
+
 protected:
 	void contextMenuEvent(QContextMenuEvent *event) override;
 	void paintEvent(QPaintEvent *event) override;
+	void focusInEvent(QFocusEvent *event) override;
+	void focusOutEvent(QFocusEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
 
 private slots:
 	void slotCopyVector() const;
 	void slotPasteVector();
 	void slotResetVector();
+	void slotSliderTimerUpdateValue();
+	void slotResetToDefault();
+	void slotZeroValue();
+	void slotDoubleValue();
+	void slotHalfValue();
+	void slotRoundValue();
 };
 
 #endif /* MANDELBULBER2_QT_MY_LINE_EDIT_H_ */

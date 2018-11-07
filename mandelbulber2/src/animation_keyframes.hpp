@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2015-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2015-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -54,6 +54,7 @@ class cInterface;
 class cFractalContainer;
 class cParameterContainer;
 class MyTableWidgetKeyframes;
+class RenderedImage;
 
 namespace Ui
 {
@@ -83,16 +84,19 @@ public:
 	parameterContainer::enumMorphType GetMorphType(int row) const;
 	void ChangeMorphType(int row, parameterContainer::enumMorphType morphType);
 	QList<int> CheckForCollisions(double minDist, bool *stopRequest);
+	void UpdateActualCameraPosition(const CVector3 &cameraPosition);
 
 public slots:
 	void UpdateLimitsForFrameRange() const;
 	bool slotRenderKeyframes();
-
-private slots:
 	void slotAddKeyframe();
 	void slotInsertKeyframe();
 	void slotDeleteKeyframe() const;
+	void slotIncreaseCurrentTableIndex();
+	void slotDecreaseCurrentTableIndex();
 	void slotModifyKeyframe();
+
+private slots:
 	void slotSelectKeyframeAnimImageDir() const;
 	void slotTableCellChanged(int row, int column);
 	void slotDeleteAllImages() const;
@@ -103,7 +107,9 @@ private slots:
 	void slotMovedSliderLastFrame(int value);
 	void slotValidate();
 	void slotCellDoubleClicked(int row, int column) const;
+	void slotCellClicked(int row, int column) const;
 	void slotSetConstantTargetDistance();
+	void slotUpdateAnimationPathSelection();
 
 private:
 	void PrepareTable();
@@ -116,12 +122,14 @@ private:
 	QString GetKeyframeFilename(int index, int subIndex) const;
 	static QColor MorphType2Color(parameterContainer::enumMorphType morphType);
 	void AddAnimSoundColumn() const;
+	void UpdateAnimationPath() const;
+	void UpdateCameraDistanceInformation() const;
 
 	cInterface *mainInterface;
 	Ui::cDockAnimation *ui;
 	cKeyframes *keyframes;
 	cImage *image;
-	QWidget *imageWidget;
+	RenderedImage *imageWidget;
 	cParameterContainer *params;
 	cFractalContainer *fractalParams;
 	QStringList tableRowNames;
@@ -130,6 +138,7 @@ private:
 	MyTableWidgetKeyframes *table;
 	bool lastToRenderMax = false;
 	QSize previewSize;
+	CVector3 actualCameraPosition;
 
 signals:
 	void updateProgressAndStatus(const QString &text, const QString &progressText, double progress,

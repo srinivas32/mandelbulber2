@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -38,6 +38,8 @@
 #include "preview_file_dialog.h"
 
 #include "src/animation_flight.hpp"
+#include "src/files.h"
+#include "src/resource_http_provider.hpp"
 
 FileSelectWidget::FileSelectWidget(QWidget *parent) : QWidget(parent), CommonMyWidgetWrapper(this)
 {
@@ -73,9 +75,7 @@ FileSelectWidget::FileSelectWidget(QWidget *parent) : QWidget(parent), CommonMyW
 	connect(lineEdit, SIGNAL(editingFinished()), this, SLOT(slotChangedFile()));
 }
 
-FileSelectWidget::~FileSelectWidget()
-{
-}
+FileSelectWidget::~FileSelectWidget() = default;
 
 void FileSelectWidget::resetToDefault()
 {
@@ -145,7 +145,12 @@ void FileSelectWidget::slotChangedFile()
 	if (lineEdit->text() != actualText)
 	{
 		actualText = lineEdit->text();
-		QPixmap pixmap(lineEdit->text());
+		QString filename = AnimatedFileName(actualText, 0);
+
+		cResourceHttpProvider httpProvider(filename);
+		if (httpProvider.IsUrl()) filename = httpProvider.cacheAndGetFilename();
+
+		QPixmap pixmap(filename);
 
 		if (pixmap.isNull())
 		{

@@ -1,7 +1,7 @@
 /**
  * Mandelbulber v2, a 3D fractal generator       ,=#MKNmMMKmmßMNWy,
  *                                             ,B" ]L,,p%%%,,,§;, "K
- * Copyright (C) 2016-17 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
+ * Copyright (C) 2016-18 Mandelbulber Team     §R-==%w["'~5]m%=L.=~5N
  *                                        ,=mm=§M ]=4 yJKA"/-Nsaj  "Bw,==,,
  * This file is part of Mandelbulber.    §R.r= jw",M  Km .mM  FW ",§=ß., ,TN
  *                                     ,4R =%["w[N=7]J '"5=],""]]M,w,-; T=]M
@@ -34,36 +34,29 @@
 
 #include "audio_track_collection.h"
 
-#include "QNetworkReply"
-#include "QNetworkRequest"
 #include "audio_track.h"
 #include "global_data.hpp"
 #include "one_parameter.hpp"
 #include "parameters.hpp"
+#include "resource_http_provider.hpp"
 #include "system.hpp"
 
-cAudioTrackCollection::cAudioTrackCollection()
-{
-}
+cAudioTrackCollection::cAudioTrackCollection() = default;
 
-cAudioTrackCollection::~cAudioTrackCollection()
-{
-	qDeleteAll(audioTracks);
-}
+cAudioTrackCollection::~cAudioTrackCollection() = default;
 
 /* Warning! this is fake constructor to avoid copying audio data to cUndo buffers */
 cAudioTrackCollection::cAudioTrackCollection(const cAudioTrackCollection &collection)
 {
 	Q_UNUSED(collection);
-	this->audioTracks.clear();
+	audioTracks.clear();
 }
 
 /* Warning! this is fake operator to avoid copying audio data to cUndo buffers */
 cAudioTrackCollection &cAudioTrackCollection::operator=(const cAudioTrackCollection &collection)
 {
 	Q_UNUSED(collection);
-	qDeleteAll(audioTracks);
-	this->audioTracks.clear();
+	audioTracks.clear();
 	return *this;
 }
 
@@ -77,7 +70,7 @@ void cAudioTrackCollection::AddAudioTrack(
 	}
 	else
 	{
-		audioTracks.insert(fullParameterName, new cAudioTrack());
+		audioTracks.insert(fullParameterName, QSharedPointer<cAudioTrack>(new cAudioTrack()));
 		if (params) // params is nullptr when audio tracks are regenerated
 		{
 			AddParameters(params, fullParameterName);
@@ -90,7 +83,6 @@ void cAudioTrackCollection::DeleteAudioTrack(
 {
 	if (audioTracks.contains(fullParameterName))
 	{
-		delete audioTracks[fullParameterName];
 		audioTracks.remove(fullParameterName);
 		RemoveParameters(params, fullParameterName);
 	}
@@ -111,7 +103,8 @@ void cAudioTrackCollection::DeleteAllAudioTracks(cParameterContainer *params)
 	}
 }
 
-cAudioTrack *cAudioTrackCollection::GetAudioTrackPtr(const QString fullParameterName) const
+QSharedPointer<cAudioTrack> cAudioTrackCollection::GetAudioTrackPtr(
+	const QString fullParameterName) const
 {
 	if (audioTracks.contains(fullParameterName))
 	{
@@ -121,7 +114,7 @@ cAudioTrack *cAudioTrackCollection::GetAudioTrackPtr(const QString fullParameter
 	{
 		qCritical() << "cAudioTrackCollection::GetAudioTrackPtr(): element '" << fullParameterName
 								<< "' doesn't exist";
-		return nullptr;
+		return QSharedPointer<cAudioTrack>(nullptr);
 	}
 }
 
@@ -135,7 +128,7 @@ void cAudioTrackCollection::AddParameters(
 			FullParameterName("midfreq", parameterName), 1000.0, 5.0, 20000.0, morphNone, paramStandard);
 		params->addParam(
 			FullParameterName("bandwidth", parameterName), 200.0, 5.0, 20000.0, morphNone, paramStandard);
-		params->addParam(FullParameterName("additionfactor", parameterName), 1.0, 0.0, 20000.0,
+		params->addParam(FullParameterName("additionfactor", parameterName), 1.0, -65535.0, 65535.0,
 			morphNone, paramStandard);
 		params->addParam(
 			FullParameterName("multfactor", parameterName), 1.0, 0.0, 20000.0, morphNone, paramStandard);
@@ -202,38 +195,8 @@ void cAudioTrackCollection::LoadAllAudioFiles(cParameterContainer *params)
 		QString filename =
 			params->Get<QString>(FullParameterName("soundfile", listOfAllParameters.at(i)));
 
-		// TEMPORARY CODE TO LOAD AUDIO OVER HTTP AND CACHE
-		if (filename.startsWith("http://") || filename.startsWith("https://"))
-		{
-			QCryptographicHash hashCrypt(QCryptographicHash::Md4);
-			hashCrypt.addData(filename.toLocal8Bit());
-			QByteArray hash = hashCrypt.result();
-			QString cachedFileName = systemData.GetHttpCacheFolder() + QDir::separator() + hash.toHex()
-															 + "." + QFileInfo(filename).suffix();
-			if (!QFile(cachedFileName).exists())
-			{
-				QFile *tempFile = new QFile(cachedFileName);
-				QNetworkAccessManager network;
-				QNetworkReply *reply = network.get(QNetworkRequest(QUrl(filename)));
-				if (!tempFile->open(QIODevice::WriteOnly))
-				{
-					qCritical() << "could not open file for writing!";
-				}
-				else
-				{
-					while (!reply->isFinished())
-					{
-						Wait(10);
-						gApplication->processEvents();
-					}
-					tempFile->write(reply->readAll());
-					tempFile->flush();
-					tempFile->close();
-				}
-				filename = cachedFileName;
-			}
-		}
-		// TEMPORARY CODE TO LOAD AUDIO OVER HTTP AND CACHE
+		cResourceHttpProvider httpProvider(filename);
+		if (httpProvider.IsUrl()) filename = httpProvider.cacheAndGetFilename();
 
 		if (!filename.isEmpty() && !audioTracks[listOfAllParameters[i]]->isLoaded())
 		{
