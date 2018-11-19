@@ -567,13 +567,6 @@
     <None Include="$(SourceDir)mandelbulber2\formula\opencl\*.cl" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
-  <ItemGroup>
-    <OpenCLdll Include="$(MSBuildThisFileDirectory)../..//packages/**/OpenCL.dll" />
-    <None Include="@(OpenCLdll)">
-      <Link>%(FileName)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
   <ItemGroup Condition="'$(Platform)'=='x64'">
     <vcredist Include="$(MSBuildProgramFiles32)/Microsoft Visual Studio/**/x64/Microsoft.VC141.CRT/*.dll;$(MSBuildProgramFiles32)/Microsoft Visual Studio/**/x64/Microsoft.VC141.CXXAMP/*.dll;$(MSBuildProgramFiles32)/Microsoft Visual Studio/**/x64/Microsoft.VC141.OPENMP/*.dll;" />
     <None Include="@(vcredist)">
