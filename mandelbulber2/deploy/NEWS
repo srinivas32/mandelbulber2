@@ -1,4 +1,7 @@
 Version history
+v2.18-1 (June 2019)
+- fixed problem with locked auto-refresh function
+- fixed bug in CMakeList - was missing SHARED_DOC_DIR definition
 
 v2.18 (June 2019)
 - Added new fractal formulas
