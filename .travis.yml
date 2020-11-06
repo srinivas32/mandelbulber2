@@ -1,5 +1,8 @@
 # Travis build configuration
 # https://docs.travis-ci.com/user/customizing-the-build/
+arch:
+  - amd64
+  - ppc64le
 sudo: required
 dist: trusty
 
